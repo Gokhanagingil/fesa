@@ -13,7 +13,9 @@ export interface EnvVars {
 
 export function validateEnv(config: Record<string, unknown>): EnvVars {
   const schema = Joi.object({
-    NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+    NODE_ENV: Joi.string()
+      .valid('development', 'production', 'test', 'staging')
+      .default('development'),
     API_PORT: Joi.number().port().optional(),
     API_GLOBAL_PREFIX: Joi.string().optional(),
     DATABASE_URL: Joi.string()

@@ -100,6 +100,13 @@ Reusable steps live in [.github/workflows/ci-reusable.yml](.github/workflows/ci-
 
 **Limitations:** API and web builds do not require a running PostgreSQL instance. Integration tests or migrations against a live DB are out of scope for this wave. Future workflows (staging deploy, scheduled hygiene, E2E) can be added alongside these files without changing the core validation pipeline.
 
+## Staging deployment (Hetzner / manual Actions)
+
+A first-wave **staging** path uses GitHub Actions (`workflow_dispatch`) to SSH into the server, sync the repo, install, build, run migrations and demo seed, and reload the API under **PM2**. Nginx serves the static web build and proxies `/api` to Nest.
+
+- **Workflow:** [.github/workflows/staging-deploy.yml](.github/workflows/staging-deploy.yml)
+- **Full guide:** [docs/staging-deploy.md](docs/staging-deploy.md) (secrets, variables, server prep, Nginx template, rollback hints)
+
 ## Multilingual UX
 
 Turkish and English are wired via `i18next` in `apps/web`. Locale files live under `apps/web/src/i18n/locales/`. See [docs/i18n.md](docs/i18n.md).

@@ -12,6 +12,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 | [i18n.md](./i18n.md) | Multilingual approach (TR/EN day one) |
 | [reporting.md](./reporting.md) | Reporting and bulk-operation placeholders |
 | [bootstrap.md](./bootstrap.md) | Demo seed, idempotency, demo tenant id |
+| [staging-deploy.md](./staging-deploy.md) | Manual GitHub Actions deploy to Ubuntu staging (SSH, PM2, Nginx) |
 
 ## Product direction
 
@@ -35,6 +36,10 @@ See the root [README.md](../README.md) for install and start commands.
 ## CI
 
 GitHub Actions runs lint and build on PRs and on pushes to `main`; optional manual runs are available. Details: [Continuous integration in the root README](../README.md#continuous-integration-github-actions).
+
+## Staging
+
+Manual staging deploy (SSH, PM2, Nginx template): [staging-deploy.md](./staging-deploy.md).
 
 ## Deferred (intentionally)
 

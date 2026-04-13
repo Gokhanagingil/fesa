@@ -19,7 +19,7 @@ export const configuration = () => ({
      */
     synchronize: envBool(
       process.env.DB_SYNCHRONIZE,
-      process.env.NODE_ENV !== 'production',
+      (process.env.NODE_ENV ?? 'development') === 'development',
     ),
     /** Run pending migrations on API startup (typical for production/staging). */
     runMigrations: envBool(process.env.DB_RUN_MIGRATIONS, false),
