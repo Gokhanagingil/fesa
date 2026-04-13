@@ -4,11 +4,14 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './i18n';
 import './styles/index.css';
+import { TenantProvider } from './lib/tenant-provider';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <TenantProvider>
+        <App />
+      </TenantProvider>
     </BrowserRouter>
   </StrictMode>,
 );

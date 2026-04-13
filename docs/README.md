@@ -7,7 +7,8 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 | Document | Purpose |
 |----------|---------|
 | [architecture.md](./architecture.md) | Monorepo layout, boundaries, principles |
-| [domain.md](./domain.md) | Group vs Team and foundational entities |
+| [domain.md](./domain.md) | Athletes, guardians, membership, training, attendance, finance foundation |
+| [migrations.md](./migrations.md) | TypeORM migrations vs synchronize |
 | [i18n.md](./i18n.md) | Multilingual approach (TR/EN day one) |
 | [reporting.md](./reporting.md) | Reporting and bulk-operation placeholders |
 
@@ -15,7 +16,8 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 
 - **Who**: club admins and coaches; low-friction, mobile-friendly UX.
 - **What**: operations beyond CRUD — schedules, attendance, fixtures, finance, reporting — introduced in later waves.
-- **This wave**: scaffolding, health/config, minimal domain model, UX shell, i18n, and conventions only.
+- **Wave one (done)**: scaffolding, health/config, minimal domain model, UX shell, i18n, conventions.
+- **Wave two (current)**: athlete/guardian/training/attendance/finance primitives, tenant-aware APIs, starter product UX, migration path.
 
 ## Repository map
 
@@ -33,7 +35,8 @@ See the root [README.md](../README.md) for install and start commands.
 
 - Full authentication and RBAC
 - Tournament engine, statistics ingestion, inventory
-- Payment workflows, 1-to-1 lessons, recommendations
+- Payment capture, 1-to-1 lessons, recommendations
 - Advanced reporting execution and exports
+- Accounting ledger, automated billing runs
 
-These areas have module or schema hooks where appropriate; they are not implemented in wave one.
+These areas stay out of scope until dedicated waves; the current schema avoids dead-end shortcuts (indexed tenant keys, explicit membership rows).

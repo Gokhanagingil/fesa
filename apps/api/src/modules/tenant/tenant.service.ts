@@ -13,4 +13,8 @@ export class TenantService {
   findAll(): Promise<Tenant[]> {
     return this.tenants.find({ order: { name: 'ASC' } });
   }
+
+  findById(id: string): Promise<Tenant | null> {
+    return this.tenants.findOne({ where: { id } });
+  }
 }

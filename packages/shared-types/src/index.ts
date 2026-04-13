@@ -86,3 +86,55 @@ export interface BulkActionRequest {
   /** Selected row ids or query snapshot ref — defined in later waves. */
   selection: Record<string, unknown>;
 }
+
+// —— Wave two: operational core (subset for clients; API is source of truth) ——
+
+export type AthleteStatus = 'active' | 'inactive' | 'trial' | 'archived';
+
+export interface AthleteSummary {
+  id: Uuid;
+  tenantId: Uuid;
+  firstName: string;
+  lastName: string;
+  preferredName?: string;
+  sportBranchId: Uuid;
+  primaryGroupId?: Uuid;
+  status: AthleteStatus;
+}
+
+export interface GuardianSummary {
+  id: Uuid;
+  tenantId: Uuid;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  email?: string;
+}
+
+export type TrainingSessionStatus = 'planned' | 'completed' | 'cancelled';
+
+export interface TrainingSessionSummary {
+  id: Uuid;
+  tenantId: Uuid;
+  title: string;
+  sportBranchId: Uuid;
+  groupId: Uuid;
+  teamId?: Uuid;
+  scheduledStart: string;
+  scheduledEnd: string;
+  status: TrainingSessionStatus;
+}
+
+export type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late';
+
+export type AthleteChargeStatus = 'pending' | 'partially_paid' | 'paid' | 'cancelled';
+
+export interface ChargeItemSummary {
+  id: Uuid;
+  tenantId: Uuid;
+  name: string;
+  category: string;
+  defaultAmount: string;
+  currency: string;
+  isActive: boolean;
+}

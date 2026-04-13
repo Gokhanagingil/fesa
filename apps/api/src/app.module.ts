@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { join } from 'path';
 import { validateEnv } from './config/env.validation';
 import { configuration } from './config/configuration';
 import { domainEntities } from './database/entities';
@@ -12,6 +13,9 @@ import { GroupModule } from './modules/group/group.module';
 import { TeamModule } from './modules/team/team.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
+import { GuardianModule } from './modules/guardian/guardian.module';
+import { TrainingModule } from './modules/training/training.module';
+import { SportBranchModule } from './modules/sport-branch/sport-branch.module';
 
 @Module({
   imports: [
@@ -22,11 +26,15 @@ import { ReportingModule } from './modules/reporting/reporting.module';
       envFilePath: ['.env.local', '.env'],
     }),
     TypeOrmModule.forRootAsync({
-      useFactory: () => ({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        url: process.env.DATABASE_URL,
+        url: config.get<string>('database.url'),
         entities: domainEntities,
-        synchronize: process.env.NODE_ENV !== 'production',
+        synchronize: config.get<boolean>('database.synchronize', false),
+        migrations: [join(__dirname, 'database', 'migrations', '*.js')],
+        migrationsRun: false,
         logging: process.env.NODE_ENV === 'development',
       }),
     }),
@@ -38,6 +46,9 @@ import { ReportingModule } from './modules/reporting/reporting.module';
     TeamModule,
     FinanceModule,
     ReportingModule,
+    GuardianModule,
+    TrainingModule,
+    SportBranchModule,
   ],
 })
 export class AppModule {}

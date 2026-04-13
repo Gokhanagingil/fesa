@@ -1,15 +1,22 @@
-import type { ReactNode } from 'react';
+import type { ChangeEvent, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 type ListPageFrameProps = {
   toolbar?: ReactNode;
   children: ReactNode;
+  /** When set, search is interactive; otherwise shows a read-only placeholder (shell demos). */
+  search?: {
+    value: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    disabled?: boolean;
+  };
 };
 
 /**
  * Established pattern for export-ready lists: toolbar (search, filters, bulk) + content.
  */
-export function ListPageFrame({ toolbar, children }: ListPageFrameProps) {
+export function ListPageFrame({ toolbar, children, search }: ListPageFrameProps) {
   const { t } = useTranslation();
 
   return (
@@ -28,9 +35,13 @@ export function ListPageFrame({ toolbar, children }: ListPageFrameProps) {
           </span>
           <input
             type="search"
-            readOnly
-            placeholder={t('app.actions.search')}
-            className="w-full rounded-xl border border-amateur-border bg-amateur-canvas py-2 pl-9 pr-3 text-sm text-amateur-muted outline-none ring-amateur-accent/20 focus:ring-2"
+            readOnly={!search}
+            {...(search
+              ? { value: search.value, onChange: (e: ChangeEvent<HTMLInputElement>) => search.onChange(e.target.value) }
+              : {})}
+            disabled={search?.disabled}
+            placeholder={search?.placeholder ?? t('app.actions.search')}
+            className="w-full rounded-xl border border-amateur-border bg-amateur-canvas py-2 pl-9 pr-3 text-sm text-amateur-ink outline-none ring-amateur-accent/20 placeholder:text-amateur-muted focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
             aria-label={t('app.actions.search')}
           />
         </div>
