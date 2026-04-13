@@ -1,0 +1,76 @@
+# Optional: verify SSH from GitHub Actions to the staging host without running a deploy.
+# Use when debugging "Permission denied (publickey)" before triggering a full Staging deploy.
+name: Staging SSH check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-ssh-check
+  cancel-in-progress: false
+
+jobs:
+  ssh-check:
+    name: SSH connectivity only
+    runs-on: ubuntu-latest
+    environment: staging
+
+    env:
+      STAGING_HOST: ${{ vars.STAGING_HOST }}
+      STAGING_USER: ${{ vars.STAGING_USER }}
+      STAGING_PORT: ${{ vars.STAGING_PORT }}
+      STAGING_APP_DIR: ${{ vars.STAGING_APP_DIR }}
+
+    steps:
+      - name: Validate GitHub environment configuration
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in STAGING_HOST STAGING_USER STAGING_PORT STAGING_APP_DIR; do
+            eval "val=\${$name:-}"
+            if [ -z "$val" ]; then
+              echo "::error::Missing environment variable: $name"
+              missing=1
+            fi
+          done
+          if [ -z "${{ secrets.STAGING_SSH_KEY }}" ]; then
+            echo "::error::Missing secret STAGING_SSH_KEY"
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Checkout (keeps workflow file revision aligned with repo)
+        uses: actions/checkout@v4
+
+      - name: Install SSH key (ssh-agent)
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.STAGING_SSH_KEY }}
+
+      - name: Add server host keys to known_hosts
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -p "${STAGING_PORT}" -H -t rsa,ecdsa,ed25519 "${STAGING_HOST}" >> ~/.ssh/known_hosts
+
+      - name: SSH preflight (whoami, uname, app dir readable?)
+        run: |
+          set -euo pipefail
+          ssh_opts=(
+            -p "${STAGING_PORT}"
+            -o BatchMode=yes
+            -o ConnectTimeout=20
+            -o StrictHostKeyChecking=yes
+            -o IdentitiesOnly=yes
+          )
+          if [ -n "${SSH_AUTH_SOCK:-}" ]; then
+            ssh_opts+=( -o "IdentityAgent=${SSH_AUTH_SOCK}" )
+          fi
+          ssh "${ssh_opts[@]}" "${STAGING_USER}@${STAGING_HOST}" \
+            "echo \"OK: user=\$(whoami) host=\$(hostname)\"; if [ -d '${STAGING_APP_DIR}' ]; then echo 'OK: STAGING_APP_DIR exists and is a directory'; else echo 'WARN: STAGING_APP_DIR missing or not a directory — fix before deploy'; fi; uname -a"

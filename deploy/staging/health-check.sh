@@ -3,6 +3,18 @@
 set -euo pipefail
 
 API_PORT="${API_PORT:-3000}"
+# When invoked over SSH with FESA_REPO_ROOT, align with apps/api/.env without sourcing the whole file.
+if [[ -n "${FESA_REPO_ROOT:-}" && -f "${FESA_REPO_ROOT}/apps/api/.env" ]]; then
+  _line="$(grep -E '^[[:space:]]*(export[[:space:]]+)?API_PORT=' "${FESA_REPO_ROOT}/apps/api/.env" | tail -1 || true)"
+  if [[ -n "$_line" ]]; then
+    _val="${_line#*=}"
+    _val="${_val#\"}"
+    _val="${_val%\"}"
+    _val="${_val#\'}"
+    _val="${_val%\'}"
+    [[ -n "$_val" ]] && API_PORT="$_val"
+  fi
+fi
 BASE="http://127.0.0.1:${API_PORT}"
 
 try_curl() {
