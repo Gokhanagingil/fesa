@@ -6,6 +6,9 @@ export interface EnvVars {
   API_GLOBAL_PREFIX?: string;
   DATABASE_URL: string;
   CORS_ORIGIN?: string;
+  DB_SYNCHRONIZE?: string;
+  DB_RUN_MIGRATIONS?: string;
+  DEV_TENANT_ID?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvVars {
@@ -18,6 +21,10 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
       .required()
       .messages({ 'string.pattern.base': 'DATABASE_URL must be a PostgreSQL connection string' }),
     CORS_ORIGIN: Joi.string().optional().allow(''),
+    DB_SYNCHRONIZE: Joi.string().valid('true', 'false').optional(),
+    DB_RUN_MIGRATIONS: Joi.string().valid('true', 'false').optional(),
+    /** Optional UUID for local/dev requests when no auth tenant exists (header X-Tenant-Id overrides). */
+    DEV_TENANT_ID: Joi.string().uuid().optional(),
   });
 
   const { error, value } = schema.validate(config, {

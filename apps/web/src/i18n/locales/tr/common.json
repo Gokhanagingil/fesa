@@ -7,6 +7,7 @@
       "athletes": "Sporcular",
       "groups": "Gruplar",
       "teams": "Takımlar",
+      "training": "Antrenman",
       "finance": "Finans",
       "reports": "Raporlar",
       "settings": "Ayarlar"
@@ -27,6 +28,16 @@
       "label": "Dil",
       "en": "İngilizce",
       "tr": "Türkçe"
+    },
+    "tenant": {
+      "label": "Kulüp",
+      "empty": "Kulüp yok — API’ye veri ekleyin"
+    },
+    "errors": {
+      "loadFailed": "Veriler yüklenemedi.",
+      "saveFailed": "Kaydedilemedi.",
+      "needTenant": "Üstte kulüp seçin.",
+      "noBranches": "Önce veritabanına bir spor branşı ekleyin."
     }
   },
   "pages": {
@@ -40,19 +51,91 @@
     },
     "athletes": {
       "title": "Sporcular",
-      "subtitle": "Kadro ve katılım, sade bir görünümle."
+      "subtitle": "Kadro ve katılım, sade bir görünümle.",
+      "empty": "Henüz sporcu yok.",
+      "emptyHint": "İlk sporcuyu ekleyerek burada görün.",
+      "new": "Sporcu ekle",
+      "edit": "Düzenle",
+      "detailTitle": "Sporcu profili",
+      "firstName": "Ad",
+      "lastName": "Soyad",
+      "preferredName": "Tercih edilen ad",
+      "birthDate": "Doğum tarihi",
+      "gender": "Cinsiyet",
+      "branch": "Spor branşı",
+      "primaryGroup": "Birincil grup",
+      "status": "Durum",
+      "jersey": "Forma no",
+      "notes": "Notlar",
+      "guardians": "Veliler",
+      "guardiansHint": "Veliler ve acil durum kişileri.",
+      "linkGuardian": "Veli bağla",
+      "teams": "Takımlar",
+      "teamsHint": "İsteğe bağlı kadro. Antrenman grubu profilde kalır.",
+      "addTeam": "Takıma ekle",
+      "endMembership": "Bitir",
+      "save": "Kaydet",
+      "cancel": "Vazgeç",
+      "delete": "Sil",
+      "guardianCreateTitle": "Yeni veli",
+      "relationship": "Yakınlık",
+      "primaryContact": "Birincil iletişim",
+      "phone": "Telefon",
+      "email": "E-posta"
     },
     "groups": {
       "title": "Gruplar",
-      "subtitle": "Antrenman kohortları ve yaş grupları — takımlardan ayrı."
+      "subtitle": "Antrenman kohortları ve yaş grupları — takımlardan ayrı.",
+      "memberHint": "Sporcular birincil grubunu profilde seçer; takım isteğe bağlıdır."
     },
     "teams": {
       "title": "Takımlar",
       "subtitle": "Branşlara bağlı kadrolar ve müsabaka birimleri."
     },
+    "training": {
+      "title": "Antrenmanlar",
+      "subtitle": "Gruplar ve isteğe bağlı takımlar için planlanan çalışmalar.",
+      "empty": "Henüz antrenman yok.",
+      "emptyHint": "Devam kaydı için bir oturum oluşturun.",
+      "new": "Yeni oturum",
+      "detailTitle": "Oturum",
+      "scheduled": "Zaman",
+      "location": "Yer",
+      "status": "Durum",
+      "attendance": "Yoklama",
+      "attendanceHint": "Kimlerin geldiğini işaretleyin. Toplu giriş için altyapı hazır.",
+      "saveAttendance": "Yoklamayı kaydet",
+      "savedAttendance": "Yoklama kaydedildi."
+    },
     "finance": {
       "title": "Finans",
-      "subtitle": "Ücret ve tahsilat — hazır olduğunuzda."
+      "subtitle": "Ücret ve tahsilat — hazır olduğunuzda.",
+      "hubTitle": "Ücretler",
+      "hubBody": "Önce tekrar kullanılabilir ücret türlerini tanımlayın, sonra sporculara atayın.",
+      "chargeItemsLink": "Ücret kalemleri",
+      "athleteChargesLink": "Sporcu borçları"
+    },
+    "chargeItems": {
+      "title": "Ücret kalemleri",
+      "subtitle": "Tekrar kullanılabilir tanımlar (aidat, kamp, forma, …).",
+      "empty": "Henüz ücret kalemi yok.",
+      "new": "Yeni kalem",
+      "name": "Ad",
+      "category": "Kategori",
+      "amount": "Varsayılan tutar",
+      "currency": "Para birimi",
+      "active": "Aktif"
+    },
+    "athleteCharges": {
+      "title": "Sporcu borçları",
+      "subtitle": "Bireysel atanmış ücretler.",
+      "empty": "Henüz borç atanmadı.",
+      "new": "Yeni borç",
+      "athlete": "Sporcu",
+      "item": "Ücret kalemi",
+      "amount": "Tutar",
+      "due": "Vade",
+      "status": "Durum"
     },
     "reports": {
       "title": "Raporlar",

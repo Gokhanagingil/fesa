@@ -7,6 +7,7 @@
       "athletes": "Athletes",
       "groups": "Groups",
       "teams": "Teams",
+      "training": "Training",
       "finance": "Finance",
       "reports": "Reports",
       "settings": "Settings"
@@ -27,6 +28,16 @@
       "label": "Language",
       "en": "English",
       "tr": "Turkish"
+    },
+    "tenant": {
+      "label": "Club",
+      "empty": "No clubs — seed the API"
+    },
+    "errors": {
+      "loadFailed": "Could not load data.",
+      "saveFailed": "Could not save.",
+      "needTenant": "Select a club in the header.",
+      "noBranches": "Add a sport branch in the database first."
     }
   },
   "pages": {
@@ -40,19 +51,91 @@
     },
     "athletes": {
       "title": "Athletes",
-      "subtitle": "Roster and participation, built for clarity."
+      "subtitle": "Roster and participation, built for clarity.",
+      "empty": "No athletes yet.",
+      "emptyHint": "Add your first athlete to see them here.",
+      "new": "Add athlete",
+      "edit": "Edit",
+      "detailTitle": "Athlete profile",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "preferredName": "Preferred name",
+      "birthDate": "Birth date",
+      "gender": "Gender",
+      "branch": "Sport branch",
+      "primaryGroup": "Primary group",
+      "status": "Status",
+      "jersey": "Jersey #",
+      "notes": "Notes",
+      "guardians": "Guardians",
+      "guardiansHint": "Parents and emergency contacts.",
+      "linkGuardian": "Link guardian",
+      "teams": "Teams",
+      "teamsHint": "Optional squad assignments. Training group stays on the profile.",
+      "addTeam": "Add to team",
+      "endMembership": "End",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "guardianCreateTitle": "New guardian",
+      "relationship": "Relationship",
+      "primaryContact": "Primary contact",
+      "phone": "Phone",
+      "email": "Email"
     },
     "groups": {
       "title": "Groups",
-      "subtitle": "Training cohorts and age buckets — separate from teams."
+      "subtitle": "Training cohorts and age buckets — separate from teams.",
+      "memberHint": "Athletes set a primary group on their profile; teams are optional."
     },
     "teams": {
       "title": "Teams",
       "subtitle": "Squads and competitive units linked to branches."
     },
+    "training": {
+      "title": "Training sessions",
+      "subtitle": "Planned practices for groups and optional teams.",
+      "empty": "No sessions scheduled yet.",
+      "emptyHint": "Create a session to start recording attendance.",
+      "new": "New session",
+      "detailTitle": "Session",
+      "scheduled": "Schedule",
+      "location": "Location",
+      "status": "Status",
+      "attendance": "Attendance",
+      "attendanceHint": "Mark who was there. Bulk entry is ready for later automation.",
+      "saveAttendance": "Save attendance",
+      "savedAttendance": "Attendance saved."
+    },
     "finance": {
       "title": "Finance",
-      "subtitle": "Charges and payments when you are ready."
+      "subtitle": "Charges and payments when you are ready.",
+      "hubTitle": "Money & fees",
+      "hubBody": "Define reusable fee types, then assign charges to athletes.",
+      "chargeItemsLink": "Charge items",
+      "athleteChargesLink": "Athlete charges"
+    },
+    "chargeItems": {
+      "title": "Charge items",
+      "subtitle": "Reusable fee definitions (dues, camp, kit, …).",
+      "empty": "No charge items yet.",
+      "new": "New charge item",
+      "name": "Name",
+      "category": "Category",
+      "amount": "Default amount",
+      "currency": "Currency",
+      "active": "Active"
+    },
+    "athleteCharges": {
+      "title": "Athlete charges",
+      "subtitle": "Fees assigned to individual athletes.",
+      "empty": "No charges assigned yet.",
+      "new": "New charge",
+      "athlete": "Athlete",
+      "item": "Charge item",
+      "amount": "Amount",
+      "due": "Due",
+      "status": "Status"
     },
     "reports": {
       "title": "Reports",

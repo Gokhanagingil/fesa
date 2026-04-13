@@ -16,7 +16,8 @@ npm workspaces unite `apps/*` and `packages/*`. Shared code lives in packages; a
 - **Stack**: NestJS 11, TypeORM, PostgreSQL driver, `@nestjs/config` with Joi validation.
 - **Config**: Environment variables validated at bootstrap; see `apps/api/.env.example`.
 - **Health**: `GET /api/health` checks DB connectivity; `GET /api/health/live` for process liveness.
-- **Modules**: Feature folders under `src/modules/*` for future domains (`tenant`, `athlete`, `group`, `team`, `finance`, `reporting`). Only safe scaffolding is implemented now.
+- **Modules**: Feature folders under `src/modules/*` (`tenant`, `athlete`, `guardian`, `group`, `team`, `sport-branch`, `training`, `finance`, `reporting`). Domain APIs are tenant-scoped via `X-Tenant-Id` (see `TenantGuard`).
+- **Migrations**: SQL migrations under `src/database/migrations`; see [migrations.md](./migrations.md).
 
 ## Multi-tenant direction
 

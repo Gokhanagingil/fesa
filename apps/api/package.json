@@ -7,6 +7,8 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
+    "migration:run": "npm run build && npx typeorm migration:run -d dist/database/data-source.js",
+    "migration:revert": "npm run build && npx typeorm migration:revert -d dist/database/data-source.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -15,6 +17,7 @@
     "@amateur/shared-types": "*",
     "@nestjs/common": "^11.0.12",
     "@nestjs/config": "^4.0.2",
+    "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/core": "^11.0.12",
     "@nestjs/platform-express": "^11.0.12",
     "@nestjs/terminus": "^11.0.0",
