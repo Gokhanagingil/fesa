@@ -1,0 +1,77 @@
+{
+  "app": {
+    "name": "Amateur",
+    "tagline": "Amatör spor kulüpleri için kulüp operasyonları",
+    "nav": {
+      "dashboard": "Panel",
+      "athletes": "Sporcular",
+      "groups": "Gruplar",
+      "teams": "Takımlar",
+      "finance": "Finans",
+      "reports": "Raporlar",
+      "settings": "Ayarlar"
+    },
+    "actions": {
+      "search": "Ara",
+      "filter": "Filtreler",
+      "export": "Dışa aktar",
+      "bulk": "Toplu işlemler",
+      "new": "Yeni"
+    },
+    "states": {
+      "loading": "Yükleniyor…",
+      "empty": "Henüz kayıt yok",
+      "emptyHint": "Kayıt eklediğinizde burada listelenir."
+    },
+    "language": {
+      "label": "Dil",
+      "en": "İngilizce",
+      "tr": "Türkçe"
+    }
+  },
+  "pages": {
+    "dashboard": {
+      "title": "Panel",
+      "subtitle": "Kulübünüzün bugünkü özeti.",
+      "cardOps": "Operasyon",
+      "cardOpsBody": "Program, devam ve fikstür burada görünecek.",
+      "cardPeople": "İnsanlar",
+      "cardPeopleBody": "Sporcular, veliler ve kadro — yakında tek yerde."
+    },
+    "athletes": {
+      "title": "Sporcular",
+      "subtitle": "Kadro ve katılım, sade bir görünümle."
+    },
+    "groups": {
+      "title": "Gruplar",
+      "subtitle": "Antrenman kohortları ve yaş grupları — takımlardan ayrı."
+    },
+    "teams": {
+      "title": "Takımlar",
+      "subtitle": "Branşlara bağlı kadrolar ve müsabaka birimleri."
+    },
+    "finance": {
+      "title": "Finans",
+      "subtitle": "Ücret ve tahsilat — hazır olduğunuzda."
+    },
+    "reports": {
+      "title": "Raporlar",
+      "subtitle": "Tanımlar, kayıtlı filtreler ve dışa aktarım — temel hazır."
+    },
+    "settings": {
+      "title": "Ayarlar",
+      "subtitle": "Kulüp profili ve tercihler.",
+      "placeholder": "Kulüp profili, bildirimler ve yerel varsayılanlar kimlik doğrulama sonrası burada olacak."
+    }
+  },
+  "landing": {
+    "badge": "Amatör spor",
+    "headline": "Kulübünüzü sakin bir güvenle yönetin.",
+    "sub": "Gruplar, takımlar, program ve finans — gereksiz kalabalık olmadan.",
+    "ctaPrimary": "Uygulamayı aç",
+    "ctaSecondary": "Daha fazla bilgi",
+    "pill1": "Çok dilli",
+    "pill2": "Mobil uyumlu",
+    "pill3": "Büyümeye hazır"
+  }
+}

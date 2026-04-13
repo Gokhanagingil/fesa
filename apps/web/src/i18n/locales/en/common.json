@@ -1,0 +1,77 @@
+{
+  "app": {
+    "name": "Amateur",
+    "tagline": "Club operations for amateur sports",
+    "nav": {
+      "dashboard": "Dashboard",
+      "athletes": "Athletes",
+      "groups": "Groups",
+      "teams": "Teams",
+      "finance": "Finance",
+      "reports": "Reports",
+      "settings": "Settings"
+    },
+    "actions": {
+      "search": "Search",
+      "filter": "Filters",
+      "export": "Export",
+      "bulk": "Bulk actions",
+      "new": "New"
+    },
+    "states": {
+      "loading": "Loading…",
+      "empty": "Nothing here yet",
+      "emptyHint": "When you add records, they will show up in this list."
+    },
+    "language": {
+      "label": "Language",
+      "en": "English",
+      "tr": "Turkish"
+    }
+  },
+  "pages": {
+    "dashboard": {
+      "title": "Dashboard",
+      "subtitle": "Today’s pulse for your club.",
+      "cardOps": "Operations",
+      "cardOpsBody": "Schedules, attendance, and fixtures will surface here.",
+      "cardPeople": "People",
+      "cardPeopleBody": "Athletes, guardians, and staff in one place — coming soon."
+    },
+    "athletes": {
+      "title": "Athletes",
+      "subtitle": "Roster and participation, built for clarity."
+    },
+    "groups": {
+      "title": "Groups",
+      "subtitle": "Training cohorts and age buckets — separate from teams."
+    },
+    "teams": {
+      "title": "Teams",
+      "subtitle": "Squads and competitive units linked to branches."
+    },
+    "finance": {
+      "title": "Finance",
+      "subtitle": "Charges and payments when you are ready."
+    },
+    "reports": {
+      "title": "Reports",
+      "subtitle": "Definitions, saved filters, and exports — foundation in place."
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Club profile and preferences.",
+      "placeholder": "Tenant profile, notifications, and locale defaults will land here after authentication."
+    }
+  },
+  "landing": {
+    "badge": "Amateur sports",
+    "headline": "Run your club with calm confidence.",
+    "sub": "One place for groups, teams, schedules, and money — without the clutter.",
+    "ctaPrimary": "Open app",
+    "ctaSecondary": "Learn more",
+    "pill1": "Multilingual",
+    "pill2": "Mobile-friendly",
+    "pill3": "Built for growth"
+  }
+}
