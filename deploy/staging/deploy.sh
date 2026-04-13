@@ -68,7 +68,8 @@ ensure_api_env() {
   local api_env="$1"
   local example="$2"
   if [[ ! -f "$api_env" ]]; then
-    local staging_ex="$api_dir/.env.staging.example"
+    local staging_ex
+    staging_ex="$(dirname "$api_env")/.env.staging.example"
     if [[ -f "$staging_ex" ]]; then
       log "Creating apps/api/.env from .env.staging.example — YOU MUST EDIT DATABASE_URL and secrets on the server"
       cp "$staging_ex" "$api_env"
