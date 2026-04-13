@@ -1,0 +1,18 @@
+# Primary CI: PRs and main branch pushes. Manual re-run via "Run workflow".
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  monorepo:
+    name: Monorepo validation
+    uses: ./.github/workflows/ci-reusable.yml

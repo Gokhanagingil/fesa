@@ -75,6 +75,21 @@ npm run build
 npm run lint
 ```
 
+## Continuous integration (GitHub Actions)
+
+CI validates the monorepo on **pull requests** and **pushes to `main`**. There is no deployment, Docker publish, or hosted database in CI yet.
+
+| Workflow | Purpose |
+|----------|---------|
+| [CI](.github/workflows/ci.yml) | Installs with `npm ci`, runs a small [repo guard](scripts/repo-guard.mjs), then `npm run lint` and `npm run build` (workspace-aware). |
+| [Manual validation](.github/workflows/manual-validate.yml) | Same checks on demand via **Actions → Manual validation → Run workflow** (useful when you are not opening a PR). |
+
+Reusable steps live in [.github/workflows/ci-reusable.yml](.github/workflows/ci-reusable.yml) so primary CI and manual runs stay in sync.
+
+**Locally:** `npm run repo:guard` runs the structure/workspace checks only; full parity with CI is `npm ci`, `npm run repo:guard`, `npm run lint`, `npm run build`.
+
+**Limitations:** API and web builds do not require a running PostgreSQL instance. Integration tests or migrations against a live DB are out of scope for this wave. Future workflows (staging deploy, scheduled hygiene, E2E) can be added alongside these files without changing the core validation pipeline.
+
 ## Multilingual UX
 
 Turkish and English are wired via `i18next` in `apps/web`. Locale files live under `apps/web/src/i18n/locales/`. See [docs/i18n.md](docs/i18n.md).

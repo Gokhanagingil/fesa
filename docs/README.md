@@ -31,6 +31,10 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 
 See the root [README.md](../README.md) for install and start commands.
 
+## CI
+
+GitHub Actions runs lint and build on PRs and on pushes to `main`; optional manual runs are available. Details: [Continuous integration in the root README](../README.md#continuous-integration-github-actions).
+
 ## Deferred (intentionally)
 
 - Full authentication and RBAC
