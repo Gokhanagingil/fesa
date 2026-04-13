@@ -11,6 +11,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 | [migrations.md](./migrations.md) | TypeORM migrations vs synchronize |
 | [i18n.md](./i18n.md) | Multilingual approach (TR/EN day one) |
 | [reporting.md](./reporting.md) | Reporting and bulk-operation placeholders |
+| [bootstrap.md](./bootstrap.md) | Demo seed, idempotency, demo tenant id |
 
 ## Product direction
 

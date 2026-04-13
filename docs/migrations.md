@@ -4,6 +4,7 @@
 
 - **TypeORM** loads entity metadata from `apps/api/src/database/entities`.
 - **SQL migrations** live in `apps/api/src/database/migrations` and compile to `dist/database/migrations/*.js`.
+- **Order:** `Wave1TenantCatalogFoundation` creates `tenants` and catalog tables (`sport_branches`, `age_groups`, `club_groups`, `teams`, …). `Wave2DomainFoundation` adds operational tables that reference those. Run all pending migrations in timestamp order.
 - **`AppDataSource`** (`apps/api/src/database/data-source.ts`) is used by the TypeORM CLI for `migration:run` / `migration:revert`.
 
 ## Environment flags
