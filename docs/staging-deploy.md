@@ -86,7 +86,7 @@ Failure messages are split by step: SSH/setup, remote script errors, or health c
 ## Rollback / recovery
 
 - **Redeploy an older ref:** Run the workflow again with a previous **commit SHA** or branch name.
-- **Broken deploy:** SSH in, `cd $STAGING_APP_DIR`, `git log`, `git checkout` a known-good SHA, run `bash deploy/staging/deploy.sh` manually with `DEPLOY_GIT_REF` unset (script uses current checkout after manual checkout — for simplicity, prefer re-running the workflow with the good SHA).
+- **Broken deploy:** Prefer **Run workflow** again with a known-good **git ref** (SHA or branch). If you must fix from SSH: `cd $STAGING_APP_DIR`, `git fetch`, `git checkout <sha>`, then run `DEPLOY_GIT_REF=<sha> bash deploy/staging/deploy.sh` (or check out `staging-deploy` branch after reset — simplest remains the Actions re-run).
 - **Database:** Migrations are forward-only in this pack; use DB backups for destructive mistakes (not automated here).
 
 ## What stays manual in this wave
