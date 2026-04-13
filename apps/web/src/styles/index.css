@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Calm, trustworthy sports-ops palette */
+  --color-amateur-canvas: #f6f8f7;
+  --color-amateur-surface: #ffffff;
+  --color-amateur-ink: #0f1f1a;
+  --color-amateur-muted: #5c6f68;
+  --color-amateur-border: #dfe8e3;
+  --color-amateur-accent: #0d4a3c;
+  --color-amateur-accent-soft: #e3f4ee;
+  --color-amateur-highlight: #1f8f6b;
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Instrument Sans', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    @apply bg-amateur-canvas text-amateur-ink font-sans;
+  }
+}
