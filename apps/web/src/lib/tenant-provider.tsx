@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { apiGet, getStoredTenantId, setStoredTenantId } from './api';
 import { TenantContext, type TenantRow } from './tenant-context';
 
+/** Matches demo seed slug (`npm run seed:demo`) so first-run picks the curated tenant when present. */
+const PREFERRED_DEMO_TENANT_SLUG = 'kadikoy-genc-spor';
+
 export function TenantProvider({ children }: { children: ReactNode }) {
   const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [tenantId, setTenantIdState] = useState<string | null>(getStoredTenantId());
@@ -18,7 +21,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       if (stored && list.some((t) => t.id === stored)) {
         setTenantIdState(stored);
       } else if (list.length > 0) {
-        const next = list[0].id;
+        const preferred = list.find((t) => t.slug === PREFERRED_DEMO_TENANT_SLUG);
+        const next = preferred?.id ?? list[0].id;
         setStoredTenantId(next);
         setTenantIdState(next);
       } else {

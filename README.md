@@ -47,6 +47,16 @@ Apply database migrations (recommended before first run against a real database,
 npm run migration:run -w @amateur/api
 ```
 
+### Demo seed (recommended for local / staging)
+
+Populate the database with a realistic amateur club tenant, athletes, training, attendance, and finance examples:
+
+```bash
+npm run seed:demo
+```
+
+Details, idempotency, and the demo tenant id are documented in [docs/bootstrap.md](docs/bootstrap.md). After seeding, you can set `DEV_TENANT_ID` in `apps/api/.env` to the documented UUID so the API defaults to the demo tenant without `X-Tenant-Id`.
+
 API defaults:
 
 - Base URL: `http://localhost:3000`
@@ -101,6 +111,7 @@ Turkish and English are wired via `i18next` in `apps/web`. Locale files live und
 ## Documentation
 
 - [docs/README.md](docs/README.md) — index
+- [docs/bootstrap.md](docs/bootstrap.md) — demo seed and first-run data
 - [docs/architecture.md](docs/architecture.md) — structure and principles
 - [docs/domain.md](docs/domain.md) — modeling notes (membership, wave-two domains)
 - [docs/migrations.md](docs/migrations.md) — database migrations and `synchronize` policy

@@ -11,7 +11,8 @@
     "repo:guard": "node scripts/repo-guard.mjs",
     "lint": "eslint apps/api/src packages/*/src apps/web/src --max-warnings 0",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "seed:demo": "npm run seed:demo -w @amateur/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",
