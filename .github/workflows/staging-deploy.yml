@@ -1,0 +1,84 @@
+# Manual staging deployment to the Hetzner Ubuntu server (no Docker in this wave).
+name: Staging deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      git_ref:
+        description: 'Git ref to deploy (branch, tag, or full SHA)'
+        required: true
+        default: main
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to staging
+    runs-on: ubuntu-latest
+    environment: staging
+
+    env:
+      STAGING_HOST: ${{ vars.STAGING_HOST }}
+      STAGING_USER: ${{ vars.STAGING_USER }}
+      STAGING_PORT: ${{ vars.STAGING_PORT }}
+      STAGING_APP_DIR: ${{ vars.STAGING_APP_DIR }}
+
+    steps:
+      - name: Validate GitHub environment configuration
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in STAGING_HOST STAGING_USER STAGING_PORT STAGING_APP_DIR; do
+            eval "val=\${$name:-}"
+            if [ -z "$val" ]; then
+              echo "::error::Missing environment variable: $name (configure in GitHub → Settings → Environments → staging)"
+              missing=1
+            fi
+          done
+          if [ -z "${{ secrets.STAGING_SSH_KEY }}" ]; then
+            echo "::error::Missing secret STAGING_SSH_KEY"
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Checkout (records exact workflow revision; deploy runs from server git)
+        uses: actions/checkout@v4
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.STAGING_SSH_KEY }}
+
+      - name: Add server to known_hosts
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -p "${STAGING_PORT}" -H "${STAGING_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Run remote deploy script
+        run: |
+          set -euo pipefail
+          ssh -p "${STAGING_PORT}" -o IdentitiesOnly=yes \
+            "${STAGING_USER}@${STAGING_HOST}" \
+            "export FESA_REPO_ROOT='${STAGING_APP_DIR}'; export DEPLOY_GIT_REF='${{ inputs.git_ref }}'; bash -s" \
+            < deploy/staging/deploy.sh
+
+      - name: Health check on server
+        run: |
+          set -euo pipefail
+          ssh -p "${STAGING_PORT}" -o IdentitiesOnly=yes \
+            "${STAGING_USER}@${STAGING_HOST}" \
+            "export FESA_REPO_ROOT='${STAGING_APP_DIR}'; bash -s" \
+            < deploy/staging/health-check.sh
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "Staging deploy finished successfully."
+          echo "App directory: ${STAGING_APP_DIR}"
+          echo "Git ref: ${{ inputs.git_ref }}"
