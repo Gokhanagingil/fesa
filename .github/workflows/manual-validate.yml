@@ -1,0 +1,14 @@
+# On-demand validation (same checks as CI) when you are not opening a PR.
+name: Manual validation
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: manual-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  monorepo:
+    name: Monorepo validation
+    uses: ./.github/workflows/ci-reusable.yml

@@ -35,3 +35,7 @@ npm workspaces unite `apps/*` and `packages/*`. Shared code lives in packages; a
 
 - Root ESLint flat config for API and web TypeScript.
 - Prettier at repository root for consistent formatting.
+
+## CI (GitHub Actions)
+
+Pull requests and pushes to `main` run install, a lightweight repo guard (`npm run repo:guard`), lint, and build. There is no deployment in CI yet; see the root [README.md](../README.md#continuous-integration-github-actions) for workflow names and triggers. Future waves can add staging deploy, database-backed tests, or scheduled jobs as separate workflows without replacing this foundation.
