@@ -68,8 +68,14 @@ ensure_api_env() {
   local api_env="$1"
   local example="$2"
   if [[ ! -f "$api_env" ]]; then
-    log "Creating apps/api/.env from .env.example — YOU MUST EDIT DATABASE_URL and secrets on the server"
-    cp "$example" "$api_env"
+    local staging_ex="$api_dir/.env.staging.example"
+    if [[ -f "$staging_ex" ]]; then
+      log "Creating apps/api/.env from .env.staging.example — YOU MUST EDIT DATABASE_URL and secrets on the server"
+      cp "$staging_ex" "$api_env"
+    else
+      log "Creating apps/api/.env from .env.example — YOU MUST EDIT DATABASE_URL and secrets on the server"
+      cp "$example" "$api_env"
+    fi
     chmod 600 "$api_env" || true
   fi
   # shellcheck disable=SC1090
@@ -91,6 +97,7 @@ main() {
 
   log "Deploy root: $root"
   log "Target ref: $DEPLOY_GIT_REF"
+  log "Node $(node -v 2>/dev/null || echo '?') / npm $(npm -v 2>/dev/null || echo '?')"
 
   mkdir -p "$root"
   sync_repo "$root"

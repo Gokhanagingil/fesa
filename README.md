@@ -93,6 +93,7 @@ CI validates the monorepo on **pull requests** and **pushes to `main`**. There i
 |----------|---------|
 | [CI](.github/workflows/ci.yml) | Installs with `npm ci`, runs a small [repo guard](scripts/repo-guard.mjs), then `npm run lint` and `npm run build` (workspace-aware). |
 | [Manual validation](.github/workflows/manual-validate.yml) | Same checks on demand via **Actions → Manual validation → Run workflow** (useful when you are not opening a PR). |
+| [Staging SSH check](.github/workflows/staging-ssh-check.yml) | Optional: verify GitHub → server SSH only (no deploy). Use when fixing `Permission denied (publickey)`. |
 
 Reusable steps live in [.github/workflows/ci-reusable.yml](.github/workflows/ci-reusable.yml) so primary CI and manual runs stay in sync.
 
@@ -104,8 +105,10 @@ Reusable steps live in [.github/workflows/ci-reusable.yml](.github/workflows/ci-
 
 A first-wave **staging** path uses GitHub Actions (`workflow_dispatch`) to SSH into the server, sync the repo, install, build, run migrations and demo seed, and reload the API under **PM2**. Nginx serves the static web build and proxies `/api` to Nest.
 
-- **Workflow:** [.github/workflows/staging-deploy.yml](.github/workflows/staging-deploy.yml)
-- **Full guide:** [docs/staging-deploy.md](docs/staging-deploy.md) (secrets, variables, server prep, Nginx template, rollback hints)
+- **Deploy workflow:** [.github/workflows/staging-deploy.yml](.github/workflows/staging-deploy.yml)
+- **SSH-only debug workflow:** [.github/workflows/staging-ssh-check.yml](.github/workflows/staging-ssh-check.yml)
+- **Full guide:** [docs/staging-deploy.md](docs/staging-deploy.md) (secrets, variables, SSH troubleshooting, server prep, Nginx template, rollback hints)
+- **On-server validation:** [deploy/staging/server-validate.sh](deploy/staging/server-validate.sh) (run on Hetzner as the deploy user)
 
 ## Multilingual UX
 

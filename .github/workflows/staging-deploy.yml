@@ -9,6 +9,9 @@ on:
         required: true
         default: main
 
+permissions:
+  contents: read
+
 concurrency:
   group: staging-deploy
   cancel-in-progress: false
@@ -41,6 +44,24 @@ jobs:
             echo "::error::Missing secret STAGING_SSH_KEY"
             missing=1
           fi
+          # Sanity checks (no secrets printed)
+          if [ -n "${STAGING_APP_DIR:-}" ]; then
+            case "${STAGING_APP_DIR}" in
+              /*) ;;
+              *)
+                echo "::error::STAGING_APP_DIR must be an absolute path (start with /). Got a relative-looking value."
+                missing=1
+                ;;
+            esac
+          fi
+          if [ -n "${STAGING_PORT:-}" ]; then
+            case "${STAGING_PORT}" in
+              ''|*[!0-9]*)
+                echo "::error::STAGING_PORT must be a numeric port number."
+                missing=1
+                ;;
+            esac
+          fi
           if [ "$missing" -ne 0 ]; then
             exit 1
           fi
@@ -48,22 +69,66 @@ jobs:
       - name: Checkout (records exact workflow revision; deploy runs from server git)
         uses: actions/checkout@v4
 
-      - name: Install SSH key
+      - name: Install SSH key (ssh-agent)
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.STAGING_SSH_KEY }}
 
-      - name: Add server to known_hosts
+      - name: Safe connection summary (no secrets)
+        run: |
+          set -euo pipefail
+          echo "SSH target: user=${STAGING_USER} host=${STAGING_HOST} port=${STAGING_PORT}"
+          echo "STAGING_APP_DIR length: ${#STAGING_APP_DIR} chars (absolute path on server)"
+          if [ -n "${SSH_AUTH_SOCK:-}" ]; then
+            echo "ssh-agent: SSH_AUTH_SOCK is set (agent available for this job)"
+          else
+            echo "::warning::SSH_AUTH_SOCK is empty — ssh-agent may not be available; SSH can fail."
+          fi
+
+      - name: Add server host keys to known_hosts
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          ssh-keyscan -p "${STAGING_PORT}" -H "${STAGING_HOST}" >> ~/.ssh/known_hosts
+          # Hash hostnames in known_hosts; fetch common key types
+          ssh-keyscan -p "${STAGING_PORT}" -H -t rsa,ecdsa,ed25519 "${STAGING_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Preflight — SSH authentication (BatchMode, no password prompts)
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2206
+          ssh_opts=(
+            -p "${STAGING_PORT}"
+            -o BatchMode=yes
+            -o ConnectTimeout=20
+            -o StrictHostKeyChecking=yes
+            -o IdentitiesOnly=yes
+          )
+          if [ -n "${SSH_AUTH_SOCK:-}" ]; then
+            ssh_opts+=( -o "IdentityAgent=${SSH_AUTH_SOCK}" )
+          fi
+          if ! ssh "${ssh_opts[@]}" "${STAGING_USER}@${STAGING_HOST}" 'echo "SSH preflight OK: connected as $(whoami) @ $(hostname)"'; then
+            echo "::error::SSH preflight failed — the runner could not authenticate to ${STAGING_USER}@${STAGING_HOST}:${STAGING_PORT}."
+            echo "Common causes: (1) STAGING_SSH_KEY secret does not match a public key in ~${STAGING_USER}/.ssh/authorized_keys on the server;"
+            echo "(2) wrong STAGING_USER or STAGING_HOST or STAGING_PORT; (3) authorized_keys permissions/ownership on the server;"
+            echo "(4) sshd disallows this key type or PubkeyAuthentication. See docs/staging-deploy.md (SSH troubleshooting)."
+            exit 1
+          fi
 
       - name: Run remote deploy script
         run: |
           set -euo pipefail
-          ssh -p "${STAGING_PORT}" -o IdentitiesOnly=yes \
+          ssh_opts=(
+            -p "${STAGING_PORT}"
+            -o BatchMode=yes
+            -o ConnectTimeout=20
+            -o StrictHostKeyChecking=yes
+            -o IdentitiesOnly=yes
+          )
+          if [ -n "${SSH_AUTH_SOCK:-}" ]; then
+            ssh_opts+=( -o "IdentityAgent=${SSH_AUTH_SOCK}" )
+          fi
+          ssh "${ssh_opts[@]}" \
             "${STAGING_USER}@${STAGING_HOST}" \
             "export FESA_REPO_ROOT='${STAGING_APP_DIR}'; export DEPLOY_GIT_REF='${{ inputs.git_ref }}'; bash -s" \
             < deploy/staging/deploy.sh
@@ -71,7 +136,17 @@ jobs:
       - name: Health check on server
         run: |
           set -euo pipefail
-          ssh -p "${STAGING_PORT}" -o IdentitiesOnly=yes \
+          ssh_opts=(
+            -p "${STAGING_PORT}"
+            -o BatchMode=yes
+            -o ConnectTimeout=20
+            -o StrictHostKeyChecking=yes
+            -o IdentitiesOnly=yes
+          )
+          if [ -n "${SSH_AUTH_SOCK:-}" ]; then
+            ssh_opts+=( -o "IdentityAgent=${SSH_AUTH_SOCK}" )
+          fi
+          ssh "${ssh_opts[@]}" \
             "${STAGING_USER}@${STAGING_HOST}" \
             "export FESA_REPO_ROOT='${STAGING_APP_DIR}'; bash -s" \
             < deploy/staging/health-check.sh
