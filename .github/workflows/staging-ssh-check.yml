@@ -52,11 +52,6 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.STAGING_SSH_KEY }}
 
-      - name: Debug loaded SSH public key
-        run: |
-          set -euo pipefail
-          ssh-add -L || true
-
       - name: Add server host keys to known_hosts
         run: |
           set -euo pipefail
