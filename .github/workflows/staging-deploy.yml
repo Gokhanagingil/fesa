@@ -102,7 +102,6 @@ jobs:
             -o BatchMode=yes
             -o ConnectTimeout=20
             -o StrictHostKeyChecking=yes
-            -o IdentitiesOnly=yes
           )
           if [ -n "${SSH_AUTH_SOCK:-}" ]; then
             ssh_opts+=( -o "IdentityAgent=${SSH_AUTH_SOCK}" )
@@ -123,7 +122,6 @@ jobs:
             -o BatchMode=yes
             -o ConnectTimeout=20
             -o StrictHostKeyChecking=yes
-            -o IdentitiesOnly=yes
           )
           if [ -n "${SSH_AUTH_SOCK:-}" ]; then
             ssh_opts+=( -o "IdentityAgent=${SSH_AUTH_SOCK}" )
@@ -141,7 +139,6 @@ jobs:
             -o BatchMode=yes
             -o ConnectTimeout=20
             -o StrictHostKeyChecking=yes
-            -o IdentitiesOnly=yes
           )
           if [ -n "${SSH_AUTH_SOCK:-}" ]; then
             ssh_opts+=( -o "IdentityAgent=${SSH_AUTH_SOCK}" )
