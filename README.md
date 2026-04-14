@@ -114,6 +114,15 @@ A first-wave **staging** path uses GitHub Actions (`workflow_dispatch`) to SSH i
 
 Turkish and English are wired via `i18next` in `apps/web`. Locale files live under `apps/web/src/i18n/locales/`. See [docs/i18n.md](docs/i18n.md).
 
+## Club operations core workflows
+
+This wave strengthens the daily operating loop instead of adding parallel modules:
+
+- **Athletes + guardians:** full athlete list/detail/form flow plus reusable guardian records, guardian list/detail/edit routes, and in-context linking/unlinking from athlete profiles.
+- **Groups + teams:** group pages explain cohort vs squad separation, and both groups and teams deep-link into the filtered athlete workspace so staff can move from structure to action quickly.
+- **Training + attendance:** session planning keeps group-required / team-optional rules visible, and attendance supports roster search plus bulk status marking for fast repeated use.
+- **Charge items + athlete charges:** charge items are editable in place, athlete charges expose athlete names and status updates, and bulk charge assignment is available from the finance workspace.
+
 ## Domain: Group vs Team vs Athlete
 
 **Groups** (table `club_groups`) are training cohorts / age buckets. **Teams** are squads; they may optionally link to a group (`teams.group_id` nullable). **Athletes** use `primaryGroupId` for their cohort and optional **team memberships** for squads. See [docs/domain.md](docs/domain.md).

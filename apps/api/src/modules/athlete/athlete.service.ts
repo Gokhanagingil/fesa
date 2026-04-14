@@ -72,7 +72,8 @@ export class AthleteService {
     const offset = query.offset ?? 0;
     const qb = this.athletes
       .createQueryBuilder('a')
-      .where('a.tenantId = :tenantId', { tenantId });
+      .where('a.tenantId = :tenantId', { tenantId })
+      .distinct(true);
 
     if (query.status) {
       qb.andWhere('a.status = :status', { status: query.status });
@@ -82,6 +83,14 @@ export class AthleteService {
     }
     if (query.primaryGroupId) {
       qb.andWhere('a.primaryGroupId = :primaryGroupId', { primaryGroupId: query.primaryGroupId });
+    }
+    if (query.teamId) {
+      qb.innerJoin(
+        AthleteTeamMembership,
+        'tm',
+        'tm.tenantId = a.tenantId AND tm.athleteId = a.id AND tm.teamId = :teamId AND tm.endedAt IS NULL',
+        { teamId: query.teamId },
+      );
     }
     if (query.q?.trim()) {
       const term = `%${query.q.trim().toLowerCase()}%`;

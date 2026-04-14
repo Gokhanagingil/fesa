@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, Repository } from 'typeorm';
+import { Brackets, QueryFailedError, Repository } from 'typeorm';
 import { ChargeItem } from '../../database/entities/charge-item.entity';
 import { AthleteCharge } from '../../database/entities/athlete-charge.entity';
 import { Athlete } from '../../database/entities/athlete.entity';
@@ -11,6 +11,7 @@ import { ListChargeItemsQueryDto } from './dto/list-charge-items-query.dto';
 import { CreateAthleteChargeDto } from './dto/create-athlete-charge.dto';
 import { UpdateAthleteChargeDto } from './dto/update-athlete-charge.dto';
 import { ListAthleteChargesQueryDto } from './dto/list-athlete-charges-query.dto';
+import { CreateBulkAthleteChargesDto } from './dto/create-bulk-athlete-charges.dto';
 
 @Injectable()
 export class FinanceService {
@@ -72,8 +73,19 @@ export class FinanceService {
   }
 
   async removeChargeItem(tenantId: string, id: string): Promise<void> {
-    const res = await this.chargeItems.delete({ id, tenantId });
-    if (!res.affected) throw new NotFoundException('Charge item not found');
+    try {
+      const res = await this.chargeItems.delete({ id, tenantId });
+      if (!res.affected) throw new NotFoundException('Charge item not found');
+    } catch (error) {
+      const maybeCode =
+        error instanceof QueryFailedError
+          ? (error as QueryFailedError & { driverError?: { code?: string } }).driverError?.code
+          : undefined;
+      if (maybeCode === '23503') {
+        throw new BadRequestException('Charge item cannot be deleted while athlete charges still use it');
+      }
+      throw error;
+    }
   }
 
   async createAthleteCharge(tenantId: string, dto: CreateAthleteChargeDto): Promise<AthleteCharge> {
@@ -100,9 +112,23 @@ export class FinanceService {
     const qb = this.athleteCharges
       .createQueryBuilder('ac')
       .leftJoinAndSelect('ac.chargeItem', 'chargeItem')
+      .leftJoinAndSelect('ac.athlete', 'athlete')
       .where('ac.tenantId = :tenantId', { tenantId });
     if (query.athleteId) qb.andWhere('ac.athleteId = :athleteId', { athleteId: query.athleteId });
     if (query.status) qb.andWhere('ac.status = :status', { status: query.status });
+    if (query.q?.trim()) {
+      const term = `%${query.q.trim().toLowerCase()}%`;
+      qb.andWhere(
+        new Brackets((w) => {
+          w.where('LOWER(chargeItem.name) LIKE :term', { term })
+            .orWhere('LOWER(chargeItem.category) LIKE :term', { term })
+            .orWhere('LOWER(athlete.firstName) LIKE :term', { term })
+            .orWhere('LOWER(athlete.lastName) LIKE :term', { term })
+            .orWhere("LOWER(CONCAT(athlete.firstName, ' ', athlete.lastName)) LIKE :term", { term })
+            .orWhere("LOWER(CONCAT(athlete.lastName, ' ', athlete.firstName)) LIKE :term", { term });
+        }),
+      );
+    }
     const total = await qb.clone().getCount();
     const items = await qb.orderBy('ac.createdAt', 'DESC').skip(offset).take(limit).getMany();
     return { items, total };
@@ -111,10 +137,35 @@ export class FinanceService {
   async getAthleteCharge(tenantId: string, id: string): Promise<AthleteCharge> {
     const row = await this.athleteCharges.findOne({
       where: { id, tenantId },
-      relations: ['chargeItem'],
+      relations: ['chargeItem', 'athlete'],
     });
     if (!row) throw new NotFoundException('Athlete charge not found');
     return row;
+  }
+
+  async createBulkAthleteCharges(tenantId: string, dto: CreateBulkAthleteChargesDto): Promise<AthleteCharge[]> {
+    const athleteIds = Array.from(new Set(dto.athleteIds));
+    const athletes = await this.athletes.find({ where: athleteIds.map((id) => ({ id, tenantId })) });
+    if (athletes.length !== athleteIds.length) {
+      throw new BadRequestException('One or more athletes were not found for this tenant');
+    }
+
+    const item = await this.chargeItems.findOne({ where: { id: dto.chargeItemId, tenantId } });
+    if (!item) throw new BadRequestException('Charge item not found');
+
+    const amount = dto.amount ?? Number(item.defaultAmount);
+    const rows = athleteIds.map((athleteId) =>
+      this.athleteCharges.create({
+        tenantId,
+        athleteId,
+        chargeItemId: dto.chargeItemId,
+        amount: amount.toFixed(2),
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        status: dto.status ?? AthleteChargeStatus.PENDING,
+        notes: dto.notes ?? null,
+      }),
+    );
+    return this.athleteCharges.save(rows);
   }
 
   async updateAthleteCharge(tenantId: string, id: string, dto: UpdateAthleteChargeDto): Promise<AthleteCharge> {

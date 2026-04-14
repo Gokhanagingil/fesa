@@ -4,10 +4,25 @@ export type AthleteStatus = 'active' | 'inactive' | 'trial' | 'archived';
 export type TrainingSessionStatus = 'planned' | 'completed' | 'cancelled';
 export type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late';
 export type AthleteChargeStatus = 'pending' | 'partially_paid' | 'paid' | 'cancelled';
+export type GuardianRelationshipType = 'mother' | 'father' | 'guardian' | 'other';
 
 export type SportBranch = { id: string; code: string; name: string };
-export type ClubGroup = { id: string; name: string; sportBranchId: string };
-export type Team = { id: string; name: string; sportBranchId: string; groupId: string | null };
+export type ClubGroup = {
+  id: string;
+  name: string;
+  sportBranchId: string;
+  sportBranch?: SportBranch;
+  teams?: Pick<Team, 'id' | 'name'>[];
+};
+export type Team = {
+  id: string;
+  name: string;
+  sportBranchId: string;
+  groupId: string | null;
+  code?: string | null;
+  sportBranch?: SportBranch;
+  group?: ClubGroup | null;
+};
 
 export type Athlete = {
   id: string;
@@ -21,6 +36,8 @@ export type Athlete = {
   status: AthleteStatus;
   jerseyNumber: string | null;
   notes: string | null;
+  sportBranch?: SportBranch;
+  primaryGroup?: ClubGroup | null;
 };
 
 export type Guardian = {
@@ -29,13 +46,16 @@ export type Guardian = {
   lastName: string;
   phone: string | null;
   email: string | null;
+  notes?: string | null;
 };
 
 export type AthleteGuardianLink = {
   id: string;
   relationshipType: string;
   isPrimaryContact: boolean;
+  notes?: string | null;
   guardian: Guardian;
+  athlete?: Athlete;
 };
 
 export type TeamMembership = {
@@ -55,6 +75,10 @@ export type TrainingSession = {
   scheduledEnd: string;
   location: string | null;
   status: TrainingSessionStatus;
+  notes?: string | null;
+  sportBranch?: SportBranch;
+  group?: ClubGroup;
+  team?: Team | null;
 };
 
 export type AttendanceRow = {
@@ -81,4 +105,6 @@ export type AthleteCharge = {
   dueDate: string | null;
   status: AthleteChargeStatus;
   chargeItem?: ChargeItem;
+  athlete?: Athlete;
+  notes?: string | null;
 };

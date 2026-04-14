@@ -4,42 +4,64 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/PageHeader';
 import { apiGet, apiPost } from '../lib/api';
+import {
+  formatDateTime,
+  getAttendanceStatusLabel,
+  getPersonName,
+  getTrainingStatusLabel,
+} from '../lib/display';
 import type {
   Athlete,
   AttendanceRow,
   AttendanceStatus,
+  ClubGroup,
+  Team,
   TrainingSession,
 } from '../lib/domain-types';
+import { useTenant } from '../lib/tenant-hooks';
 
 const attendanceOptions: AttendanceStatus[] = ['present', 'absent', 'excused', 'late'];
 
 export function TrainingSessionDetailPage() {
   const { id } = useParams();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { tenantId } = useTenant();
   const [session, setSession] = useState<TrainingSession | null>(null);
   const [roster, setRoster] = useState<Athlete[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
+  const [groups, setGroups] = useState<ClubGroup[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [draft, setDraft] = useState<Record<string, AttendanceStatus>>({});
+  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!tenantId || !id) return;
     setLoading(true);
     setError(null);
     try {
       const s = await apiGet<TrainingSession>(`/api/training-sessions/${id}`);
+      const athleteParams = new URLSearchParams({
+        primaryGroupId: s.groupId,
+        limit: '500',
+      });
+      if (s.teamId) athleteParams.set('teamId', s.teamId);
       const [att, athletes] = await Promise.all([
         apiGet<AttendanceRow[]>(`/api/training-sessions/${id}/attendance`),
-        apiGet<{ items: Athlete[] }>(
-          `/api/athletes?primaryGroupId=${s.groupId}&limit=500`,
-        ),
+        apiGet<{ items: Athlete[] }>(`/api/athletes?${athleteParams.toString()}`),
+      ]);
+      const [groupRes, teamRes] = await Promise.all([
+        apiGet<{ items: ClubGroup[] }>('/api/groups?limit=200'),
+        apiGet<{ items: Team[] }>('/api/teams?limit=200'),
       ]);
       setSession(s);
       setAttendance(att);
       setRoster(athletes.items);
+      setGroups(groupRes.items);
+      setTeams(teamRes.items);
       const next: Record<string, AttendanceStatus> = {};
       for (const row of att) {
         next[row.athlete.id] = row.status;
@@ -53,7 +75,7 @@ export function TrainingSessionDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, t]);
+  }, [id, t, tenantId]);
 
   useEffect(() => {
     void load();
@@ -70,8 +92,38 @@ export function TrainingSessionDetailPage() {
         list.push({ athlete: r.athlete, attendanceId: r.id });
       }
     }
-    return list;
-  }, [roster, attendance]);
+    if (!query.trim()) return list;
+    const term = query.trim().toLowerCase();
+    return list.filter(({ athlete }) =>
+      `${athlete.firstName} ${athlete.lastName}`.toLowerCase().includes(term) ||
+      `${athlete.lastName} ${athlete.firstName}`.toLowerCase().includes(term),
+    );
+  }, [attendance, query, roster]);
+
+  const summary = useMemo(
+    () =>
+      attendanceOptions.reduce<Record<AttendanceStatus, number>>(
+        (acc, status) => ({
+          ...acc,
+          [status]: Object.values(draft).filter((value) => value === status).length,
+        }),
+        { present: 0, absent: 0, excused: 0, late: 0 },
+      ),
+    [draft],
+  );
+
+  const groupName = session ? groups.find((group) => group.id === session.groupId)?.name : undefined;
+  const teamName = session?.teamId ? teams.find((team) => team.id === session.teamId)?.name : undefined;
+
+  function applyBulkStatus(status: AttendanceStatus) {
+    setDraft((current) => {
+      const next = { ...current };
+      for (const { athlete } of rows) {
+        next[athlete.id] = status;
+      }
+      return next;
+    });
+  }
 
   async function save() {
     if (!id) return;
@@ -106,45 +158,76 @@ export function TrainingSessionDetailPage() {
       <PageHeader title={session.title} subtitle={t('pages.training.attendance')} />
       <div className="mb-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
         <p className="text-sm text-amateur-muted">
-          {new Date(session.scheduledStart).toLocaleString()} — {new Date(session.scheduledEnd).toLocaleString()}
+          {formatDateTime(session.scheduledStart, i18n.language)} —{' '}
+          {formatDateTime(session.scheduledEnd, i18n.language)}
+        </p>
+        <p className="mt-2 text-sm text-amateur-muted">
+          {t('pages.athletes.primaryGroup')}: {groupName ?? t('pages.training.unknownGroup')}
+          {teamName ? ` · ${t('pages.teams.title')}: ${teamName}` : ''}
         </p>
         {session.location ? (
           <p className="mt-1 text-sm">
             {t('pages.training.location')}: {session.location}
           </p>
         ) : null}
-        <p className="mt-2 text-xs capitalize text-amateur-muted">{session.status}</p>
+        <p className="mt-2 text-xs text-amateur-muted">{getTrainingStatusLabel(t, session.status)}</p>
       </div>
 
       <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
         <p className="text-sm text-amateur-muted">{t('pages.training.attendanceHint')}</p>
         {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
         {message ? <p className="mt-2 text-sm text-amateur-accent">{message}</p> : null}
+        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+            <span>{t('app.actions.search')}</span>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('pages.training.searchRoster')}
+              className="min-w-[12rem] bg-transparent text-amateur-ink outline-none placeholder:text-amateur-muted"
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {attendanceOptions.map((status) => (
+              <Button key={status} type="button" variant="ghost" onClick={() => applyBulkStatus(status)}>
+                {t('pages.training.markAll', { status: getAttendanceStatusLabel(t, status) })}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {attendanceOptions.map((status) => (
+            <div key={status} className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+                {getAttendanceStatusLabel(t, status)}
+              </p>
+              <p className="mt-1 font-display text-2xl font-semibold text-amateur-ink">{summary[status]}</p>
+            </div>
+          ))}
+        </div>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[480px] text-left text-sm">
             <thead>
               <tr className="border-b border-amateur-border text-amateur-muted">
-                <th className="pb-2 font-medium">{t('pages.athletes.lastName')}</th>
-                <th className="pb-2 font-medium">{t('pages.athletes.firstName')}</th>
+                <th className="pb-2 font-medium">{t('pages.athletes.name')}</th>
                 <th className="pb-2 font-medium">{t('pages.training.attendance')}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map(({ athlete: a }) => (
                 <tr key={a.id} className="border-b border-amateur-border/60 last:border-0">
-                  <td className="py-2 pr-2">{a.lastName}</td>
-                  <td className="py-2 pr-2">{a.firstName}</td>
+                  <td className="py-2 pr-2">{getPersonName(a)}</td>
                   <td className="py-2">
                     <select
                       value={draft[a.id] ?? 'present'}
                       onChange={(e) =>
                         setDraft((d) => ({ ...d, [a.id]: e.target.value as AttendanceStatus }))
                       }
-                      className="rounded-lg border border-amateur-border bg-amateur-canvas px-2 py-1 text-sm capitalize"
+                      className="rounded-lg border border-amateur-border bg-amateur-canvas px-2 py-1 text-sm"
                     >
                       {attendanceOptions.map((o) => (
                         <option key={o} value={o}>
-                          {o}
+                          {getAttendanceStatusLabel(t, o)}
                         </option>
                       ))}
                     </select>
