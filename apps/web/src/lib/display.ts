@@ -50,7 +50,7 @@ export function getAttendanceStatusLabel(t: TFunction, status: AttendanceStatus)
 }
 
 export function getChargeStatusLabel(t: TFunction, status: AthleteChargeStatus): string {
-  return t(`app.enums.chargeStatus.${status}`);
+  return t(`app.enums.athleteChargeStatus.${status}`);
 }
 
 export function getGuardianRelationshipLabel(t: TFunction, relationshipType: string): string {

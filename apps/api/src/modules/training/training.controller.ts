@@ -16,6 +16,8 @@ import { TrainingService } from './training.service';
 import { CreateTrainingSessionDto } from './dto/create-training-session.dto';
 import { UpdateTrainingSessionDto } from './dto/update-training-session.dto';
 import { ListTrainingSessionsQueryDto } from './dto/list-training-sessions-query.dto';
+import { CreateTrainingSessionSeriesDto } from './dto/create-training-session-series.dto';
+import { BulkUpdateTrainingSessionsDto } from './dto/bulk-update-training-sessions.dto';
 import { BulkAttendanceDto } from './dto/bulk-attendance.dto';
 import { PatchAttendanceDto } from './dto/patch-attendance.dto';
 
@@ -32,6 +34,16 @@ export class TrainingController {
   @Post()
   create(@Req() req: Request, @Body() dto: CreateTrainingSessionDto) {
     return this.training.create(req.tenantId!, dto);
+  }
+
+  @Post('series')
+  createSeries(@Req() req: Request, @Body() dto: CreateTrainingSessionSeriesDto) {
+    return this.training.createSeries(req.tenantId!, dto);
+  }
+
+  @Post('bulk')
+  bulkUpdate(@Req() req: Request, @Body() dto: BulkUpdateTrainingSessionsDto) {
+    return this.training.bulkUpdate(req.tenantId!, dto);
   }
 
   @Get(':id')
