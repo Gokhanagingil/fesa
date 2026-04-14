@@ -31,10 +31,36 @@ Guardians use a classic **M:N** link table `athlete_guardians` with relationship
 
 Eligibility rule in the API: an athlete must share the session’s **primary group**; if the session targets a team, the athlete needs an **active** (no `endedAt`) membership in that team.
 
+### Operational UX implications in the current product wave
+
+- **Athlete lists** can now be filtered by **group** and by **active team membership**, which keeps the group-vs-team split visible in day-to-day roster work.
+- **Groups** are presented as the main training container, with direct jumps into the athlete list and session planning.
+- **Teams** are presented as optional squads layered on top of groups, with direct jumps into filtered athlete rosters.
+- **Attendance** uses the same rule set: a team session loads only athletes who both belong to the session group and currently hold an active membership in that team.
+
+## Guardians
+
+- Guardians remain reusable tenant-level contact records.
+- The product wave now treats guardian operations as a first-class workflow:
+  - browse guardians,
+  - open a guardian profile,
+  - edit guardian contact details,
+  - see linked athletes from the guardian side,
+  - create a guardian directly from an athlete profile and link them in one flow.
+
 ## Finance (foundation only)
 
 - **`charge_items`** — reusable catalog (name, category, default amount, currency, active flag).
 - **`athlete_charges`** — an amount assigned to an athlete, optional due date, status (pending / partially_paid / paid / cancelled).
+
+### Current operational finance flow
+
+- Clubs define reusable **charge items** and can now manage active/inactive state directly from the list.
+- **Athlete charges** can be assigned:
+  - individually from an athlete profile,
+  - individually through the finance area,
+  - in **bulk** across multiple selected athletes.
+- Athlete charge lists now include the linked athlete record so staff can review and update charge status without losing context.
 
 **Intentionally deferred:** ledger postings, invoices, payment gateways, tax lines, inventory links.
 

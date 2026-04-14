@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/PageHeader';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
+import { getAthleteStatusLabel } from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
 import type { Athlete, AthleteStatus, ClubGroup, SportBranch } from '../lib/domain-types';
 
@@ -11,7 +12,7 @@ const statuses: AthleteStatus[] = ['active', 'inactive', 'trial', 'archived'];
 
 export function AthleteFormPage() {
   const { id } = useParams();
-  const isNew = id === 'new';
+  const isNew = !id;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { tenantId } = useTenant();
@@ -60,7 +61,7 @@ export function AthleteFormPage() {
         setGroups([]);
       }
     })();
-  }, [tenantId, sportBranchId]);
+  }, [sportBranchId, tenantId]);
 
   useEffect(() => {
     if (!tenantId || isNew || !id) return;
@@ -174,7 +175,7 @@ export function AthleteFormPage() {
                 <input
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
-                  placeholder="—"
+                  placeholder={t('pages.athletes.optionalHint')}
                   className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 outline-none ring-amateur-accent/20 focus:ring-2"
                 />
               </label>
@@ -215,6 +216,7 @@ export function AthleteFormPage() {
                   </option>
                 ))}
               </select>
+              <span className="text-xs text-amateur-muted">{t('pages.athletes.primaryGroupHint')}</span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-amateur-ink">{t('pages.athletes.status')}</span>
@@ -225,7 +227,7 @@ export function AthleteFormPage() {
               >
                 {statuses.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {getAthleteStatusLabel(t, s)}
                   </option>
                 ))}
               </select>

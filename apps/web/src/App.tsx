@@ -5,7 +5,9 @@ import { DashboardPage } from './pages/DashboardPage';
 import { AthletesPage } from './pages/AthletesPage';
 import { AthleteFormPage } from './pages/AthleteFormPage';
 import { AthleteDetailPage } from './pages/AthleteDetailPage';
+import { GuardiansPage } from './pages/GuardiansPage';
 import { GuardianFormPage } from './pages/GuardianFormPage';
+import { GuardianDetailPage } from './pages/GuardianDetailPage';
 import { GroupsPage } from './pages/GroupsPage';
 import { TeamsPage } from './pages/TeamsPage';
 import { FinanceHubPage } from './pages/FinanceHubPage';
@@ -28,7 +30,10 @@ export default function App() {
         <Route path="/app/athletes/:id/edit" element={<AthleteFormPage />} />
         <Route path="/app/athletes/:id" element={<AthleteDetailPage />} />
         <Route path="/app/athletes" element={<AthletesPage />} />
+        <Route path="/app/guardians/:id/edit" element={<GuardianFormPage />} />
+        <Route path="/app/guardians/:id" element={<GuardianDetailPage />} />
         <Route path="/app/guardians/new" element={<GuardianFormPage />} />
+        <Route path="/app/guardians" element={<GuardiansPage />} />
         <Route path="/app/groups" element={<GroupsPage />} />
         <Route path="/app/teams" element={<TeamsPage />} />
         <Route path="/app/training/new" element={<TrainingSessionFormPage />} />

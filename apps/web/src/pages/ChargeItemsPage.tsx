@@ -1,24 +1,28 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
-import { apiGet, apiPost } from '../lib/api';
+import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
 import { useTenant } from '../lib/tenant-hooks';
 import type { ChargeItem } from '../lib/domain-types';
 
 export function ChargeItemsPage() {
   const { t } = useTranslation();
   const { tenantId, loading: tenantLoading } = useTenant();
+  const [q, setQ] = useState('');
   const [items, setItems] = useState<ChargeItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [show, setShow] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('dues');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('TRY');
+  const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -26,32 +30,69 @@ export function ChargeItemsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiGet<{ items: ChargeItem[] }>('/api/charge-items?limit=200');
+      const params = new URLSearchParams({ limit: '200' });
+      if (q.trim()) params.set('q', q.trim());
+      const res = await apiGet<{ items: ChargeItem[] }>(`/api/charge-items?${params.toString()}`);
       setItems(res.items);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [tenantId, t]);
+  }, [q, tenantId, t]);
 
   useEffect(() => {
-    void load();
+    const id = setTimeout(() => void load(), 250);
+    return () => clearTimeout(id);
   }, [load]);
+
+  function resetForm() {
+    setEditingId(null);
+    setName('');
+    setCategory('dues');
+    setAmount('');
+    setCurrency('TRY');
+    setIsActive(true);
+  }
+
+  function openCreateForm() {
+    resetForm();
+    setShow(true);
+    setMessage(null);
+  }
+
+  function openEditForm(item: ChargeItem) {
+    setEditingId(item.id);
+    setName(item.name);
+    setCategory(item.category);
+    setAmount(item.defaultAmount);
+    setCurrency(item.currency);
+    setIsActive(item.isActive);
+    setShow(true);
+    setMessage(null);
+  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setError(null);
     try {
-      await apiPost('/api/charge-items', {
+      const payload = {
         name,
         category,
         defaultAmount: parseFloat(amount),
         currency,
-      });
+        isActive,
+      };
+      if (editingId) {
+        await apiPatch(`/api/charge-items/${editingId}`, payload);
+        setMessage(t('pages.chargeItems.updated'));
+      } else {
+        await apiPost('/api/charge-items', payload);
+        setMessage(t('pages.chargeItems.created'));
+      }
       setShow(false);
-      setName('');
-      setAmount('');
+      resetForm();
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('app.errors.saveFailed'));
@@ -60,21 +101,69 @@ export function ChargeItemsPage() {
     }
   }
 
+  async function toggleActive(item: ChargeItem) {
+    try {
+      await apiPatch(`/api/charge-items/${item.id}`, { isActive: !item.isActive });
+      setMessage(
+        item.isActive ? t('pages.chargeItems.deactivated') : t('pages.chargeItems.activated'),
+      );
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('app.errors.saveFailed'));
+    }
+  }
+
+  async function removeItem(item: ChargeItem) {
+    try {
+      await apiDelete(`/api/charge-items/${item.id}`);
+      setMessage(t('pages.chargeItems.deleted'));
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('app.errors.saveFailed'));
+    }
+  }
+
+  const activeCount = useMemo(() => items.filter((item) => item.isActive).length, [items]);
+
   return (
     <div>
       <PageHeader title={t('pages.chargeItems.title')} subtitle={t('pages.chargeItems.subtitle')} />
       <ListPageFrame
+        search={{ value: q, onChange: setQ, disabled: !tenantId || tenantLoading }}
         toolbar={
           <>
-            <Button variant="ghost" disabled>
-              {t('app.actions.filter')}
+            <Button type="button" variant="ghost" onClick={() => setShow((s) => !s)}>
+              {show ? t('app.actions.cancel') : t('app.actions.manage')}
             </Button>
-            <Button type="button" onClick={() => setShow((s) => !s)}>
+            <Button type="button" onClick={openCreateForm}>
               {t('pages.chargeItems.new')}
             </Button>
           </>
         }
       >
+        {message ? <p className="mb-4 text-sm text-amateur-accent">{message}</p> : null}
+        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+              {t('pages.chargeItems.summaryTotal')}
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold text-amateur-ink">{items.length}</p>
+          </div>
+          <div className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+              {t('pages.chargeItems.summaryActive')}
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold text-amateur-ink">{activeCount}</p>
+          </div>
+          <div className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+              {t('pages.chargeItems.summaryInactive')}
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold text-amateur-ink">
+              {items.length - activeCount}
+            </p>
+          </div>
+        </div>
         {!tenantId && !tenantLoading ? (
           <p className="text-sm text-amateur-muted">{t('app.errors.needTenant')}</p>
         ) : show ? (
@@ -122,8 +211,26 @@ export function ChargeItemsPage() {
                 className="rounded-lg border border-amateur-border bg-amateur-surface px-2 py-2"
               />
             </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+              />
+              {t('pages.chargeItems.active')}
+            </label>
             <Button type="submit" disabled={saving}>
               {t('pages.athletes.save')}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setShow(false);
+                resetForm();
+              }}
+            >
+              {t('pages.athletes.cancel')}
             </Button>
           </form>
         ) : null}
@@ -141,6 +248,7 @@ export function ChargeItemsPage() {
                   <th className="pb-2 font-medium">{t('pages.chargeItems.category')}</th>
                   <th className="pb-2 font-medium">{t('pages.chargeItems.amount')}</th>
                   <th className="pb-2 font-medium">{t('pages.chargeItems.active')}</th>
+                  <th className="pb-2 font-medium">{t('app.actions.manage')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -151,7 +259,28 @@ export function ChargeItemsPage() {
                     <td className="py-3">
                       {c.currency} {c.defaultAmount}
                     </td>
-                    <td className="py-3">{c.isActive ? '✓' : '—'}</td>
+                    <td className="py-3">
+                      {c.isActive ? t('pages.chargeItems.activeState') : t('pages.chargeItems.inactiveState')}
+                    </td>
+                    <td className="py-3">
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" variant="ghost" onClick={() => openEditForm(c)}>
+                          {t('pages.athletes.edit')}
+                        </Button>
+                        <Button type="button" variant="ghost" onClick={() => void toggleActive(c)}>
+                          {c.isActive
+                            ? t('pages.chargeItems.deactivateAction')
+                            : t('pages.chargeItems.activateAction')}
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => void removeItem(c)}
+                          className="text-sm font-medium text-amateur-muted transition hover:text-red-700"
+                        >
+                          {t('pages.athletes.delete')}
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

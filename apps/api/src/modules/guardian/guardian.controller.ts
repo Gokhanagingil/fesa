@@ -26,6 +26,11 @@ export class GuardianController {
     return this.guardians.findOne(req.tenantId!, id);
   }
 
+  @Get(':id/athletes')
+  listAthletes(@Req() req: Request, @Param('id') id: string) {
+    return this.guardians.listAthletesForGuardian(req.tenantId!, id);
+  }
+
   @Patch(':id')
   update(@Req() req: Request, @Param('id') id: string, @Body() dto: UpdateGuardianDto) {
     return this.guardians.update(req.tenantId!, id, dto);

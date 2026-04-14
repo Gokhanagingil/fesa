@@ -40,7 +40,7 @@ export function TrainingSessionFormPage() {
   }, [tenantId, t]);
 
   useEffect(() => {
-    if (!sportBranchId) {
+    if (!tenantId || !sportBranchId) {
       setGroups([]);
       return;
     }
@@ -55,10 +55,10 @@ export function TrainingSessionFormPage() {
         setGroups([]);
       }
     })();
-  }, [sportBranchId]);
+  }, [sportBranchId, tenantId]);
 
   useEffect(() => {
-    if (!sportBranchId) {
+    if (!tenantId || !sportBranchId) {
       setTeams([]);
       return;
     }
@@ -72,7 +72,7 @@ export function TrainingSessionFormPage() {
         setTeams([]);
       }
     })();
-  }, [sportBranchId, groupId]);
+  }, [groupId, sportBranchId, tenantId]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -106,7 +106,7 @@ export function TrainingSessionFormPage() {
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">{t('pages.training.detailTitle')}</span>
+            <span className="font-medium">{t('pages.training.sessionTitle')}</span>
             <input
               required
               value={title}
@@ -150,9 +150,10 @@ export function TrainingSessionFormPage() {
                 </option>
               ))}
             </select>
+              <span className="text-xs text-amateur-muted">{t('pages.training.groupHint')}</span>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">{t('pages.teams.title')} ({t('app.actions.filter')})</span>
+            <span className="font-medium">{t('pages.training.teamOptional')}</span>
             <select
               value={teamId}
               onChange={(e) => setTeamId(e.target.value)}
@@ -165,10 +166,11 @@ export function TrainingSessionFormPage() {
                 </option>
               ))}
             </select>
+            <span className="text-xs text-amateur-muted">{t('pages.training.teamHint')}</span>
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium">{t('pages.training.scheduled')} (start)</span>
+              <span className="font-medium">{t('pages.training.startTime')}</span>
               <input
                 required
                 type="datetime-local"
@@ -178,7 +180,7 @@ export function TrainingSessionFormPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium">{t('pages.training.scheduled')} (end)</span>
+              <span className="font-medium">{t('pages.training.endTime')}</span>
               <input
                 required
                 type="datetime-local"

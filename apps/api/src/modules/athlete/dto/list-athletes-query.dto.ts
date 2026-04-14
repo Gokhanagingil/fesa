@@ -21,6 +21,10 @@ export class ListAthletesQueryDto {
   primaryGroupId?: string;
 
   @IsOptional()
+  @IsUUID()
+  teamId?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @Min(1)
   @Max(200)

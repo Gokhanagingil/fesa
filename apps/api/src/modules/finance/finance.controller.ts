@@ -19,6 +19,7 @@ import { ListChargeItemsQueryDto } from './dto/list-charge-items-query.dto';
 import { CreateAthleteChargeDto } from './dto/create-athlete-charge.dto';
 import { UpdateAthleteChargeDto } from './dto/update-athlete-charge.dto';
 import { ListAthleteChargesQueryDto } from './dto/list-athlete-charges-query.dto';
+import { CreateBulkAthleteChargesDto } from './dto/create-bulk-athlete-charges.dto';
 
 @Controller('charge-items')
 @UseGuards(TenantGuard)
@@ -64,6 +65,11 @@ export class AthleteChargeController {
   @Post()
   create(@Req() req: Request, @Body() dto: CreateAthleteChargeDto) {
     return this.finance.createAthleteCharge(req.tenantId!, dto);
+  }
+
+  @Post('bulk')
+  createBulk(@Req() req: Request, @Body() dto: CreateBulkAthleteChargesDto) {
+    return this.finance.createBulkAthleteCharges(req.tenantId!, dto);
   }
 
   @Get(':id')

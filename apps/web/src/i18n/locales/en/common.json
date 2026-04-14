@@ -5,6 +5,7 @@
     "nav": {
       "dashboard": "Dashboard",
       "athletes": "Athletes",
+      "guardians": "Guardians",
       "groups": "Groups",
       "teams": "Teams",
       "training": "Training",
@@ -17,7 +18,12 @@
       "filter": "Filters",
       "export": "Export",
       "bulk": "Bulk actions",
-      "new": "New"
+      "new": "New",
+      "update": "Update",
+      "clear": "Clear",
+      "open": "Open",
+      "cancel": "Cancel",
+      "manage": "Manage"
     },
     "states": {
       "loading": "Loading…",
@@ -38,16 +44,66 @@
       "saveFailed": "Could not save.",
       "needTenant": "Select a club in the header.",
       "noBranches": "Add a sport branch in the database first."
+    },
+    "count": {
+      "rows_one": "{{count}} row",
+      "rows_other": "{{count}} rows"
+    },
+    "enums": {
+      "athleteStatus": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "trial": "Trial",
+        "archived": "Archived"
+      },
+      "trainingStatus": {
+        "planned": "Planned",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "attendanceStatus": {
+        "present": "Present",
+        "absent": "Absent",
+        "excused": "Excused",
+        "late": "Late"
+      },
+      "athleteChargeStatus": {
+        "pending": "Pending",
+        "partially_paid": "Partially paid",
+        "paid": "Paid",
+        "cancelled": "Cancelled"
+      },
+      "guardianRelationship": {
+        "mother": "Mother",
+        "father": "Father",
+        "guardian": "Guardian",
+        "other": "Other"
+      }
     }
   },
   "pages": {
     "dashboard": {
       "title": "Dashboard",
-      "subtitle": "Today’s pulse for your club.",
+      "subtitle": "The daily operating snapshot for your club.",
       "cardOps": "Operations",
-      "cardOpsBody": "Schedules, attendance, and fixtures will surface here.",
+      "cardOpsBody": "Plan sessions, take attendance quickly, and keep the weekly rhythm visible.",
       "cardPeople": "People",
-      "cardPeopleBody": "Athletes, guardians, and staff in one place — coming soon."
+      "cardPeopleBody": "Athletes, guardians, groups, and teams stay connected in one calm workspace.",
+      "cardFinance": "Finance",
+      "cardFinanceBody": "Reusable charge items and assigned athlete fees stay explicit and easy to maintain.",
+      "stats": {
+        "athletes": "Athletes",
+        "guardians": "Guardians",
+        "upcomingSessions": "Upcoming sessions",
+        "activeChargeItems": "Active charge items"
+      },
+      "quickLinks": "Jump into today’s work",
+      "quickAthletes": "Athletes & guardians",
+      "quickAthletesBody": "Maintain profiles, contacts, and team assignments.",
+      "quickTraining": "Training & attendance",
+      "quickTrainingBody": "Plan sessions and mark presence in bulk.",
+      "quickFinance": "Charges & fees",
+      "quickFinanceBody": "Define fee items and assign charges without confusion."
     },
     "athletes": {
       "title": "Athletes",
@@ -57,6 +113,7 @@
       "new": "Add athlete",
       "edit": "Edit",
       "detailTitle": "Athlete profile",
+      "name": "Athlete",
       "firstName": "First name",
       "lastName": "Last name",
       "preferredName": "Preferred name",
@@ -70,10 +127,13 @@
       "guardians": "Guardians",
       "guardiansHint": "Parents and emergency contacts.",
       "linkGuardian": "Link guardian",
+      "selectGuardian": "Existing guardian",
       "teams": "Teams",
       "teamsHint": "Optional squad assignments. Training group stays on the profile.",
       "addTeam": "Add to team",
       "endMembership": "End",
+      "teamAdded": "Team membership added.",
+      "teamEnded": "Team membership ended.",
       "save": "Save",
       "cancel": "Cancel",
       "delete": "Delete",
@@ -81,16 +141,68 @@
       "relationship": "Relationship",
       "primaryContact": "Primary contact",
       "phone": "Phone",
-      "email": "Email"
+      "email": "Email",
+      "allGroups": "All groups",
+      "allTeams": "All teams",
+      "allStatuses": "All statuses",
+      "teamFilterHint": "Showing athletes with an active membership in {{team}}.",
+      "primaryGroupHint": "Groups are training cohorts. Team assignment stays optional.",
+      "optionalHint": "Optional",
+      "noGroup": "No primary group",
+      "teamCount": "Active teams"
+    },
+    "guardians": {
+      "title": "Guardians",
+      "subtitle": "Parents and trusted contacts, managed as reusable club records.",
+      "new": "Add guardian",
+      "edit": "Edit guardian",
+      "detail": "Open profile",
+      "detailTitle": "Guardian profile",
+      "empty": "No guardians yet.",
+      "emptyHint": "Add a guardian once and reuse them across athlete profiles.",
+      "name": "Guardian",
+      "contact": "Contact details",
+      "linkedAthletes": "Linked athletes",
+      "linkedAthletesHint": "See each athlete connected to this guardian and how they are listed.",
+      "linkedCreateHint": "Create the guardian and link them to the athlete in one step.",
+      "linkToAthlete": "Link settings",
+      "noAthletes": "No linked athletes yet.",
+      "noAthletesHint": "Open an athlete profile to connect this guardian.",
+      "unknownAthlete": "Unknown athlete",
+      "open": "Open guardian",
+      "unlink": "Unlink",
+      "linkSuccess": "Guardian linked.",
+      "unlinkSuccess": "Guardian unlinked."
     },
     "groups": {
       "title": "Groups",
       "subtitle": "Training cohorts and age buckets — separate from teams.",
-      "memberHint": "Athletes set a primary group on their profile; teams are optional."
+      "memberHint": "Athletes set a primary group on their profile; teams are optional.",
+      "empty": "No groups yet.",
+      "emptyHint": "Groups from your branch catalog will appear here.",
+      "openAthletes": "View athletes",
+      "openSessions": "View sessions",
+      "viewAthletes": "Open athlete list",
+      "planSession": "Plan session",
+      "structureTitle": "Why groups matter",
+      "teamCount": "{{count}} teams",
+      "teamCount_one": "{{count}} team",
+      "teamCount_other": "{{count}} teams",
+      "noTeams": "No teams linked yet."
     },
     "teams": {
       "title": "Teams",
-      "subtitle": "Squads and competitive units linked to branches."
+      "subtitle": "Squads and competitive units linked to branches.",
+      "empty": "No teams yet.",
+      "emptyHint": "Teams from your branch setup will appear here.",
+      "openAthletes": "View roster",
+      "openSessions": "View sessions",
+      "viewAthletes": "Athlete list",
+      "viewMembers": "Open roster",
+      "structureHint": "Teams are optional squads inside or alongside groups. Athletes can stay group-only.",
+      "structureTitle": "Team structure",
+      "structureBody": "Use teams for match squads or focused sub-groups without forcing every athlete into one.",
+      "noGroup": "No linked group"
     },
     "training": {
       "title": "Training sessions",
@@ -99,32 +211,68 @@
       "emptyHint": "Create a session to start recording attendance.",
       "new": "New session",
       "detailTitle": "Session",
+      "sessionTitle": "Session title",
       "scheduled": "Schedule",
       "location": "Location",
       "status": "Status",
       "attendance": "Attendance",
-      "attendanceHint": "Mark who was there. Bulk entry is ready for later automation.",
+      "attendanceHint": "Mark the roster quickly and keep the whole session visible at a glance.",
       "saveAttendance": "Save attendance",
-      "savedAttendance": "Attendance saved."
+      "savedAttendance": "Attendance saved.",
+      "allGroups": "All groups",
+      "allTeams": "All teams",
+      "allStatuses": "All statuses",
+      "groupTeamHint": "Sessions belong to a group and can optionally target one team inside that group.",
+      "optionalTeam": "Optional team",
+      "teamOptional": "Optional team",
+      "groupHint": "Choose the main training cohort for this session.",
+      "teamHint": "Leave empty for a full-group session.",
+      "startTime": "Start time",
+      "endTime": "End time",
+      "searchRoster": "Search roster",
+      "markAll": "Mark all {{status}}",
+      "unknownGroup": "Unknown group",
+      "unknownTeam": "Unknown team"
     },
     "finance": {
       "title": "Finance",
-      "subtitle": "Charges and payments when you are ready.",
+      "subtitle": "Charge definitions and athlete fees for daily club operations.",
       "hubTitle": "Money & fees",
-      "hubBody": "Define reusable fee types, then assign charges to athletes.",
+      "hubBody": "Define reusable fee types, then assign clear athlete charges individually or in bulk.",
       "chargeItemsLink": "Charge items",
-      "athleteChargesLink": "Athlete charges"
+      "athleteChargesLink": "Athlete charges",
+      "hubChecklistTitle": "A clean finance loop",
+      "hubChecklist1": "Define reusable fee items once, then keep labels and defaults consistent.",
+      "hubChecklist2": "Assign charges in bulk when the same fee applies across a roster or group.",
+      "hubChecklist3": "Update charge status directly where staff review outstanding items.",
+      "bulkAssignTitle": "Bulk assign charges",
+      "bulkAssignBody": "Select a charge item, choose athletes, and assign fees in one pass."
     },
     "chargeItems": {
       "title": "Charge items",
       "subtitle": "Reusable fee definitions (dues, camp, kit, …).",
       "empty": "No charge items yet.",
       "new": "New charge item",
+      "edit": "Edit charge item",
+      "created": "Charge item created.",
       "name": "Name",
       "category": "Category",
       "amount": "Default amount",
       "currency": "Currency",
-      "active": "Active"
+      "active": "Active",
+      "summaryTotal": "Total items",
+      "summaryActive": "Active items",
+      "summaryInactive": "Inactive items",
+      "activeState": "Active",
+      "inactiveState": "Inactive",
+      "activateAction": "Activate",
+      "deactivateAction": "Deactivate",
+      "activated": "Charge item activated.",
+      "deactivated": "Charge item deactivated.",
+      "saveSuccess": "Charge item saved.",
+      "delete": "Delete",
+      "toggleActive": "Set active",
+      "cannotDelete": "Charge items in use should be deactivated instead of deleted."
     },
     "athleteCharges": {
       "title": "Athlete charges",
@@ -135,7 +283,29 @@
       "item": "Charge item",
       "amount": "Amount",
       "due": "Due",
-      "status": "Status"
+      "status": "Status",
+      "quickAssign": "Quick assign",
+      "quickAssignHint": "Create a charge directly from the athlete profile.",
+      "profileHint": "Recent charges stay visible here so staff can confirm status quickly.",
+      "viewAll": "Open full charge list",
+      "created": "Charge created.",
+      "updated": "Charge updated.",
+      "bulkTitle": "Bulk assign charges",
+      "bulkAssign": "Bulk assign",
+      "assignBulk": "Assign charges",
+      "bulkHint": "Apply one charge item to multiple athletes at once.",
+      "allAthletes": "All athletes",
+      "allStatuses": "All statuses",
+      "selectAthletes": "Choose athletes",
+      "chooseItem": "Choose a charge item",
+      "useDefaultAmount": "Use the item default amount",
+      "openAthlete": "Open athlete",
+      "bulkSuccess_one": "{{count}} athlete received the charge.",
+      "bulkSuccess_other": "{{count}} athletes received the charge.",
+      "dueDate": "Due date",
+      "saveBulk": "Assign charges",
+      "selectedCount_one": "{{count}} athlete selected",
+      "selectedCount_other": "{{count}} athletes selected"
     },
     "reports": {
       "title": "Reports",

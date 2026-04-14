@@ -68,6 +68,15 @@ export class GuardianService {
     return this.guardians.save(g);
   }
 
+  async listAthletesForGuardian(tenantId: string, guardianId: string) {
+    await this.findOne(tenantId, guardianId);
+    return this.links.find({
+      where: { tenantId, guardianId },
+      relations: ['athlete'],
+      order: { isPrimaryContact: 'DESC', createdAt: 'ASC' },
+    });
+  }
+
   async remove(tenantId: string, id: string): Promise<void> {
     const res = await this.guardians.delete({ id, tenantId });
     if (!res.affected) throw new NotFoundException('Guardian not found');
@@ -79,8 +88,11 @@ export class GuardianService {
     const guardian = await this.guardians.findOne({ where: { id: dto.guardianId, tenantId } });
     if (!guardian) throw new BadRequestException('Guardian not found for tenant');
 
-    const existing = await this.links.findOne({ where: { athleteId, guardianId: dto.guardianId } });
+    const existing = await this.links.findOne({ where: { tenantId, athleteId, guardianId: dto.guardianId } });
     if (existing) {
+      if (dto.isPrimaryContact) {
+        await this.links.update({ tenantId, athleteId }, { isPrimaryContact: false });
+      }
       existing.relationshipType = dto.relationshipType;
       if (dto.isPrimaryContact !== undefined) existing.isPrimaryContact = dto.isPrimaryContact;
       if (dto.notes !== undefined) existing.notes = dto.notes ?? null;
