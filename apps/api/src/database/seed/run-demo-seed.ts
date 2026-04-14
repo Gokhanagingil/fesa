@@ -1,17 +1,7 @@
 import 'reflect-metadata';
-import { existsSync } from 'fs';
-import { resolve } from 'path';
-import { config } from 'dotenv';
 import { AppDataSource } from '../data-source';
 import { runDemoSeed } from './demo-seed';
 import { DEMO_TENANT_ID, DEMO_TENANT_SLUG } from './constants';
-
-for (const envPath of [resolve(process.cwd(), '.env'), resolve(process.cwd(), 'apps/api/.env')]) {
-  if (existsSync(envPath)) {
-    config({ path: envPath });
-    break;
-  }
-}
 
 async function main(): Promise<void> {
   if (!process.env.DATABASE_URL) {
