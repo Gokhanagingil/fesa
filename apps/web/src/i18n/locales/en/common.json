@@ -23,7 +23,11 @@
       "clear": "Clear",
       "open": "Open",
       "cancel": "Cancel",
-      "manage": "Manage"
+      "manage": "Manage",
+      "save": "Save",
+      "record": "Record",
+      "apply": "Apply",
+      "refresh": "Refresh"
     },
     "states": {
       "loading": "Loading…",
@@ -95,15 +99,27 @@
         "athletes": "Athletes",
         "guardians": "Guardians",
         "upcomingSessions": "Upcoming sessions",
-        "activeChargeItems": "Active charge items"
+        "activeChargeItems": "Active charge items",
+        "outstanding": "Outstanding balance",
+        "overdue": "Overdue balance",
+        "collected": "Collections recorded",
+        "cancelledSessions": "Cancelled sessions"
       },
-      "quickLinks": "Jump into today’s work",
-      "quickAthletes": "Athletes & guardians",
-      "quickAthletesBody": "Maintain profiles, contacts, and team assignments.",
-      "quickTraining": "Training & attendance",
-      "quickTrainingBody": "Plan sessions and mark presence in bulk.",
-      "quickFinance": "Charges & fees",
-      "quickFinanceBody": "Define fee items and assign charges without confusion."
+      "needTenant": "Choose a club to load the command center.",
+      "financeTitle": "Collections at a glance",
+      "financeBody": "Track what is overdue, what was collected recently, and who still needs follow-up.",
+      "scheduleTitle": "Planning pulse",
+      "scheduleBody": "See upcoming workload by group and keep schedule changes visible before they become attendance issues.",
+      "attendanceTitle": "Attendance signal",
+      "attendanceBody": "Spot the latest pattern quickly so coaches and staff can react early.",
+      "recentPayments": "Recent collections",
+      "topOutstanding": "Highest outstanding balances",
+      "upcomingByGroup": "Upcoming sessions by group",
+      "groupDistribution": "Athlete distribution by group",
+      "attendanceBreakdown": "Attendance breakdown",
+      "openReports": "Open reports",
+      "openTraining": "Open training board",
+      "openFinance": "Open collections"
     },
     "athletes": {
       "title": "Athletes",
@@ -206,10 +222,11 @@
     },
     "training": {
       "title": "Training sessions",
-      "subtitle": "Planned practices for groups and optional teams.",
+      "subtitle": "Calendar-aware planning for groups and optional teams.",
       "empty": "No sessions scheduled yet.",
       "emptyHint": "Create a session to start recording attendance.",
       "new": "New session",
+      "newSeries": "Generate recurring series",
       "detailTitle": "Session",
       "sessionTitle": "Session title",
       "scheduled": "Schedule",
@@ -232,21 +249,66 @@
       "searchRoster": "Search roster",
       "markAll": "Mark all {{status}}",
       "unknownGroup": "Unknown group",
-      "unknownTeam": "Unknown team"
+      "unknownTeam": "Unknown team",
+      "searchPlaceholder": "Search title, location, or note",
+      "fromDate": "From",
+      "toDate": "To",
+      "calendarView": "Calendar",
+      "listView": "List",
+      "boardTitle": "Scheduling board",
+      "boardHint": "Scan the week fast, then jump straight into attendance or session actions.",
+      "upcomingTitle": "Upcoming sessions",
+      "bulkTitle": "Bulk schedule actions",
+      "bulkHint": "Use safe bulk changes for planned sessions only.",
+      "selectedCount_one": "{{count}} session selected",
+      "selectedCount_other": "{{count}} sessions selected",
+      "selectAllVisible": "Select visible",
+      "clearSelection": "Clear selection",
+      "cancelSelected": "Cancel selected",
+      "shiftSelected": "Shift selected",
+      "shiftDays": "Shift by days",
+      "bulkNote": "Bulk note",
+      "bulkUpdated_one": "{{count}} session updated.",
+      "bulkUpdated_other": "{{count}} sessions updated.",
+      "seriesTitle": "Recurring session generator",
+      "seriesHint": "Create the smallest useful repeated pattern instead of adding sessions one by one.",
+      "startsOn": "Starts on",
+      "endsOn": "Ends on",
+      "weekdays": "Weekdays",
+      "seriesGenerated_one": "{{count}} session generated.",
+      "seriesGenerated_other": "{{count}} sessions generated.",
+      "seriesSkipped_one": "{{count}} matching session already existed and was skipped.",
+      "seriesSkipped_other": "{{count}} matching sessions already existed and were skipped.",
+      "weekdaysShort": {
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat",
+        "7": "Sun"
+      }
     },
     "finance": {
       "title": "Finance",
-      "subtitle": "Charge definitions and athlete fees for daily club operations.",
+      "subtitle": "Collections, balances, and club-side fee operations in one clear workspace.",
       "hubTitle": "Money & fees",
-      "hubBody": "Define reusable fee types, then assign clear athlete charges individually or in bulk.",
+      "hubBody": "Define reusable fee types, assign charges, then record collections against the right athlete balances.",
       "chargeItemsLink": "Charge items",
       "athleteChargesLink": "Athlete charges",
+      "paymentsLink": "Collections",
       "hubChecklistTitle": "A clean finance loop",
       "hubChecklist1": "Define reusable fee items once, then keep labels and defaults consistent.",
       "hubChecklist2": "Assign charges in bulk when the same fee applies across a roster or group.",
-      "hubChecklist3": "Update charge status directly where staff review outstanding items.",
+      "hubChecklist3": "Record real collections so paid, partial, unpaid, and overdue states stay trustworthy.",
       "bulkAssignTitle": "Bulk assign charges",
-      "bulkAssignBody": "Select a charge item, choose athletes, and assign fees in one pass."
+      "bulkAssignBody": "Select a charge item, choose athletes, and assign fees in one pass.",
+      "summaryTitle": "Collections command center",
+      "summaryHint": "Understand what is owed, what is overdue, and what was just collected without leaving finance.",
+      "totalCharged": "Charged",
+      "totalCollected": "Collected",
+      "totalOutstanding": "Outstanding",
+      "totalOverdue": "Overdue"
     },
     "chargeItems": {
       "title": "Charge items",
@@ -276,7 +338,7 @@
     },
     "athleteCharges": {
       "title": "Athlete charges",
-      "subtitle": "Fees assigned to individual athletes.",
+      "subtitle": "Fees assigned to individual athletes, with real balance and overdue visibility.",
       "empty": "No charges assigned yet.",
       "new": "New charge",
       "athlete": "Athlete",
@@ -305,11 +367,55 @@
       "dueDate": "Due date",
       "saveBulk": "Assign charges",
       "selectedCount_one": "{{count}} athlete selected",
-      "selectedCount_other": "{{count}} athletes selected"
+      "selectedCount_other": "{{count}} athletes selected",
+      "allocated": "Collected",
+      "remaining": "Remaining",
+      "derivedStatus": "Balance status",
+      "overdueOnly": "Overdue only",
+      "statusManagedByPayments": "Paid and partial states are now derived from recorded collections."
+    },
+    "payments": {
+      "title": "Collections",
+      "subtitle": "Record payments against athlete charges and keep balances trustworthy.",
+      "recordTitle": "Record collection",
+      "recordHint": "Apply one payment to one athlete's open charges. Partial allocations are supported.",
+      "amount": "Payment amount",
+      "currency": "Currency",
+      "paidAt": "Paid at",
+      "method": "Method",
+      "reference": "Reference",
+      "notes": "Notes",
+      "applyTo": "Apply to charges",
+      "remainingToAllocate": "Remaining to allocate",
+      "recorded": "Collection recorded.",
+      "empty": "No collections recorded yet.",
+      "recentTitle": "Recent collection activity",
+      "selectAthleteFirst": "Choose an athlete to load open charges.",
+      "allocationExceeded": "Allocation cannot exceed the remaining amount.",
+      "chargeSummary": "Athlete balance summary"
     },
     "reports": {
       "title": "Reports",
-      "subtitle": "Definitions, saved filters, and exports — foundation in place."
+      "subtitle": "Operational and financial visibility for scheduling, attendance, and collections.",
+      "readyHint": "These report surfaces now summarize live operating data for managers and staff.",
+      "commandCenterTitle": "Command center",
+      "commandCenterHint": "Use this page for manager visibility and finance follow-up, not analytics theater.",
+      "cards": {
+        "collections": {
+          "title": "Collections overview",
+          "body": "Outstanding, overdue, and recently collected money in one place."
+        },
+        "scheduling": {
+          "title": "Scheduling overview",
+          "body": "See upcoming workload by group and keep the week coordinated."
+        },
+        "balances": {
+          "title": "Athlete balances",
+          "body": "Find the athletes who still need action on assigned charges."
+        }
+      },
+      "overdueCharges": "Overdue charges",
+      "reportDefinitions": "Available report surfaces"
     },
     "settings": {
       "title": "Settings",

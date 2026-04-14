@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
+import { InlineAlert } from '../components/ui/InlineAlert';
 import { PageHeader } from '../components/ui/PageHeader';
+import { StatCard } from '../components/ui/StatCard';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
 import { useTenant } from '../lib/tenant-hooks';
 import {
@@ -11,10 +13,13 @@ import {
   getGuardianRelationshipLabel,
   getPersonName,
   getAthleteStatusLabel,
+  getMoneyAmount,
+  getChargeCurrencyAmount,
 } from '../lib/display';
 import type {
   Athlete,
   AthleteCharge,
+  AthleteFinanceSummaryResponse,
   AthleteGuardianLink,
   ChargeItem,
   Guardian,
@@ -58,14 +63,14 @@ export function AthleteDetailPage() {
         apiGet<{ items: Guardian[] }>('/api/guardians?limit=200'),
         apiGet<{ items: Team[] }>('/api/teams?limit=200'),
         apiGet<{ items: ChargeItem[] }>('/api/charge-items?limit=200&isActive=true'),
-        apiGet<{ items: AthleteCharge[] }>(`/api/athlete-charges?athleteId=${id}&limit=20`),
+        apiGet<AthleteFinanceSummaryResponse>(`/api/finance/athlete-summaries?athleteId=${id}`),
       ]);
       setAthlete(a);
       setGuardians(g);
       setTeams(tm);
       setAllGuardians(ag.items);
       setChargeItems(ci.items);
-      setCharges(ac.items);
+      setCharges(ac.charges.slice(0, 20));
       const sameBranch = tr.items.filter((x) => x.sportBranchId === a.sportBranchId);
       setAllTeams(sameBranch);
     } catch (e) {
@@ -190,8 +195,16 @@ export function AthleteDetailPage() {
           </Link>
         }
       />
-      {error ? <p className="mb-4 text-sm text-red-700">{error}</p> : null}
-      {message ? <p className="mb-4 text-sm text-amateur-accent">{message}</p> : null}
+      {error ? (
+        <InlineAlert tone="error" className="mb-4">
+          {error}
+        </InlineAlert>
+      ) : null}
+      {message ? (
+        <InlineAlert tone="success" className="mb-4">
+          {message}
+        </InlineAlert>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm lg:col-span-2">
@@ -265,7 +278,7 @@ export function AthleteDetailPage() {
               {t('pages.athleteCharges.new')}
             </Button>
             <Link
-              to="/app/finance/athlete-charges"
+              to={`/app/finance/athlete-charges?athleteId=${athlete.id}`}
               className="text-center text-sm font-medium text-amateur-accent hover:underline"
             >
               {t('pages.finance.athleteChargesLink')} →
@@ -436,6 +449,31 @@ export function AthleteDetailPage() {
             <Button variant="ghost">{t('pages.athleteCharges.viewAll')}</Button>
           </Link>
         </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <StatCard
+            label={t('pages.athleteCharges.summaryOutstanding')}
+            value={getMoneyAmount(
+              charges.reduce((sum, charge) => sum + Number(charge.remainingAmount ?? 0), 0),
+              charges.find((charge) => charge.chargeItem?.currency)?.chargeItem?.currency ?? 'TRY',
+            )}
+            tone="danger"
+            compact
+          />
+          <StatCard
+            label={t('pages.athleteCharges.summaryCollected')}
+            value={getMoneyAmount(
+              charges.reduce((sum, charge) => sum + Number(charge.allocatedAmount ?? 0), 0),
+              charges.find((charge) => charge.chargeItem?.currency)?.chargeItem?.currency ?? 'TRY',
+            )}
+            compact
+          />
+          <StatCard
+            label={t('pages.athleteCharges.summaryOverdue')}
+            value={charges.filter((charge) => charge.isOverdue).length}
+            tone="danger"
+            compact
+          />
+        </div>
         {charges.length === 0 ? (
           <div className="mt-4 rounded-xl border border-dashed border-amateur-border bg-amateur-canvas/60 px-4 py-6 text-sm text-amateur-muted">
             {t('pages.athleteCharges.empty')}
@@ -456,12 +494,10 @@ export function AthleteDetailPage() {
                 {charges.map((charge) => (
                   <tr key={charge.id} className="border-b border-amateur-border/70 last:border-0">
                     <td className="py-3 font-medium">{charge.chargeItem?.name ?? charge.chargeItemId}</td>
-                    <td className="py-3">
-                      {charge.chargeItem?.currency ?? ''} {charge.amount}
-                    </td>
+                    <td className="py-3">{getChargeCurrencyAmount(charge)}</td>
                     <td className="py-3">{formatDate(charge.dueDate, i18n.language)}</td>
                     <td className="py-3 text-amateur-muted">
-                      {getChargeStatusLabel(t, charge.status)}
+                      {getChargeStatusLabel(t, charge.derivedStatus ?? charge.status)}
                     </td>
                     <td className="py-3">
                       <select

@@ -27,6 +27,7 @@ Guardians use a classic **M:N** link table `athlete_guardians` with relationship
 ## Training & attendance
 
 - **`training_sessions`** — scheduled work for a **group** (`groupId` required); optional **team** (`teamId`) for team-specific practices.
+- **`training_session_series`** — recurring scheduling template rows that generate concrete `training_sessions` on selected weekdays and keep repeated planning out of manual repetition hell.
 - **`attendances`** — one row per `(trainingSessionId, athleteId)` with status and optional note.
 
 Eligibility rule in the API: an athlete must share the session’s **primary group**; if the session targets a team, the athlete needs an **active** (no `endedAt`) membership in that team.
@@ -37,6 +38,8 @@ Eligibility rule in the API: an athlete must share the session’s **primary gro
 - **Groups** are presented as the main training container, with direct jumps into the athlete list and session planning.
 - **Teams** are presented as optional squads layered on top of groups, with direct jumps into filtered athlete rosters.
 - **Attendance** uses the same rule set: a team session loads only athletes who both belong to the session group and currently hold an active membership in that team.
+- **Recurring planning** stays group-first and team-optional. Series generation creates normal session rows, so attendance, list views, and bulk operations continue to work on the same product surface.
+- **Bulk rescheduling/cancellation** stays intentionally narrow: bulk shift is limited to planned sessions, and bulk cancel appends explicit notes so staff actions remain traceable.
 
 ## Guardians
 
@@ -48,25 +51,39 @@ Eligibility rule in the API: an athlete must share the session’s **primary gro
   - see linked athletes from the guardian side,
   - create a guardian directly from an athlete profile and link them in one flow.
 
-## Finance (foundation only)
+## Finance
 
 - **`charge_items`** — reusable catalog (name, category, default amount, currency, active flag).
 - **`athlete_charges`** — an amount assigned to an athlete, optional due date, status (pending / partially_paid / paid / cancelled).
+- **`payments`** — recorded collections against an athlete with amount, currency, method/reference, and paid timestamp.
+- **`payment_allocations`** — how a payment is applied across one or more athlete charges.
 
 ### Current operational finance flow
 
-- Clubs define reusable **charge items** and can now manage active/inactive state directly from the list.
+- Clubs define reusable **charge items** and can manage active/inactive state directly from the list.
 - **Athlete charges** can be assigned:
   - individually from an athlete profile,
   - individually through the finance area,
   - in **bulk** across multiple selected athletes.
-- Athlete charge lists now include the linked athlete record so staff can review and update charge status without losing context.
+- **Payments** are recorded explicitly and allocated to one or more open athlete charges.
+- **Charge status is derived from allocations** for non-cancelled rows:
+  - no allocations -> `pending`
+  - some but not full allocation -> `partially_paid`
+  - fully allocated -> `paid`
+- **Overdue** remains a computed operational state based on due date plus remaining balance, not a separate stored enum.
+- Athlete finance views now expose total charged / collected / outstanding / overdue values plus recent payment activity.
 
-**Intentionally deferred:** ledger postings, invoices, payment gateways, tax lines, inventory links.
+**Intentionally deferred:** ledger postings, invoices, payment gateways, tax lines, inventory links, and full accounting reconciliation.
 
-## Reporting placeholders (wave one)
+## Reporting & command center
 
-- `report_definitions`, `saved_filter_presets` — unchanged; future reporting can key off the new entities via `tenantId` and indexed foreign keys.
+- Reporting remains tenant-scoped and intentionally pragmatic rather than BI-heavy.
+- The current wave exposes:
+  - report definition metadata for the web command center,
+  - a live command-center summary for scheduling, attendance, balances, and recent collections,
+  - finance summary endpoints that power dashboard, reports, and athlete finance surfaces.
+
+`report_definitions` and `saved_filter_presets` stay lean so future saved filters/export flows can evolve without reshaping the operational entities above.
 
 ## Future packaging (tiers)
 

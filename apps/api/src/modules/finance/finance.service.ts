@@ -573,10 +573,13 @@ export class FinanceService {
         overdueTotal: financeSummary.totals.totalOverdue,
         collectedTotal: financeSummary.totals.totalCollected,
       },
-      attendance: attendanceRows.reduce<Record<string, number>>((acc, row: { status: string; count: number }) => {
-        acc[row.status] = Number(row.count);
-        return acc;
-      }, {}),
+      attendance: (attendanceRows as Array<{ status: string; count: number }>).reduce(
+        (acc: Record<string, number>, row) => {
+          acc[row.status] = Number(row.count);
+          return acc;
+        },
+        {},
+      ),
       groupDistribution,
       upcomingByGroup,
       recentPayments: financeSummary.recentPayments.slice(0, 5),

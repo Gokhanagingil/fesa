@@ -1,30 +1,39 @@
-# Reporting and bulk operations (foundation)
+# Reporting and command center
 
-## Goals for later waves
+## What this wave adds
 
-- First-class **report definitions** (metadata, versioning, scheduling).
-- **Saved filters** reusable across lists and reports.
-- **Export-ready lists**: consistent toolbar (search, filters, export, bulk) on list pages.
-- **Bulk actions** executed asynchronously with idempotency and audit logs.
+Wave 2 turns reporting from a placeholder into a practical management surface:
 
-## What exists now
+- `/api/reporting/definitions` now returns live report cards with i18n keys for collections, scheduling, and athlete balance monitoring.
+- `/api/reporting/command-center` returns tenant-aware operational + finance visibility for the reports page.
+- `/api/finance/dashboard-summary` powers the dashboard command center with:
+  - athlete / session counts
+  - attendance distribution
+  - upcoming sessions by group
+  - outstanding / overdue / collected totals
+  - recent payment activity
+  - top outstanding athletes
 
-### Shared types (`packages/shared-types`)
+## Scheduling and bulk operations
 
-- `ReportDefinitionMeta`, `SavedFilterPreset`, `BulkActionRequest` — structural placeholders for API and UI contracts.
+The product now includes pragmatic bulk tooling inside the existing training surface:
 
-### Backend
+- recurring session generation backed by `training_session_series`
+- bulk cancellation for selected sessions
+- bulk day-shift rescheduling for planned sessions only
+- free-text note append during bulk actions so staff can leave a clear audit trail in session notes
 
-- Entities: `report_definitions`, `saved_filter_presets` (minimal columns).
-- `GET /api/reporting/definitions` — placeholder response until registry is populated.
+This intentionally stays short of a full queue/worker bulk engine. The workflow is synchronous, tenant-scoped, and designed for day-to-day club operations rather than abstract infrastructure.
 
-### Frontend
+## Current conventions
 
-- `ListPageFrame` — search placeholder + toolbar area for filter/export/bulk buttons.
-- List pages use **disabled** toolbar actions to show intent without fake workflows.
+- **Report keys** remain stable identifiers with `titleKey` resolved in the frontend.
+- **Saved filters** still exist as schema groundwork but are not yet exposed in the web product.
+- **Bulk actions** remain synchronous route-level actions inside the current modules rather than a generic async command bus.
 
-## Conventions
+## Intentionally still deferred
 
-- **Report keys**: stable `key` column + `titleKey` for i18n (not free-form titles in DB for user-facing labels).
-- **Saved filters**: `surface` identifies which list/report the payload applies to; validation per surface in later waves.
-- **Bulk actions**: `BulkActionKind` enum will grow; execution layer not implemented in wave one.
+- CSV / Excel export workflows
+- scheduled report delivery
+- saved report presets in the UI
+- background bulk job orchestration and audit dashboards
