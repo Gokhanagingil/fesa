@@ -9,11 +9,13 @@ import { AthleteTeamMembership } from '../../database/entities/athlete-team-memb
 import { AthleteService } from './athlete.service';
 import { AthleteController } from './athlete.controller';
 import { GuardianModule } from '../guardian/guardian.module';
+import { FamilyActionModule } from '../family-action/family-action.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Athlete, SportBranch, ClubGroup, Team, AthleteGuardian, AthleteTeamMembership]),
     GuardianModule,
+    FamilyActionModule,
   ],
   controllers: [AthleteController],
   providers: [AthleteService],

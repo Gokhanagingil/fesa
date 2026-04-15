@@ -10,7 +10,9 @@ import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.entity';
 import { Team } from '../../database/entities/team.entity';
 import { TrainingSession } from '../../database/entities/training-session.entity';
+import { FamilyReadinessStatus } from '../../database/enums';
 import { FinanceService } from '../finance/finance.service';
+import { FamilyActionService } from '../family-action/family-action.service';
 import { ListCommunicationAudienceQueryDto } from './dto/list-communication-audience-query.dto';
 
 type AudienceMember = {
@@ -32,6 +34,9 @@ type AudienceMember = {
   outstandingAmount: string;
   overdueAmount: string;
   hasOverdueBalance: boolean;
+  familyReadinessStatus: FamilyReadinessStatus;
+  pendingFamilyActions: number;
+  awaitingStaffReview: number;
 };
 
 @Injectable()
@@ -56,6 +61,7 @@ export class CommunicationService {
     @InjectRepository(SavedFilterPreset)
     private readonly presets: Repository<SavedFilterPreset>,
     private readonly finance: FinanceService,
+    private readonly familyActions: FamilyActionService,
   ) {}
 
   private unique(values: string[]): string[] {
@@ -149,6 +155,19 @@ export class CommunicationService {
         .forEach((row) => ids.add(row.athlete.id));
     }
 
+    if (query.familyReadiness || query.needsFollowUp) {
+      const readinessMap = await this.familyActions.getReadinessMap(tenantId);
+      for (const readiness of readinessMap.values()) {
+        if (query.familyReadiness && readiness.status !== query.familyReadiness) {
+          continue;
+        }
+        if (query.needsFollowUp && readiness.status === FamilyReadinessStatus.COMPLETE) {
+          continue;
+        }
+        ids.add(readiness.athleteId);
+      }
+    }
+
     if (ids.size === 0) {
       const athletes = await this.athletes.find({
         where: { tenantId },
@@ -171,7 +190,7 @@ export class CommunicationService {
       };
     }
 
-    const [athletes, guardians, memberships, groups, teams, financeSummary, upcomingLessons] = await Promise.all([
+    const [athletes, guardians, memberships, groups, teams, financeSummary, upcomingLessons, readinessMap] = await Promise.all([
       this.athletes.find({
         where: { tenantId, id: In(athleteIds) },
         relations: ['primaryGroup'],
@@ -194,6 +213,7 @@ export class CommunicationService {
         relations: ['coach'],
         order: { scheduledStart: 'ASC' },
       }),
+      this.familyActions.getReadinessMap(tenantId, athleteIds),
     ]);
 
     const financeMap = new Map(financeSummary.athletes.map((row) => [row.athlete.id, row]));
@@ -225,6 +245,7 @@ export class CommunicationService {
       const financeRow = financeMap.get(athlete.id);
       const activeMemberships = membershipsByAthlete.get(athlete.id) ?? [];
       const athleteLessons = lessonsByAthlete.get(athlete.id) ?? [];
+      const readiness = readinessMap.get(athlete.id);
       const reasons: string[] = [];
 
       if (query.groupId && athlete.primaryGroupId === query.groupId) {
@@ -247,6 +268,18 @@ export class CommunicationService {
       }
       if (query.coachId && athleteLessons.some((lesson) => lesson.coachId === query.coachId)) {
         reasons.push('coach_assignment');
+      }
+      if (query.familyReadiness && readiness?.status === query.familyReadiness) {
+        reasons.push(`family_readiness:${query.familyReadiness}`);
+      }
+      if (query.needsFollowUp && readiness && readiness.status !== FamilyReadinessStatus.COMPLETE) {
+        reasons.push(`family_readiness:${readiness.status}`);
+      }
+      if ((readiness?.summary.pendingFamilyActions ?? 0) > 0) {
+        reasons.push('family_action:pending');
+      }
+      if ((readiness?.summary.awaitingStaffReview ?? 0) > 0) {
+        reasons.push('family_action:review');
       }
       if (reasons.length === 0) {
         reasons.push('manual_selection');
@@ -271,8 +304,18 @@ export class CommunicationService {
         outstandingAmount: (financeRow?.totalOutstanding ?? 0).toFixed(2),
         overdueAmount: (financeRow?.totalOverdue ?? 0).toFixed(2),
         hasOverdueBalance: (financeRow?.totalOverdue ?? 0) > 0,
+        familyReadinessStatus: readiness?.status ?? FamilyReadinessStatus.COMPLETE,
+        pendingFamilyActions: readiness?.summary.pendingFamilyActions ?? 0,
+        awaitingStaffReview: readiness?.summary.awaitingStaffReview ?? 0,
       };
     });
+
+    if (query.familyReadiness) {
+      items = items.filter((item) => item.familyReadinessStatus === query.familyReadiness);
+    }
+    if (query.needsFollowUp) {
+      items = items.filter((item) => item.familyReadinessStatus !== FamilyReadinessStatus.COMPLETE);
+    }
 
     if (query.q?.trim()) {
       const term = query.q.trim().toLowerCase();
@@ -312,6 +355,14 @@ export class CommunicationService {
         guardians: guardianCount,
         primaryContacts,
         withOverdueBalance: items.filter((item) => item.hasOverdueBalance).length,
+        incompleteAthletes: items.filter((item) => item.familyReadinessStatus === FamilyReadinessStatus.INCOMPLETE).length,
+        awaitingGuardianAction: items.filter(
+          (item) => item.familyReadinessStatus === FamilyReadinessStatus.AWAITING_GUARDIAN_ACTION,
+        ).length,
+        awaitingStaffReview: items.filter(
+          (item) => item.familyReadinessStatus === FamilyReadinessStatus.AWAITING_STAFF_REVIEW,
+        ).length,
+        needingFollowUp: items.filter((item) => item.familyReadinessStatus !== FamilyReadinessStatus.COMPLETE).length,
       },
     };
   }

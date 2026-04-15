@@ -6,12 +6,18 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { apiGet } from '../lib/api';
-import { getAthleteStatusLabel, getPersonName } from '../lib/display';
+import { getAthleteStatusLabel, getFamilyReadinessStatusLabel, getPersonName } from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
-import type { Athlete, AthleteStatus, ClubGroup, Team } from '../lib/domain-types';
+import type { Athlete, AthleteStatus, ClubGroup, FamilyReadinessStatus, Team } from '../lib/domain-types';
 
 type ListResponse = { items: Athlete[]; total: number };
 const statusOptions: AthleteStatus[] = ['trial', 'active', 'paused', 'inactive', 'archived'];
+const readinessOptions: FamilyReadinessStatus[] = [
+  'incomplete',
+  'awaiting_guardian_action',
+  'awaiting_staff_review',
+  'complete',
+];
 
 export function AthletesPage() {
   const { t } = useTranslation();
@@ -21,6 +27,8 @@ export function AthletesPage() {
   const [status, setStatus] = useState(searchParams.get('status') ?? '');
   const [groupId, setGroupId] = useState(searchParams.get('groupId') ?? '');
   const [teamId, setTeamId] = useState(searchParams.get('teamId') ?? '');
+  const [familyReadinessStatus, setFamilyReadinessStatus] = useState(searchParams.get('familyReadinessStatus') ?? '');
+  const [needsFamilyFollowUp, setNeedsFamilyFollowUp] = useState(searchParams.get('needsFamilyFollowUp') === 'true');
   const [items, setItems] = useState<Athlete[]>([]);
   const [total, setTotal] = useState(0);
   const [groups, setGroups] = useState<ClubGroup[]>([]);
@@ -33,6 +41,8 @@ export function AthletesPage() {
     setStatus(searchParams.get('status') ?? '');
     setGroupId(searchParams.get('groupId') ?? '');
     setTeamId(searchParams.get('teamId') ?? '');
+    setFamilyReadinessStatus(searchParams.get('familyReadinessStatus') ?? '');
+    setNeedsFamilyFollowUp(searchParams.get('needsFamilyFollowUp') === 'true');
   }, [searchParams]);
 
   useEffect(() => {
@@ -41,8 +51,10 @@ export function AthletesPage() {
     if (status) next.set('status', status);
     if (groupId) next.set('groupId', groupId);
     if (teamId) next.set('teamId', teamId);
+    if (familyReadinessStatus) next.set('familyReadinessStatus', familyReadinessStatus);
+    if (needsFamilyFollowUp) next.set('needsFamilyFollowUp', 'true');
     setSearchParams(next, { replace: true });
-  }, [groupId, q, setSearchParams, status, teamId]);
+  }, [familyReadinessStatus, groupId, needsFamilyFollowUp, q, setSearchParams, status, teamId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -71,6 +83,8 @@ export function AthletesPage() {
       if (status) params.set('status', status);
       if (groupId) params.set('primaryGroupId', groupId);
       if (teamId) params.set('teamId', teamId);
+      if (familyReadinessStatus) params.set('familyReadinessStatus', familyReadinessStatus);
+      if (needsFamilyFollowUp) params.set('needsFamilyFollowUp', 'true');
       params.set('limit', '100');
       const path = `/api/athletes?${params.toString()}`;
       const res = await apiGet<ListResponse>(path);
@@ -81,7 +95,7 @@ export function AthletesPage() {
     } finally {
       setLoading(false);
     }
-  }, [groupId, q, status, t, teamId, tenantId]);
+  }, [familyReadinessStatus, groupId, needsFamilyFollowUp, q, status, t, teamId, tenantId]);
 
   useEffect(() => {
     const id = setTimeout(() => void load(), 250);
@@ -149,6 +163,29 @@ export function AthletesPage() {
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+              <span>{t('pages.athletes.familyActions.readinessFilter')}</span>
+              <select
+                value={familyReadinessStatus}
+                onChange={(e) => setFamilyReadinessStatus(e.target.value)}
+                className="bg-transparent text-amateur-ink outline-none"
+              >
+                <option value="">{t('pages.athletes.familyActions.readinessFilterAll')}</option>
+                {readinessOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {getFamilyReadinessStatusLabel(t, option)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+              <input
+                type="checkbox"
+                checked={needsFamilyFollowUp}
+                onChange={(e) => setNeedsFamilyFollowUp(e.target.checked)}
+              />
+              <span>{t('pages.athletes.familyActions.followUpFilter')}</span>
             </label>
             <Link to="/app/athletes/new">
               <Button>{t('pages.athletes.new')}</Button>

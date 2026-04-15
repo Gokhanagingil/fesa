@@ -8,6 +8,10 @@ import { StatCard } from '../components/ui/StatCard';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
 import { useTenant } from '../lib/tenant-hooks';
 import {
+  getFamilyActionStatusLabel,
+  getFamilyActionTypeLabel,
+  getFamilyReadinessStatusLabel,
+  getFamilyReadinessTone,
   formatDate,
   formatDateTime,
   getChargeStatusLabel,
@@ -21,9 +25,13 @@ import {
 import type {
   Athlete,
   AthleteCharge,
+  AthleteFamilyReadiness,
   AthleteFinanceSummaryResponse,
   AthleteGuardianLink,
   ChargeItem,
+  FamilyActionRequest,
+  FamilyActionRequestStatus,
+  FamilyActionRequestType,
   PrivateLesson,
   Guardian,
   GuardianRelationshipType,
@@ -44,6 +52,7 @@ export function AthleteDetailPage() {
   const [chargeItems, setChargeItems] = useState<ChargeItem[]>([]);
   const [charges, setCharges] = useState<AthleteCharge[]>([]);
   const [privateLessons, setPrivateLessons] = useState<PrivateLesson[]>([]);
+  const [familyReadiness, setFamilyReadiness] = useState<AthleteFamilyReadiness | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(searchParams.get('message'));
@@ -54,13 +63,18 @@ export function AthleteDetailPage() {
   const [primaryContact, setPrimaryContact] = useState(false);
 
   const [teamId, setTeamId] = useState('');
+  const [requestTitle, setRequestTitle] = useState('');
+  const [requestDescription, setRequestDescription] = useState('');
+  const [requestDueDate, setRequestDueDate] = useState('');
+  const [requestType, setRequestType] = useState<FamilyActionRequestType>('contact_details_completion');
+  const [requestGuardianId, setRequestGuardianId] = useState('');
 
   const load = useCallback(async () => {
     if (!id || !tenantId) return;
     setLoading(true);
     setError(null);
     try {
-      const [a, g, tm, ag, tr, ci, ac, lessons] = await Promise.all([
+      const [a, g, tm, ag, tr, ci, ac, lessons, readiness] = await Promise.all([
         apiGet<Athlete>(`/api/athletes/${id}`),
         apiGet<AthleteGuardianLink[]>(`/api/athletes/${id}/guardians`),
         apiGet<TeamMembership[]>(`/api/athletes/${id}/teams`),
@@ -69,6 +83,7 @@ export function AthleteDetailPage() {
         apiGet<{ items: ChargeItem[] }>('/api/charge-items?limit=200&isActive=true'),
         apiGet<AthleteFinanceSummaryResponse>(`/api/finance/athlete-summaries?athleteId=${id}`),
         apiGet<{ items: PrivateLesson[] }>(`/api/private-lessons?athleteId=${id}&limit=20`),
+        apiGet<AthleteFamilyReadiness>(`/api/athletes/${id}/family-readiness`),
       ]);
       setAthlete(a);
       setGuardians(g);
@@ -77,14 +92,18 @@ export function AthleteDetailPage() {
       setChargeItems(ci.items);
       setCharges(ac.charges.slice(0, 20));
       setPrivateLessons(lessons.items);
+      setFamilyReadiness(readiness);
       const sameBranch = tr.items.filter((x) => x.sportBranchId === a.sportBranchId);
       setAllTeams(sameBranch);
+      if (!requestGuardianId && readiness.actions[0]?.guardianId) {
+        setRequestGuardianId(readiness.actions[0].guardianId);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [id, tenantId, t]);
+  }, [id, requestGuardianId, tenantId, t]);
 
   useEffect(() => {
     void load();
@@ -171,6 +190,37 @@ export function AthleteDetailPage() {
     }
   }
 
+  async function createFamilyActionRequest() {
+    if (!id || !requestTitle.trim()) return;
+    try {
+      await apiPost('/api/family-actions', {
+        athleteId: id,
+        guardianId: requestGuardianId || undefined,
+        type: requestType,
+        title: requestTitle.trim(),
+        description: requestDescription.trim() || undefined,
+        dueDate: requestDueDate || undefined,
+      });
+      setRequestTitle('');
+      setRequestDescription('');
+      setRequestDueDate('');
+      setMessage(t('pages.athletes.familyActions.created'));
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
+    }
+  }
+
+  async function transitionFamilyAction(request: FamilyActionRequest, status: FamilyActionRequestStatus) {
+    try {
+      await apiPost(`/api/family-actions/${request.id}/transition`, { status });
+      setMessage(t('pages.athletes.familyActions.updated'));
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
+    }
+  }
+
   const activeTeams = teams.filter((m) => !m.endedAt);
   const endedTeams = teams.filter((m) => m.endedAt);
   const availableGuardians = useMemo(
@@ -181,6 +231,10 @@ export function AthleteDetailPage() {
   const outstandingTotal = charges.reduce((sum, charge) => sum + Number(charge.remainingAmount ?? 0), 0);
   const overdueCount = charges.filter((charge) => charge.isOverdue).length;
   const openLessons = privateLessons.filter((lesson) => lesson.status !== 'completed').length;
+  const readinessIssueCodes = familyReadiness?.issueCodes ?? [];
+  const pendingFamilyActions = familyReadiness?.summary.pendingFamilyActions ?? 0;
+  const awaitingStaffReview = familyReadiness?.summary.awaitingStaffReview ?? 0;
+  const availableActionGuardians = guardians.map((row) => row.guardian);
 
   if (loading || !athlete) {
     return (
@@ -194,6 +248,7 @@ export function AthleteDetailPage() {
   }
 
   const displayName = getPersonName(athlete);
+  const readinessStatus = familyReadiness?.status ?? 'incomplete';
   const enrollmentChecklist = [
     {
       key: 'status',
@@ -249,8 +304,23 @@ export function AthleteDetailPage() {
       actionLabel: t('pages.finance.athleteChargesLink'),
       actionHref: `/app/finance/athlete-charges?athleteId=${athlete.id}`,
     },
+    {
+      key: 'familyFollowUp',
+      done: pendingFamilyActions === 0 && awaitingStaffReview === 0,
+      label: t('pages.athletes.familyActions.readinessLabel'),
+      detail:
+        pendingFamilyActions > 0 || awaitingStaffReview > 0
+          ? t('pages.athletes.familyActions.readinessOpen', {
+              pendingFamilyActions,
+              awaitingStaffReview,
+            })
+          : t('pages.athletes.familyActions.readinessClear'),
+      actionLabel: t('pages.athletes.familyActions.jumpToQueue'),
+      actionHref: '#family-actions',
+    },
   ];
   const nextActions = enrollmentChecklist.filter((item) => !item.done).slice(0, 3);
+  const readinessTone = getFamilyReadinessTone(readinessStatus);
 
   return (
     <div>
@@ -284,10 +354,28 @@ export function AthleteDetailPage() {
               <p className="text-sm text-amateur-muted">
                 {getAthleteStatusLabel(t, athlete.status)}
               </p>
+              <p className="mt-2 text-sm text-amateur-muted">
+                {t('pages.athletes.familyActions.readinessHeadline', {
+                  status: getFamilyReadinessStatusLabel(t, readinessStatus),
+                })}
+              </p>
             </div>
-            <span className="rounded-full bg-amateur-accent-soft px-3 py-1 text-xs font-medium text-amateur-accent">
-              {athlete.primaryGroup?.name ?? t('pages.athletes.noGroup')}
-            </span>
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-full bg-amateur-accent-soft px-3 py-1 text-xs font-medium text-amateur-accent">
+                {athlete.primaryGroup?.name ?? t('pages.athletes.noGroup')}
+              </span>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                  readinessTone === 'danger'
+                    ? 'bg-amber-100 text-amber-700'
+                    : readinessTone === 'success'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-slate-100 text-slate-700'
+                }`}
+              >
+                {getFamilyReadinessStatusLabel(t, readinessStatus)}
+              </span>
+            </div>
           </div>
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <div>
@@ -363,6 +451,13 @@ export function AthleteDetailPage() {
               {t('pages.athletes.enrollmentSubtitle')}
             </h3>
             <p className="mt-2 max-w-2xl text-sm text-amateur-muted">{t('pages.athletes.enrollmentHint')}</p>
+            {readinessIssueCodes.length > 0 ? (
+              <p className="mt-2 text-sm text-amateur-muted">
+                {t('pages.athletes.familyActions.issueSummary', {
+                  count: readinessIssueCodes.length,
+                })}
+              </p>
+            ) : null}
           </div>
           <div className="grid min-w-[14rem] gap-3 sm:grid-cols-3 lg:grid-cols-1">
             <StatCard
@@ -432,6 +527,181 @@ export function AthleteDetailPage() {
                   </li>
                 ))}
               </ul>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section id="family-actions" className="mt-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-semibold">{t('pages.athletes.familyActions.title')}</h3>
+            <p className="text-sm text-amateur-muted">{t('pages.athletes.familyActions.hint')}</p>
+          </div>
+          <Link to={`/app/communications?athleteIds=${athlete.id}&needsFollowUp=true`}>
+            <Button variant="ghost">{t('pages.athletes.familyActions.openFollowUp')}</Button>
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <StatCard
+            label={t('pages.athletes.familyActions.pendingFamily')}
+            value={pendingFamilyActions}
+            compact
+            tone={pendingFamilyActions > 0 ? 'danger' : 'default'}
+          />
+          <StatCard
+            label={t('pages.athletes.familyActions.awaitingReview')}
+            value={awaitingStaffReview}
+            compact
+            tone={awaitingStaffReview > 0 ? 'danger' : 'default'}
+          />
+          <StatCard
+            label={t('pages.athletes.familyActions.closed')}
+            value={familyReadiness?.summary.completedActions ?? 0}
+            compact
+          />
+        </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+          <div className="rounded-xl border border-amateur-border bg-amateur-canvas p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+              {t('pages.athletes.familyActions.newRequest')}
+            </p>
+            <div className="mt-3 space-y-3">
+              <label className="flex flex-col gap-1 text-sm">
+                <span>{t('pages.athletes.familyActions.requestType')}</span>
+                <select
+                  value={requestType}
+                  onChange={(e) => setRequestType(e.target.value as FamilyActionRequestType)}
+                  className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                >
+                  {(
+                    [
+                      'contact_details_completion',
+                      'guardian_profile_update',
+                      'consent_acknowledgement',
+                      'enrollment_readiness',
+                      'profile_correction',
+                    ] as FamilyActionRequestType[]
+                  ).map((value) => (
+                    <option key={value} value={value}>
+                      {getFamilyActionTypeLabel(t, value)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span>{t('pages.athletes.familyActions.requestGuardian')}</span>
+                <select
+                  value={requestGuardianId}
+                  onChange={(e) => setRequestGuardianId(e.target.value)}
+                  className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                >
+                  <option value="">{t('pages.athletes.familyActions.anyLinkedGuardian')}</option>
+                  {availableActionGuardians.map((guardian) => (
+                    <option key={guardian.id} value={guardian.id}>
+                      {getPersonName(guardian)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span>{t('pages.athletes.familyActions.requestTitle')}</span>
+                <input
+                  value={requestTitle}
+                  onChange={(e) => setRequestTitle(e.target.value)}
+                  className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span>{t('pages.athletes.familyActions.requestDueDate')}</span>
+                <input
+                  type="date"
+                  value={requestDueDate}
+                  onChange={(e) => setRequestDueDate(e.target.value)}
+                  className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span>{t('pages.athletes.familyActions.requestDescription')}</span>
+                <textarea
+                  rows={4}
+                  value={requestDescription}
+                  onChange={(e) => setRequestDescription(e.target.value)}
+                  className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                />
+              </label>
+              <Button type="button" onClick={() => void createFamilyActionRequest()} disabled={!requestTitle.trim()}>
+                {t('pages.athletes.familyActions.create')}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-amateur-border bg-amateur-canvas p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+              {t('pages.athletes.familyActions.queueTitle')}
+            </p>
+            {familyReadiness?.actions.length ? (
+              <div className="mt-3 space-y-3">
+                {familyReadiness.actions.map((request) => (
+                  <article key={request.id} className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-amateur-ink">{request.title}</p>
+                        <p className="mt-1 text-xs text-amateur-muted">
+                          {[
+                            getFamilyActionTypeLabel(t, request.type),
+                            request.guardianName,
+                            request.dueDate ? formatDate(request.dueDate, i18n.language) : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                        {getFamilyActionStatusLabel(t, request.status)}
+                      </span>
+                    </div>
+                    {request.description ? (
+                      <p className="mt-2 text-sm text-amateur-muted">{request.description}</p>
+                    ) : null}
+                    {request.latestResponseText ? (
+                      <p className="mt-2 text-sm text-amateur-muted">
+                        {t('pages.athletes.familyActions.latestResponse')}: {request.latestResponseText}
+                      </p>
+                    ) : null}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {request.status === 'pending_family_action' || request.status === 'open' || request.status === 'rejected' ? (
+                        <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'submitted')}>
+                          {t('pages.athletes.familyActions.markSubmitted')}
+                        </Button>
+                      ) : null}
+                      {request.status === 'submitted' ? (
+                        <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'under_review')}>
+                          {t('pages.athletes.familyActions.startReview')}
+                        </Button>
+                      ) : null}
+                      {request.status === 'submitted' || request.status === 'under_review' ? (
+                        <>
+                          <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'approved')}>
+                            {t('pages.athletes.familyActions.approve')}
+                          </Button>
+                          <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'rejected')}>
+                            {t('pages.athletes.familyActions.reject')}
+                          </Button>
+                        </>
+                      ) : null}
+                      {request.status === 'approved' ? (
+                        <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'completed')}>
+                          {t('pages.athletes.familyActions.complete')}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-amateur-muted">{t('pages.athletes.familyActions.empty')}</p>
             )}
           </div>
         </div>
@@ -778,6 +1048,12 @@ export function AthleteDetailPage() {
               <li>
                 {t('pages.communications.signalLessons', {
                   count: privateLessons.filter((lesson) => lesson.status !== 'completed').length,
+                })}
+              </li>
+              <li>
+                {t('pages.communications.signalFamilyActions', {
+                  pending: pendingFamilyActions,
+                  review: awaitingStaffReview,
                 })}
               </li>
             </ul>

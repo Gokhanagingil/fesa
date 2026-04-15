@@ -18,6 +18,8 @@ import { ChargeItem } from './charge-item.entity';
 import { AthleteCharge } from './athlete-charge.entity';
 import { Payment } from './payment.entity';
 import { PaymentAllocation } from './payment-allocation.entity';
+import { FamilyActionRequest } from './family-action-request.entity';
+import { FamilyActionEvent } from './family-action-event.entity';
 
 export const domainEntities = [
   Tenant,
@@ -40,6 +42,8 @@ export const domainEntities = [
   AthleteCharge,
   Payment,
   PaymentAllocation,
+  FamilyActionRequest,
+  FamilyActionEvent,
 ];
 
 export {
@@ -63,4 +67,6 @@ export {
   AthleteCharge,
   Payment,
   PaymentAllocation,
+  FamilyActionRequest,
+  FamilyActionEvent,
 };

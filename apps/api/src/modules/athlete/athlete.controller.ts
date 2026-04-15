@@ -19,6 +19,7 @@ import { ListAthletesQueryDto } from './dto/list-athletes-query.dto';
 import { LinkAthleteGuardianDto } from '../guardian/dto/link-athlete-guardian.dto';
 import { GuardianService } from '../guardian/guardian.service';
 import { AddTeamMembershipDto } from './dto/add-team-membership.dto';
+import { FamilyActionService } from '../family-action/family-action.service';
 
 @Controller('athletes')
 @UseGuards(TenantGuard)
@@ -26,6 +27,7 @@ export class AthleteController {
   constructor(
     private readonly athletes: AthleteService,
     private readonly guardians: GuardianService,
+    private readonly familyActions: FamilyActionService,
   ) {}
 
   @Get()
@@ -56,6 +58,11 @@ export class AthleteController {
   @Get(':id/guardians')
   listGuardians(@Req() req: Request, @Param('id') athleteId: string) {
     return this.athletes.listGuardiansForAthlete(req.tenantId!, athleteId);
+  }
+
+  @Get(':id/family-readiness')
+  getFamilyReadiness(@Req() req: Request, @Param('id') athleteId: string) {
+    return this.familyActions.getAthleteReadiness(req.tenantId!, athleteId);
   }
 
   @Post(':id/guardians')

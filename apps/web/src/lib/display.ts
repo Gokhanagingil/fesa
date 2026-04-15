@@ -3,6 +3,10 @@ import type {
   Athlete,
   AthleteCharge,
   AthleteChargeStatus,
+  FamilyActionRequest,
+  FamilyActionRequestStatus,
+  FamilyActionRequestType,
+  FamilyReadinessStatus,
   AthleteGuardianLink,
   AthleteStatus,
   AttendanceStatus,
@@ -52,6 +56,49 @@ export function getEnrollmentReadinessTone(missingCount: number): 'default' | 'd
   return missingCount > 0 ? 'danger' : 'default';
 }
 
+export function getFamilyReadinessLabel(t: TFunction, status: FamilyReadinessStatus): string {
+  return t(`app.enums.familyReadinessStatus.${status}`);
+}
+
+export function getFamilyReadinessStatusLabel(t: TFunction, status: FamilyReadinessStatus): string {
+  return getFamilyReadinessLabel(t, status);
+}
+
+export function getFamilyReadinessTone(
+  status: FamilyReadinessStatus,
+): 'default' | 'danger' | 'warning' | 'success' {
+  switch (status) {
+    case 'incomplete':
+      return 'danger';
+    case 'awaiting_guardian_action':
+    case 'awaiting_staff_review':
+      return 'warning';
+    case 'complete':
+    default:
+      return 'success';
+  }
+}
+
+export function getFamilyActionRequestTypeLabel(t: TFunction, type: FamilyActionRequestType): string {
+  return t(`app.enums.familyActionRequestType.${type}`);
+}
+
+export function getFamilyActionTypeLabel(t: TFunction, type: FamilyActionRequestType): string {
+  return getFamilyActionRequestTypeLabel(t, type);
+}
+
+export function getFamilyActionRequestStatusLabel(t: TFunction, status: FamilyActionRequestStatus): string {
+  return t(`app.enums.familyActionRequestStatus.${status}`);
+}
+
+export function getFamilyActionStatusLabel(t: TFunction, status: FamilyActionRequestStatus): string {
+  return getFamilyActionRequestStatusLabel(t, status);
+}
+
+export function getFamilyActionActorLabel(t: TFunction, actor: FamilyActionRequest['events'][number]['actor']): string {
+  return t(`app.enums.familyActionActor.${actor}`);
+}
+
 export function getTrainingStatusLabel(t: TFunction, status: TrainingSessionStatus): string {
   return t(`app.enums.trainingStatus.${status}`);
 }
@@ -72,11 +119,18 @@ export function getPrivateLessonReasonLabel(t: TFunction, reason: string): strin
       status: getTrainingStatusLabel(t, reason.slice('private_lesson:'.length) as TrainingSessionStatus),
     });
   }
+  if (reason.startsWith('family_readiness:')) {
+    return t('pages.communications.reasonFamilyReadiness', {
+      status: getFamilyReadinessLabel(t, reason.slice('family_readiness:'.length) as FamilyReadinessStatus),
+    });
+  }
   const labels: Record<string, string> = {
     'finance:overdue': t('pages.communications.reasonOverdue'),
     'finance:outstanding': t('pages.communications.reasonOutstanding'),
     training_session: t('pages.communications.reasonTraining'),
     coach_assignment: t('pages.communications.reasonCoach'),
+    'family_action:pending': t('pages.communications.reasonPendingFamily'),
+    'family_action:review': t('pages.communications.reasonAwaitingReview'),
     manual_selection: t('pages.communications.reasonManual'),
   };
   return labels[reason] ?? reason;

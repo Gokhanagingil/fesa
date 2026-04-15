@@ -113,6 +113,62 @@ That makes standard sessions excellent for cohort operations, but awkward for 1-
   - see linked athletes from the guardian side,
   - create a guardian directly from an athlete profile and link them in one flow.
 
+## Family portal readiness and controlled self-service
+
+- The platform still does **not** expose a public family portal or guardian authentication layer in this wave.
+- Instead, it now adds a tenant-scoped internal workflow foundation built for future portal usage without forcing immediate public exposure:
+  - **`family_action_requests`** for staff-created family-facing requests,
+  - **`family_action_events`** for audit-friendly workflow history.
+
+### Current workflow model
+
+- A family action request links to:
+  - one athlete,
+  - optionally one linked guardian,
+  - one request type,
+  - one controlled status.
+- Supported request types are intentionally narrow and operational:
+  - guardian profile update,
+  - contact details completion,
+  - consent acknowledgement,
+  - enrollment readiness completion,
+  - profile correction.
+
+### Current status model
+
+- `open`
+- `pending_family_action`
+- `submitted`
+- `under_review`
+- `approved`
+- `rejected`
+- `completed`
+- `closed`
+
+This keeps the product in a practical club-operations lane rather than turning it into a generic BPM engine.
+
+### Readiness model in this wave
+
+- Athlete-facing family readiness is now derived from:
+  - linked guardians,
+  - primary contact presence,
+  - whether guardians have any phone/email contact detail,
+  - primary group assignment,
+  - open family-action workflow state.
+- Staff-facing readiness collapses into a small operational state set:
+  - `complete`
+  - `incomplete`
+  - `awaiting_guardian_action`
+  - `awaiting_staff_review`
+
+### Why this matters
+
+- Clubs can now see whether missing family data should be:
+  - fixed internally,
+  - requested from a guardian,
+  - reviewed by staff before becoming authoritative.
+- The model prepares the platform for future guardian login/linkage later without requiring a rewrite of athlete, guardian, communication, or reporting surfaces.
+
 ## Finance
 
 - **`charge_items`** — reusable catalog (name, category, default amount, currency, active flag).

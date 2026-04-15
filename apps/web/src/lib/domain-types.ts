@@ -5,6 +5,23 @@ export type TrainingSessionStatus = 'planned' | 'completed' | 'cancelled';
 export type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late';
 export type AthleteChargeStatus = 'pending' | 'partially_paid' | 'paid' | 'cancelled';
 export type GuardianRelationshipType = 'mother' | 'father' | 'guardian' | 'other';
+export type FamilyActionRequestType =
+  | 'guardian_profile_update'
+  | 'contact_details_completion'
+  | 'consent_acknowledgement'
+  | 'enrollment_readiness'
+  | 'profile_correction';
+export type FamilyActionRequestStatus =
+  | 'open'
+  | 'pending_family_action'
+  | 'submitted'
+  | 'under_review'
+  | 'approved'
+  | 'rejected'
+  | 'completed'
+  | 'closed';
+export type FamilyActionActor = 'club' | 'family' | 'system';
+export type FamilyReadinessStatus = 'complete' | 'incomplete' | 'awaiting_guardian_action' | 'awaiting_staff_review';
 
 export type SportBranch = { id: string; code: string; name: string };
 export type Coach = {
@@ -189,6 +206,9 @@ export type CommunicationAudienceMember = {
   outstandingAmount: string;
   overdueAmount: string;
   hasOverdueBalance: boolean;
+  familyReadinessStatus: FamilyReadinessStatus;
+  pendingFamilyActions: number;
+  awaitingStaffReview: number;
 };
 
 export type CommunicationAudienceResponse = {
@@ -198,7 +218,89 @@ export type CommunicationAudienceResponse = {
     guardians: number;
     primaryContacts: number;
     withOverdueBalance: number;
+    incompleteAthletes: number;
+    awaitingGuardianAction: number;
+    awaitingStaffReview: number;
+    needingFollowUp: number;
   };
+};
+
+export type FamilyActionEvent = {
+  id: string;
+  actor: FamilyActionActor;
+  eventType: string;
+  fromStatus: FamilyActionRequestStatus | null;
+  toStatus: FamilyActionRequestStatus | null;
+  note: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type FamilyActionRequest = {
+  id: string;
+  athleteId: string;
+  athleteName: string;
+  guardianId: string | null;
+  guardianName: string | null;
+  type: FamilyActionRequestType;
+  status: FamilyActionRequestStatus;
+  title: string;
+  description: string | null;
+  dueDate: string | null;
+  payload: Record<string, unknown>;
+  latestResponseText: string | null;
+  decisionNote: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  latestEventAt: string | null;
+  eventCount: number;
+  events: FamilyActionEvent[];
+};
+
+export type AthleteFamilyReadiness = {
+  athleteId: string;
+  status: FamilyReadinessStatus;
+  issueCodes: string[];
+  summary: {
+    guardiansLinked: number;
+    primaryContacts: number;
+    guardiansMissingContactDetails: number;
+    missingItems: number;
+    pendingFamilyActions: number;
+    awaitingStaffReview: number;
+    completedActions: number;
+    openActions: number;
+  };
+  actions: FamilyActionRequest[];
+};
+
+export type GuardianFamilyReadiness = {
+  guardianId: string;
+  status: FamilyReadinessStatus;
+  issueCodes: string[];
+  summary: {
+    linkedAthletes: number;
+    primaryRelationships: number;
+    athletesAwaitingGuardianAction: number;
+    athletesAwaitingStaffReview: number;
+  };
+  actions: FamilyActionRequest[];
+};
+
+export type FamilyActionWorkflowSummary = {
+  counts: {
+    open: number;
+    pendingFamilyAction: number;
+    awaitingStaffReview: number;
+    completed: number;
+    incompleteAthletes: number;
+    athletesAwaitingGuardianAction: number;
+    athletesAwaitingStaffReview: number;
+  };
+  items: FamilyActionRequest[];
 };
 
 export type Payment = {
@@ -275,6 +377,13 @@ export type CommandCenterResponse = DashboardSummary & {
     audienceAthletes: number;
     reachableGuardians: number;
     athletesWithOverdueBalance: number;
+    incompleteAthletes: number;
+    athletesAwaitingGuardianAction: number;
+    athletesAwaitingStaffReview: number;
+    athletesNeedingFollowUp: number;
+  };
+  familyWorkflow?: FamilyActionWorkflowSummary['counts'] & {
+    items: FamilyActionRequest[];
   };
 };
 

@@ -11,12 +11,14 @@ import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.e
 import { Team } from '../../database/entities/team.entity';
 import { TrainingSession } from '../../database/entities/training-session.entity';
 import { FinanceModule } from '../finance/finance.module';
+import { FamilyActionModule } from '../family-action/family-action.module';
 import { CommunicationController } from './communication.controller';
 import { CommunicationService } from './communication.service';
 
 @Module({
   imports: [
     FinanceModule,
+    FamilyActionModule,
     TypeOrmModule.forFeature([
       Athlete,
       Guardian,

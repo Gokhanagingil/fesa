@@ -6,6 +6,7 @@ import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.e
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { AthleteCharge } from '../../database/entities/athlete-charge.entity';
 import { CommunicationService } from '../communication/communication.service';
+import { FamilyActionService } from '../family-action/family-action.service';
 import { FinanceService } from '../finance/finance.service';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class ReportingService {
     private readonly privateLessons: Repository<PrivateLesson>,
     private readonly finance: FinanceService,
     private readonly communications: CommunicationService,
+    private readonly familyActions: FamilyActionService,
   ) {}
 
   async definitions(tenantId: string) {
@@ -75,11 +77,12 @@ export class ReportingService {
       .orderBy('lesson.scheduledStart', 'ASC')
       .take(20);
 
-    const [dashboard, financeSummary, lessons, communicationAudience] = await Promise.all([
+    const [dashboard, financeSummary, lessons, communicationAudience, workflowSummary] = await Promise.all([
       this.finance.getDashboardSummary(tenantId),
       this.finance.listAthleteFinanceSummaries(tenantId, {}),
       lessonsQuery.getMany(),
       this.communications.listAudience(tenantId, {}),
+      this.familyActions.getWorkflowSummary(tenantId),
     ]);
 
     const today = new Date();
@@ -106,6 +109,14 @@ export class ReportingService {
         audienceAthletes: communicationAudience.counts.athletes,
         reachableGuardians: communicationAudience.counts.guardians,
         athletesWithOverdueBalance: communicationAudience.counts.withOverdueBalance,
+        incompleteAthletes: communicationAudience.counts.incompleteAthletes,
+        athletesAwaitingGuardianAction: communicationAudience.counts.awaitingGuardianAction,
+        athletesAwaitingStaffReview: communicationAudience.counts.awaitingStaffReview,
+        athletesNeedingFollowUp: communicationAudience.counts.needingFollowUp,
+      },
+      familyWorkflow: {
+        ...workflowSummary.counts,
+        items: workflowSummary.items,
       },
     };
   }
