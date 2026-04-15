@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { ReportDefinition } from '../../database/entities/report-definition.entity';
 import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.entity';
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
+import { AthleteCharge } from '../../database/entities/athlete-charge.entity';
 import { CommunicationService } from '../communication/communication.service';
 import { FinanceService } from '../finance/finance.service';
 
@@ -59,15 +60,25 @@ export class ReportingService {
   }
 
   async commandCenter(tenantId: string) {
+    const lessonsQuery = this.privateLessons
+      .createQueryBuilder('lesson')
+      .leftJoinAndSelect('lesson.coach', 'coach')
+      .leftJoinAndSelect('lesson.athlete', 'athlete')
+      .leftJoinAndMapOne(
+        'lesson.charge',
+        AthleteCharge,
+        'charge',
+        'charge.privateLessonId = lesson.id AND charge.tenantId = lesson.tenantId',
+      )
+      .leftJoinAndSelect('charge.chargeItem', 'chargeItem')
+      .where('lesson.tenantId = :tenantId', { tenantId })
+      .orderBy('lesson.scheduledStart', 'ASC')
+      .take(20);
+
     const [dashboard, financeSummary, lessons, communicationAudience] = await Promise.all([
       this.finance.getDashboardSummary(tenantId),
       this.finance.listAthleteFinanceSummaries(tenantId, {}),
-      this.privateLessons.find({
-        where: { tenantId },
-        relations: ['coach', 'athlete', 'charge'],
-        order: { scheduledStart: 'ASC' },
-        take: 20,
-      }),
+      lessonsQuery.getMany(),
       this.communications.listAudience(tenantId, {}),
     ]);
 

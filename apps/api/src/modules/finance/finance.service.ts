@@ -278,7 +278,12 @@ export class FinanceService {
     const qb = this.privateLessons
       .createQueryBuilder('lesson')
       .leftJoinAndSelect('lesson.athlete', 'athlete')
-      .leftJoinAndSelect('lesson.charge', 'charge')
+      .leftJoinAndMapOne(
+        'lesson.charge',
+        AthleteCharge,
+        'charge',
+        'charge.privateLessonId = lesson.id AND charge.tenantId = lesson.tenantId',
+      )
       .leftJoinAndSelect('charge.chargeItem', 'chargeItem')
       .where('lesson.tenantId = :tenantId', { tenantId });
 

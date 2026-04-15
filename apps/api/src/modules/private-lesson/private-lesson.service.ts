@@ -88,11 +88,25 @@ export class PrivateLessonService {
     await this.athleteCharges.save(charge);
   }
 
+  private privateLessonQuery(tenantId: string) {
+    return this.privateLessons
+      .createQueryBuilder('lesson')
+      .leftJoinAndSelect('lesson.athlete', 'athlete')
+      .leftJoinAndSelect('athlete.primaryGroup', 'primaryGroup')
+      .leftJoinAndSelect('athlete.sportBranch', 'athleteSportBranch')
+      .leftJoinAndSelect('lesson.coach', 'coach')
+      .leftJoinAndMapOne(
+        'lesson.charge',
+        AthleteCharge,
+        'charge',
+        'charge.privateLessonId = lesson.id AND charge.tenantId = lesson.tenantId',
+      )
+      .leftJoinAndSelect('charge.chargeItem', 'chargeItem')
+      .where('lesson.tenantId = :tenantId', { tenantId });
+  }
+
   private async loadLesson(tenantId: string, id: string): Promise<PrivateLesson> {
-    const lesson = await this.privateLessons.findOne({
-      where: { id, tenantId },
-      relations: ['athlete', 'athlete.primaryGroup', 'athlete.sportBranch', 'coach', 'charge', 'charge.chargeItem'],
-    });
+    const lesson = await this.privateLessonQuery(tenantId).andWhere('lesson.id = :id', { id }).getOne();
     if (!lesson) {
       throw new NotFoundException('Private lesson not found');
     }
@@ -132,14 +146,7 @@ export class PrivateLessonService {
   async list(tenantId: string, query: ListPrivateLessonsQueryDto) {
     const limit = query.limit ?? 50;
     const offset = query.offset ?? 0;
-    const qb = this.privateLessons
-      .createQueryBuilder('lesson')
-      .leftJoinAndSelect('lesson.athlete', 'athlete')
-      .leftJoinAndSelect('athlete.primaryGroup', 'primaryGroup')
-      .leftJoinAndSelect('lesson.coach', 'coach')
-      .leftJoinAndSelect('lesson.charge', 'charge')
-      .leftJoinAndSelect('charge.chargeItem', 'chargeItem')
-      .where('lesson.tenantId = :tenantId', { tenantId });
+    const qb = this.privateLessonQuery(tenantId);
 
     if (query.athleteId) {
       qb.andWhere('lesson.athleteId = :athleteId', { athleteId: query.athleteId });
