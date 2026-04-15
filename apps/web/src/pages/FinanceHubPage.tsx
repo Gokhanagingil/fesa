@@ -6,6 +6,7 @@ import { StatCard } from '../components/ui/StatCard';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { apiGet } from '../lib/api';
 import { getLessonStatusLabel, getPersonName } from '../lib/display';
+import type { TrainingSessionStatus } from '../lib/domain-types';
 import { useTenant } from '../lib/tenant-hooks';
 
 type FinanceSummaryResponse = {
@@ -34,7 +35,7 @@ type FinanceSummaryResponse = {
     id: string;
     athleteId: string;
     scheduledStart: string;
-    status: string;
+    status: TrainingSessionStatus;
     athlete?: {
       id: string;
       firstName: string;

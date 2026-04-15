@@ -23,6 +23,7 @@ import type {
   ChargeItem,
   ClubGroup,
   Payment,
+  Team,
   PeriodicChargeGenerateResponse,
   PeriodicChargePreviewResponse,
 } from '../lib/domain-types';
@@ -76,6 +77,7 @@ export function AthleteChargesPage() {
   const [items, setItems] = useState<AthleteCharge[]>([]);
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [groups, setGroups] = useState<ClubGroup[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [chargeItems, setChargeItems] = useState<ChargeItem[]>([]);
   const [summary, setSummary] = useState<AthleteFinanceSummaryResponse | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -120,18 +122,21 @@ export function AthleteChargesPage() {
     if (!tenantId) return;
     void (async () => {
       try {
-        const [athleteRes, chargeItemRes, groupRes] = await Promise.all([
+        const [athleteRes, chargeItemRes, groupRes, teamRes] = await Promise.all([
           apiGet<{ items: Athlete[] }>('/api/athletes?limit=200'),
           apiGet<{ items: ChargeItem[] }>('/api/charge-items?limit=200&isActive=true'),
           apiGet<{ items: ClubGroup[] }>('/api/groups?limit=200'),
+          apiGet<{ items: Team[] }>('/api/teams?limit=200'),
         ]);
         setAthletes(athleteRes.items);
         setChargeItems(chargeItemRes.items);
         setGroups(groupRes.items);
+        setTeams(teamRes.items);
       } catch {
         setAthletes([]);
         setChargeItems([]);
         setGroups([]);
+        setTeams([]);
       }
     })();
   }, [tenantId]);

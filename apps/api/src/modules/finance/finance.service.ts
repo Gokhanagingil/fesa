@@ -300,10 +300,10 @@ export class FinanceService {
         charge: lesson.charge ? ((summaryMap.get(lesson.charge.id) as AthleteCharge | undefined) ?? lesson.charge) : null,
       }))
       .filter(
-        (lesson) =>
-          lesson.charge === null ||
-          Number(lesson.charge.remainingAmount ?? lesson.charge.amount) > 0 ||
-          lesson.status !== 'completed',
+        (lesson) => {
+          const charge = lesson.charge as (AthleteCharge & { remainingAmount?: string }) | null;
+          return charge === null || Number(charge.remainingAmount ?? charge.amount) > 0 || lesson.status !== 'completed';
+        },
       )
       .slice(0, 10);
   }
