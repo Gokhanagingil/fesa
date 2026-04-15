@@ -149,15 +149,15 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
     ]);
 
-    await membershipsRepo.save({
-      tenantId: DEMO_TENANT_ID,
-      staffUserId: STAFF_CLUB_ADMIN_ID,
-      role: TenantMembershipRole.CLUB_ADMIN,
-      isDefault: true,
-      createdByUserId: STAFF_GLOBAL_ADMIN_ID,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    await membershipsRepo.upsert(
+      {
+        tenantId: DEMO_TENANT_ID,
+        staffUserId: STAFF_CLUB_ADMIN_ID,
+        role: TenantMembershipRole.CLUB_ADMIN,
+        isDefault: true,
+      },
+      ['tenantId', 'staffUserId'],
+    );
 
     await branches.save([
       {
