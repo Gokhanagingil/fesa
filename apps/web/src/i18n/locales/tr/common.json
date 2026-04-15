@@ -99,6 +99,33 @@
         "rejected": "Reddedildi",
         "completed": "Tamamlandı",
         "closed": "Kapatıldı"
+      },
+      "familyActionRequestType": {
+        "guardian_profile_update": "Veli profil güncellemesi",
+        "contact_details_completion": "İletişim bilgisi tamamlama",
+        "consent_acknowledgement": "Onay / rıza teyidi",
+        "enrollment_readiness": "Kayıt hazırlığı",
+        "profile_correction": "Profil düzeltmesi"
+      },
+      "familyActionRequestStatus": {
+        "open": "Açık",
+        "pending_family_action": "Aile aksiyonu bekleniyor",
+        "submitted": "Gönderildi",
+        "under_review": "İncelemede",
+        "approved": "Onaylandı",
+        "rejected": "Reddedildi",
+        "completed": "Tamamlandı",
+        "closed": "Kapatıldı"
+      },
+      "familyActionActor": {
+        "club": "Kulüp personeli",
+        "family": "Aile portalı",
+        "system": "Sistem"
+      },
+      "guardianPortalAccessStatus": {
+        "invited": "Davet edildi",
+        "active": "Aktif",
+        "disabled": "Devre dışı"
       }
     },
     "states": {
@@ -310,7 +337,10 @@
         "openFollowUp": "Takip kitlesini aç",
         "readinessFilter": "Hazırlık durumu",
         "readinessFilterAll": "Tüm hazırlık durumları",
-        "followUpFilter": "Yalnız takip gerekenler"
+        "followUpFilter": "Yalnız takip gerekenler",
+        "portalSubmissionTitle": "Veli portalından gönderildi",
+        "applyPortalSubmission": "Onayla ve uygula",
+        "returnToGuardian": "Aileye geri gönder"
       }
     },
     "coaches": {
@@ -371,6 +401,24 @@
         "awaitingReview": "İnceleme bekleyen sporcular",
         "openActions": "Açık talepler",
         "openAthlete": "Sporcuyu aç"
+      },
+      "portalAccess": {
+        "title": "Portal erişimi",
+        "hint": "Bu veliyi kontrollü aile portalına davet edin; personel verileri görünür olmasın.",
+        "enabled": "Portal erişimi etkin.",
+        "disabled": "Portal erişimi devre dışı.",
+        "missingEmail": "Veli portal erişimini açmadan önce e-posta ekleyin.",
+        "pendingActions": "Bekleyen portal aksiyonları",
+        "awaitingReview": "Personel incelemesi bekleyen",
+        "linkedAthletes": "Bağlı sporcular",
+        "invitedAt": "Davet tarihi",
+        "activatedAt": "Aktivasyon",
+        "lastLoginAt": "Son giriş",
+        "enable": "Portalı yeniden aç",
+        "disable": "Erişimi kapat",
+        "resendInvite": "Daveti yeniden gönder",
+        "notEnabled": "Veli portal erişimi henüz açılmadı.",
+        "invite": "Portala davet et"
       }
     },
     "groups": {
@@ -874,12 +922,31 @@
       "summaryAwaitingReview": "İnceleme bekleyen",
       "reasonPendingFamily": "Aile aksiyonu bekleniyor",
       "reasonAwaitingReview": "İnceleme bekleniyor",
-      "reasonFamilyReadiness": "Aile hazırlığı: {{status}}"
+      "reasonFamilyReadiness": "Aile hazırlığı: {{status}}",
+      "portalEnabledOnly": "Portal erişimi açık olanlar",
+      "portalPendingOnly": "Portal takibi bekleyenler"
     },
     "settings": {
       "title": "Ayarlar",
       "subtitle": "Kulüp profili ve tercihler.",
       "placeholder": "Kulüp profili, bildirimler ve yerel varsayılanlar kimlik doğrulama sonrası burada olacak."
+    },
+    "guardianPortal": {
+      "backHome": "Portal ana sayfasına dön",
+      "action": {
+        "submitSuccess": "Yanıtınız kulüp incelemesine gönderildi.",
+        "requestTitle": "Talep detayları",
+        "staffNote": "Personel notu",
+        "responseTitle": "Yanıtınız",
+        "responseHint": "Yalnız kulübün istediği bilgileri paylaşın. Güncellemeler önce personel tarafından incelenir.",
+        "responseLabel": "Yanıt",
+        "phone": "Telefon",
+        "email": "E-posta",
+        "notes": "Notlar",
+        "submit": "Yanıtı gönder",
+        "readOnlyHint": "Bu talep artık sizden aksiyon beklemiyor.",
+        "historyTitle": "Talep geçmişi"
+      }
     }
   },
   "landing": {
@@ -891,5 +958,64 @@
     "pill1": "Çok dilli",
     "pill2": "Mobil uyumlu",
     "pill3": "Büyümeye hazır"
+  },
+  "portal": {
+    "brand": "Amateur aile portalı",
+    "subtitle": "Veli takibi için sakin ve güvenli görünüm.",
+    "nav": {
+      "home": "Ana sayfa"
+    },
+    "actions": {
+      "logout": "Çıkış yap",
+      "open": "Talebi aç",
+      "view": "Talebi görüntüle"
+    },
+    "login": {
+      "badge": "Veli erişimi",
+      "title": "Aile portalına giriş yapın",
+      "subtitle": "Veliler için sakin ve sınırlı görünüm.",
+      "hint": "Yalnız ailenize bağlı sporcuları ve talepleri görmek için kulüp davetindeki bilgileri kullanın.",
+      "club": "Kulüp",
+      "selectClub": "Kulübünüzü seçin",
+      "email": "E-posta",
+      "password": "Şifre",
+      "submit": "Giriş yap",
+      "submitting": "Giriş yapılıyor..."
+    },
+    "activate": {
+      "badge": "Portal daveti",
+      "title": "Veli erişiminizi etkinleştirin",
+      "subtitle": "Güvenli aile erişimi için kurulumu tamamlayın.",
+      "hint": "Bir kez şifre oluşturun; sonra sporcu güncellemeleri ve bekleyen talepleri görmek için buraya dönebilirsiniz.",
+      "password": "Şifre oluştur",
+      "submit": "Erişimi etkinleştir",
+      "submitting": "Etkinleştiriliyor...",
+      "invalidLink": "Bu davet bağlantısı geçersiz veya süresi dolmuş."
+    },
+    "home": {
+      "title": "Aile portalı",
+      "subtitle": "Bağlı sporcuları, bekleyen talepleri ve kulübü bekleyen konuları görün.",
+      "greeting": "Hoş geldiniz, {{name}}",
+      "empty": "Henüz görünür portal verisi yok.",
+      "stats": {
+        "linkedAthletes": "Bağlı sporcular",
+        "pendingActions": "Bekleyen aksiyonlar",
+        "awaitingReview": "Personel bekleniyor",
+        "outstandingAthletes": "Bakiyesi olan sporcular"
+      },
+      "readinessBadge": "Aile durumu",
+      "readinessTitle": "Dikkat gerektirenler",
+      "readinessHint": "Güncel genel durum: {{status}}",
+      "actionsTitle": "Kulüpten gelen talepler",
+      "actionsHint": "Onayınız veya bilgi güncellemeniz gereken kayıtları açın.",
+      "noActions": "Şu anda açık aile talebi yok.",
+      "athletesTitle": "Bağlı sporcularınız",
+      "athletesHint": "Veli kaydınıza bağlı sporcuların sınırlı özeti.",
+      "primaryContact": "Birincil iletişim",
+      "outstanding": "Açık bakiye",
+      "overdue": "Gecikmiş",
+      "nextTraining": "Sıradaki antrenman",
+      "nextLesson": "Sıradaki özel ders"
+    }
   }
 }

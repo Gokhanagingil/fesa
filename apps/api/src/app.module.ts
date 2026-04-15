@@ -21,6 +21,7 @@ import { PrivateLessonModule } from './modules/private-lesson/private-lesson.mod
 import { CommunicationModule } from './modules/communication/communication.module';
 import { FamilyActionModule } from './modules/family-action/family-action.module';
 import { ActionCenterModule } from './modules/action-center/action-center.module';
+import { GuardianPortalModule } from './modules/guardian-portal/guardian-portal.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { ActionCenterModule } from './modules/action-center/action-center.module
     CommunicationModule,
     FamilyActionModule,
     ActionCenterModule,
+    GuardianPortalModule,
   ],
 })
 export class AppModule {}

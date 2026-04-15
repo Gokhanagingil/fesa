@@ -22,11 +22,23 @@ import { CommunicationsPage } from './pages/CommunicationsPage';
 import { ActionCenterPage } from './pages/ActionCenterPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { PortalShell } from './components/layout/PortalShell';
+import { GuardianPortalLoginPage } from './pages/GuardianPortalLoginPage';
+import { GuardianPortalActivationPage } from './pages/GuardianPortalActivationPage';
+import { GuardianPortalHomePage } from './pages/GuardianPortalHomePage';
+import { GuardianPortalActionPage } from './pages/GuardianPortalActionPage';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/portal/login" element={<GuardianPortalLoginPage />} />
+      <Route path="/portal/activate" element={<GuardianPortalActivationPage />} />
+      <Route element={<PortalShell />}>
+        <Route path="/portal" element={<Navigate to="/portal/home" replace />} />
+        <Route path="/portal/home" element={<GuardianPortalHomePage />} />
+        <Route path="/portal/actions/:id" element={<GuardianPortalActionPage />} />
+      </Route>
       <Route element={<AppShell />}>
         <Route path="/app" element={<Navigate to="/app/dashboard" replace />} />
         <Route path="/app/dashboard" element={<DashboardPage />} />

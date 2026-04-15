@@ -27,30 +27,40 @@ async function parseError(res: Response): Promise<string> {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(path, { headers: headers() });
+  const res = await fetch(path, { headers: headers(), credentials: 'include' });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json() as Promise<T>;
 }
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(path, { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify(body),
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json() as Promise<T>;
 }
 
 export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(path, { method: 'PATCH', headers: headers(), body: JSON.stringify(body) });
+  const res = await fetch(path, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(body),
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json() as Promise<T>;
 }
 
 export async function apiPatchNoBody<T>(path: string): Promise<T> {
-  const res = await fetch(path, { method: 'PATCH', headers: headers() });
+  const res = await fetch(path, { method: 'PATCH', headers: headers(), credentials: 'include' });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json() as Promise<T>;
 }
 
 export async function apiDelete(path: string): Promise<void> {
-  const res = await fetch(path, { method: 'DELETE', headers: headers() });
+  const res = await fetch(path, { method: 'DELETE', headers: headers(), credentials: 'include' });
   if (!res.ok) throw new Error(await parseError(res));
 }

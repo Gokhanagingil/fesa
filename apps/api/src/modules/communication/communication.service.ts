@@ -10,6 +10,7 @@ import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.entity';
 import { Team } from '../../database/entities/team.entity';
 import { TrainingSession } from '../../database/entities/training-session.entity';
+import { GuardianPortalAccess } from '../../database/entities/guardian-portal-access.entity';
 import { FamilyReadinessStatus } from '../../database/enums';
 import { FinanceService } from '../finance/finance.service';
 import { FamilyActionService } from '../family-action/family-action.service';
@@ -60,6 +61,8 @@ export class CommunicationService {
     private readonly privateLessons: Repository<PrivateLesson>,
     @InjectRepository(SavedFilterPreset)
     private readonly presets: Repository<SavedFilterPreset>,
+    @InjectRepository(GuardianPortalAccess)
+    private readonly guardianPortalAccesses: Repository<GuardianPortalAccess>,
     private readonly finance: FinanceService,
     private readonly familyActions: FamilyActionService,
   ) {}
@@ -168,6 +171,28 @@ export class CommunicationService {
       }
     }
 
+    if (query.portalEnabledOnly || query.portalPendingOnly) {
+      const accessRows = await this.guardianPortalAccesses.find({
+        where: { tenantId },
+        select: { guardianId: true, status: true },
+      });
+      const guardianIds = accessRows
+        .filter((row) =>
+          query.portalEnabledOnly
+            ? row.status === 'active' || row.status === 'invited'
+            : row.status === 'invited',
+        )
+        .map((row) => row.guardianId);
+      if (guardianIds.length === 0) {
+        return [];
+      }
+      const links = await this.athleteGuardians.find({
+        where: { tenantId, guardianId: In(guardianIds) },
+        select: { athleteId: true },
+      });
+      links.forEach((link) => ids.add(link.athleteId));
+    }
+
     if (ids.size === 0) {
       const athletes = await this.athletes.find({
         where: { tenantId },
@@ -190,7 +215,8 @@ export class CommunicationService {
       };
     }
 
-    const [athletes, guardians, memberships, groups, teams, financeSummary, upcomingLessons, readinessMap] = await Promise.all([
+    const [athletes, guardians, memberships, groups, teams, financeSummary, upcomingLessons, readinessMap, portalAccesses] =
+      await Promise.all([
       this.athletes.find({
         where: { tenantId, id: In(athleteIds) },
         relations: ['primaryGroup'],
@@ -214,6 +240,10 @@ export class CommunicationService {
         order: { scheduledStart: 'ASC' },
       }),
       this.familyActions.getReadinessMap(tenantId, athleteIds),
+      this.guardianPortalAccesses.find({
+        where: { tenantId },
+        select: { guardianId: true, status: true },
+      }),
     ]);
 
     const financeMap = new Map(financeSummary.athletes.map((row) => [row.athlete.id, row]));
@@ -223,6 +253,7 @@ export class CommunicationService {
       current.push(link);
       guardiansByAthlete.set(link.athleteId, current);
     });
+    const portalStatusByGuardian = new Map(portalAccesses.map((row) => [row.guardianId, row.status]));
 
     const membershipsByAthlete = new Map<string, AthleteTeamMembership[]>();
     memberships.forEach((membership) => {
@@ -271,6 +302,23 @@ export class CommunicationService {
       }
       if (query.familyReadiness && readiness?.status === query.familyReadiness) {
         reasons.push(`family_readiness:${query.familyReadiness}`);
+      }
+      if (
+        query.portalEnabledOnly &&
+        (guardiansByAthlete.get(athlete.id) ?? []).some((link) => {
+          const status = portalStatusByGuardian.get(link.guardianId);
+          return status === 'active' || status === 'invited';
+        })
+      ) {
+        reasons.push('portal:enabled');
+      }
+      if (
+        query.portalPendingOnly &&
+        (guardiansByAthlete.get(athlete.id) ?? []).some(
+          (link) => portalStatusByGuardian.get(link.guardianId) === 'invited',
+        )
+      ) {
+        reasons.push('portal:pending');
       }
       if (query.needsFollowUp && readiness && readiness.status !== FamilyReadinessStatus.COMPLETE) {
         reasons.push(`family_readiness:${readiness.status}`);
@@ -340,6 +388,20 @@ export class CommunicationService {
           guardians: item.guardians.filter((guardian) => guardian.isPrimaryContact),
         }))
         .filter((item) => item.guardians.length > 0);
+    }
+
+    if (query.portalEnabledOnly) {
+      items = items.filter((item) =>
+        item.guardians.some((guardian) => {
+          const status = portalStatusByGuardian.get(guardian.guardianId);
+          return status === 'active' || status === 'invited';
+        }),
+      );
+    }
+    if (query.portalPendingOnly) {
+      items = items.filter((item) =>
+        item.guardians.some((guardian) => portalStatusByGuardian.get(guardian.guardianId) === 'invited'),
+      );
     }
 
     const guardianCount = items.reduce((sum, item) => sum + item.guardians.length, 0);

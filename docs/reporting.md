@@ -1,8 +1,8 @@
 # Reporting and command center
 
-## What Wave 6 adds
+## What Wave 7 adds
 
-Wave 6 keeps the existing reporting and command-center backbone, then extends it into a practical daily action surface:
+Wave 7 keeps the existing reporting and command-center backbone, then extends it into a practical cross-surface follow-through system:
 
 - `/api/reporting/definitions` still returns stable live report cards with i18n keys.
 - `/api/reporting/command-center` now combines:
@@ -18,7 +18,7 @@ Wave 6 keeps the existing reporting and command-center backbone, then extends it
 
 ## Action center model
 
-Wave 6 intentionally does **not** introduce a parallel workflow engine.
+Wave 7 still intentionally does **not** introduce a parallel workflow engine.
 
 Instead, it derives actionable items from current operational truth:
 
@@ -48,7 +48,7 @@ That keeps the queue trustworthy: if the underlying issue changes materially, th
 
 ## Communication follow-through
 
-Wave 6 keeps communications in the “preparation and targeting” lane:
+Wave 7 keeps communications in the “preparation and targeting” lane while adding guardian-portal follow-through targeting:
 
 - action-center items can pivot into `/app/communications` with prefilled filters,
 - audience reasons still explain why the athlete or family is included,
@@ -63,4 +63,4 @@ This keeps follow-through operational without drifting into a full outbound mess
 - saved report presets beyond communication-targeting use cases
 - background bulk job orchestration and audit dashboards
 - email / SMS / WhatsApp delivery infrastructure
-- public guardian authentication / external family portal delivery
+- full outbound delivery infrastructure for the guardian portal (email / SMS / WhatsApp sends still stay outside this wave)

@@ -94,6 +94,36 @@ export type Guardian = {
   notes?: string | null;
 };
 
+export type GuardianPortalAccessStatus = 'invited' | 'active' | 'disabled';
+
+export type GuardianPortalAccessSummary = {
+  id: string;
+  guardianId: string;
+  guardianName: string;
+  guardianEmail: string | null;
+  status: GuardianPortalAccessStatus;
+  invitedAt: string | null;
+  activatedAt: string | null;
+  lastLoginAt: string | null;
+  portalEnabled: boolean;
+  pendingActions: number;
+  awaitingReview: number;
+  linkedAthletes: number;
+  inviteLink?: string;
+};
+
+export type GuardianPortalActionSubmissionInput = {
+  responseText?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+};
+
+export type GuardianPortalActionReviewRequest = {
+  decision: 'approved' | 'rejected';
+  note?: string;
+};
+
 export type AthleteGuardianLink = {
   id: string;
   relationshipType: string;
@@ -213,6 +243,7 @@ export type CommunicationAudienceMember = {
     phone: string | null;
     email: string | null;
     isPrimaryContact: boolean;
+    portalAccessStatus?: GuardianPortalAccessStatus | null;
   }>;
   outstandingAmount: string;
   overdueAmount: string;
@@ -233,6 +264,59 @@ export type CommunicationAudienceResponse = {
     awaitingGuardianAction: number;
     awaitingStaffReview: number;
     needingFollowUp: number;
+  };
+};
+
+export type GuardianPortalActivationStatus = {
+  token: string;
+  tenantId: string;
+  tenantName: string;
+  guardianId: string;
+  guardianName: string;
+  email: string;
+  expiresAt: string;
+};
+
+export type GuardianPortalLinkedAthlete = {
+  linkId: string;
+  athleteId: string;
+  relationshipType: string;
+  isPrimaryContact: boolean;
+  athleteName: string;
+  groupName: string | null;
+  status: AthleteStatus | null;
+  outstandingAmount: string;
+  overdueAmount: string;
+  nextTraining: Array<{
+    id: string;
+    title: string;
+    scheduledStart: string;
+  }>;
+  nextPrivateLesson: {
+    id: string;
+    scheduledStart: string;
+    coachName: string | null;
+  } | null;
+};
+
+export type GuardianPortalHome = {
+  guardian: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+  };
+  access: {
+    status: GuardianPortalAccessStatus;
+    activatedAt: string | null;
+    lastLoginAt: string | null;
+  };
+  readiness: GuardianFamilyReadiness;
+  linkedAthletes: GuardianPortalLinkedAthlete[];
+  actions: FamilyActionRequest[];
+  finance: {
+    outstandingAthletes: number;
+    overdueAthletes: number;
   };
 };
 
