@@ -20,6 +20,7 @@ import { CreateAthleteChargeDto } from './dto/create-athlete-charge.dto';
 import { UpdateAthleteChargeDto } from './dto/update-athlete-charge.dto';
 import { ListAthleteChargesQueryDto } from './dto/list-athlete-charges-query.dto';
 import { CreateBulkAthleteChargesDto } from './dto/create-bulk-athlete-charges.dto';
+import { GeneratePeriodicAthleteChargesDto } from './dto/generate-periodic-athlete-charges.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ListPaymentsQueryDto } from './dto/list-payments-query.dto';
 import { ListAthleteFinanceSummaryQueryDto } from './dto/list-athlete-finance-summary-query.dto';
@@ -73,6 +74,16 @@ export class AthleteChargeController {
   @Post('bulk')
   createBulk(@Req() req: Request, @Body() dto: CreateBulkAthleteChargesDto) {
     return this.finance.createBulkAthleteCharges(req.tenantId!, dto);
+  }
+
+  @Post('periodic-preview')
+  previewPeriodic(@Req() req: Request, @Body() dto: GeneratePeriodicAthleteChargesDto) {
+    return this.finance.previewPeriodicAthleteCharges(req.tenantId!, dto);
+  }
+
+  @Post('periodic-generate')
+  generatePeriodic(@Req() req: Request, @Body() dto: GeneratePeriodicAthleteChargesDto) {
+    return this.finance.generatePeriodicAthleteCharges(req.tenantId!, dto);
   }
 
   @Get(':id')

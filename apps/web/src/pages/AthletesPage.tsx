@@ -11,7 +11,7 @@ import { useTenant } from '../lib/tenant-hooks';
 import type { Athlete, AthleteStatus, ClubGroup, Team } from '../lib/domain-types';
 
 type ListResponse = { items: Athlete[]; total: number };
-const statusOptions: AthleteStatus[] = ['active', 'inactive', 'trial', 'archived'];
+const statusOptions: AthleteStatus[] = ['trial', 'active', 'paused', 'inactive', 'archived'];
 
 export function AthletesPage() {
   const { t } = useTranslation();
@@ -186,7 +186,12 @@ export function AthletesPage() {
                     <td className="py-3 pr-4">
                       <p className="font-medium text-amateur-ink">{getPersonName(a)}</p>
                       <p className="text-xs text-amateur-muted">
-                        {a.jerseyNumber ? `${t('pages.athletes.jersey')} ${a.jerseyNumber}` : '—'}
+                        {[
+                          a.jerseyNumber ? `${t('pages.athletes.jersey')} ${a.jerseyNumber}` : null,
+                          a.sportBranch?.name ?? null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ') || '—'}
                       </p>
                     </td>
                     <td className="py-3 pr-4 text-amateur-muted">{groupMap.get(a.primaryGroupId ?? '') ?? '—'}</td>

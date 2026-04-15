@@ -5,7 +5,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { apiGet } from '../lib/api';
-import { getPersonName } from '../lib/display';
+import { getLessonStatusLabel, getPersonName } from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
 
 type FinanceSummaryResponse = {
@@ -206,7 +206,8 @@ export function FinanceHubPage() {
                         {lesson.athlete ? getPersonName(lesson.athlete) : t('pages.athleteCharges.openAthlete')}
                       </p>
                       <p className="text-xs text-amateur-muted">
-                        {new Date(lesson.scheduledStart).toLocaleString(i18n.language)} · {lesson.status}
+                        {new Date(lesson.scheduledStart).toLocaleString(i18n.language)} ·{' '}
+                        {getLessonStatusLabel(t, lesson.status)}
                       </p>
                     </div>
                     <Link

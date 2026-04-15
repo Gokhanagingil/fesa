@@ -390,7 +390,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
         gender: 'male',
         sportBranchId: BRANCH_FOOTBALL_ID,
         primaryGroupId: GROUP_FB_U16_ID,
-        status: AthleteStatus.INACTIVE,
+        status: AthleteStatus.PAUSED,
         jerseyNumber: null,
         notes: 'Paused — family travel; keep on roster for reactivation',
       },

@@ -32,5 +32,6 @@ import { CommunicationService } from './communication.service';
   ],
   controllers: [CommunicationController],
   providers: [CommunicationService],
+  exports: [CommunicationService],
 })
 export class CommunicationModule {}

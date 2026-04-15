@@ -5,7 +5,7 @@ import { InlineAlert } from '../components/ui/InlineAlert';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { apiGet } from '../lib/api';
-import { getPersonName } from '../lib/display';
+import { getLessonStatusLabel, getPersonName } from '../lib/display';
 import type { Coach, DashboardSummary, Payment, PrivateLesson } from '../lib/domain-types';
 import { useTenant } from '../lib/tenant-hooks';
 
@@ -96,7 +96,7 @@ export function DashboardPage() {
               : t('pages.athleteCharges.openAthlete')}
           </p>
           <p className="text-xs text-amateur-muted">
-            {[payment.method, payment.reference].filter(Boolean).join(' · ') || t('pages.finance.recentCollectionsHint')}
+            {[payment.method, payment.reference].filter(Boolean).join(' · ') || t('pages.dashboard.recentCollectionsHint')}
           </p>
         </div>
         <span className="text-sm font-semibold text-amateur-accent">{payment.currency} {payment.amount}</span>
@@ -274,7 +274,7 @@ export function DashboardPage() {
                       {lesson.coach ? getPersonName(lesson.coach) : '—'} · {lesson.focus || t('pages.privateLessons.focus')}
                     </p>
                   </div>
-                  <span className="text-xs text-amateur-muted">{lesson.status}</span>
+                  <span className="text-xs text-amateur-muted">{getLessonStatusLabel(t, lesson.status)}</span>
                 </li>
               ))}
             </ul>

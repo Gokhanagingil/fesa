@@ -5,6 +5,7 @@ import { AthleteCharge } from '../../database/entities/athlete-charge.entity';
 import { Athlete } from '../../database/entities/athlete.entity';
 import { Payment } from '../../database/entities/payment.entity';
 import { PaymentAllocation } from '../../database/entities/payment-allocation.entity';
+import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { FinanceService } from './finance.service';
 import {
   AthleteChargeController,
@@ -14,7 +15,7 @@ import {
 } from './finance.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ChargeItem, AthleteCharge, Athlete, Payment, PaymentAllocation])],
+  imports: [TypeOrmModule.forFeature([ChargeItem, AthleteCharge, Athlete, Payment, PaymentAllocation, PrivateLesson])],
   controllers: [ChargeItemController, AthleteChargeController, PaymentController, FinanceSummaryController],
   providers: [FinanceService],
   exports: [FinanceService],

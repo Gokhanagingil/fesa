@@ -6,12 +6,7 @@ import { ClubGroup } from '../../database/entities/club-group.entity';
 import { TenantGuard } from '../core/tenant.guard';
 import { CoachService } from '../coach/coach.service';
 import { AssignHeadCoachDto } from '../coach/dto/assign-head-coach.dto';
-
-class ListGroupsQuery {
-  sportBranchId?: string;
-  limit?: string;
-  offset?: string;
-}
+import { ListGroupsQueryDto } from './dto/list-groups-query.dto';
 
 @Controller('groups')
 @UseGuards(TenantGuard)
@@ -23,7 +18,7 @@ export class GroupController {
   ) {}
 
   @Get()
-  async list(@Req() req: Request, @Query() query: ListGroupsQuery) {
+  async list(@Req() req: Request, @Query() query: ListGroupsQueryDto) {
     const tenantId = req.tenantId!;
     const qb = this.groups
       .createQueryBuilder('g')
@@ -35,8 +30,8 @@ export class GroupController {
     if (query.sportBranchId) {
       qb.andWhere('g.sportBranchId = :sportBranchId', { sportBranchId: query.sportBranchId });
     }
-    const limit = Math.min(parseInt(query.limit ?? '50', 10) || 50, 200);
-    const offset = parseInt(query.offset ?? '0', 10) || 0;
+    const limit = query.limit ?? 50;
+    const offset = query.offset ?? 0;
     const total = await qb.clone().getCount();
     const items = await qb.orderBy('g.name', 'ASC').skip(offset).take(limit).getMany();
     return { items, total };

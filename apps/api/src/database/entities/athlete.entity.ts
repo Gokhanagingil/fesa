@@ -66,6 +66,7 @@ export class Athlete {
     enumName: 'athlete_status',
     default: AthleteStatus.ACTIVE,
   })
+  /** Trial and paused keep lifecycle visible without forcing archive/leave semantics too early. */
   status!: AthleteStatus;
 
   @Column({ type: 'varchar', length: 8, nullable: true })

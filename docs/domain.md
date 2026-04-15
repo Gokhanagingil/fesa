@@ -24,6 +24,23 @@ This supports:
 
 Guardians use a classic **M:N** link table `athlete_guardians` with relationship metadata (`relationshipType`, `isPrimaryContact`).
 
+## Athlete lifecycle and enrollment readiness
+
+- `athletes.status` now covers a lean club-operations lifecycle:
+  - `trial`
+  - `active`
+  - `paused`
+  - `inactive`
+  - `archived`
+- `paused` is intended for temporary breaks (travel, injury, season pause) where the athlete should stay visible for return-to-play and collections follow-up.
+- The product intentionally avoids a separate enrollment bureaucracy table in this wave. Instead, athlete readiness is computed from existing records:
+  - athlete status
+  - guardian linkage / primary contact
+  - primary group assignment
+  - optional team assignment
+  - open finance state
+- This keeps onboarding operational and fast: staff can open a profile and immediately see what is still missing without leaving the core athlete surface.
+
 ## Training & attendance
 
 - **`training_sessions`** — scheduled work for a **group** (`groupId` required); optional **team** (`teamId`) for team-specific practices.
@@ -110,6 +127,14 @@ That makes standard sessions excellent for cohort operations, but awkward for 1-
   - individually from an athlete profile,
   - individually through the finance area,
   - in **bulk** across multiple selected athletes.
+- **Periodic charges** can also be generated from the existing athlete-charges surface using:
+  - selected athletes,
+  - a target group, or
+  - a target team.
+- Periodic generation stores:
+  - `billingPeriodKey` — stable machine key such as `2026-04-dues`
+  - `billingPeriodLabel` — staff-facing label such as `April 2026 dues`
+- A tenant-scoped unique index on `(tenantId, athleteId, chargeItemId, billingPeriodKey)` prevents duplicate generation for the same athlete / item / period combination.
 - **Payments** are recorded explicitly and allocated to one or more open athlete charges.
 - **Charge status is derived from allocations** for non-cancelled rows:
   - no allocations -> `pending`

@@ -6,7 +6,9 @@ import { AthleteCharge } from '../../database/entities/athlete-charge.entity';
 import { Athlete } from '../../database/entities/athlete.entity';
 import { Payment } from '../../database/entities/payment.entity';
 import { PaymentAllocation } from '../../database/entities/payment-allocation.entity';
-import { AthleteChargeStatus } from '../../database/enums';
+import { PrivateLesson } from '../../database/entities/private-lesson.entity';
+import { AthleteTeamMembership } from '../../database/entities/athlete-team-membership.entity';
+import { AthleteChargeStatus, AthleteStatus } from '../../database/enums';
 import { CreateChargeItemDto } from './dto/create-charge-item.dto';
 import { UpdateChargeItemDto } from './dto/update-charge-item.dto';
 import { ListChargeItemsQueryDto } from './dto/list-charge-items-query.dto';
@@ -14,6 +16,7 @@ import { CreateAthleteChargeDto } from './dto/create-athlete-charge.dto';
 import { UpdateAthleteChargeDto } from './dto/update-athlete-charge.dto';
 import { ListAthleteChargesQueryDto } from './dto/list-athlete-charges-query.dto';
 import { CreateBulkAthleteChargesDto } from './dto/create-bulk-athlete-charges.dto';
+import { GeneratePeriodicAthleteChargesDto } from './dto/generate-periodic-athlete-charges.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ListPaymentsQueryDto } from './dto/list-payments-query.dto';
 import { ListAthleteFinanceSummaryQueryDto } from './dto/list-athlete-finance-summary-query.dto';
@@ -31,6 +34,8 @@ export class FinanceService {
     private readonly payments: Repository<Payment>,
     @InjectRepository(PaymentAllocation)
     private readonly paymentAllocations: Repository<PaymentAllocation>,
+    @InjectRepository(PrivateLesson)
+    private readonly privateLessons: Repository<PrivateLesson>,
   ) {}
 
   private getChargeRemaining(amount: string | number, allocatedAmount: number): number {
@@ -125,6 +130,182 @@ export class FinanceService {
     const athlete = await this.athletes.findOne({ where: { id: athleteId, tenantId } });
     if (!athlete) throw new BadRequestException('Athlete not found');
     return athlete;
+  }
+
+  private async resolvePeriodicChargeTargets(
+    tenantId: string,
+    dto: GeneratePeriodicAthleteChargesDto,
+  ): Promise<Athlete[]> {
+    const selectedAthleteIds = Array.from(new Set(dto.athleteIds ?? []));
+    const hasSelectedAthletes = selectedAthleteIds.length > 0;
+    const hasFilterTarget = Boolean(dto.groupId || dto.teamId);
+
+    if (!hasSelectedAthletes && !hasFilterTarget) {
+      throw new BadRequestException('Choose selected athletes, a group, or a team before generating periodic charges');
+    }
+
+    if (hasSelectedAthletes && hasFilterTarget) {
+      throw new BadRequestException('Use either selected athletes or a group/team target for periodic charges');
+    }
+
+    const statuses =
+      dto.athleteStatuses && dto.athleteStatuses.length > 0
+        ? dto.athleteStatuses
+        : [AthleteStatus.ACTIVE, AthleteStatus.TRIAL];
+
+    const qb = this.athletes
+      .createQueryBuilder('athlete')
+      .where('athlete.tenantId = :tenantId', { tenantId })
+      .distinct(true);
+
+    if (hasSelectedAthletes) {
+      qb.andWhere('athlete.id IN (:...athleteIds)', { athleteIds: selectedAthleteIds });
+    }
+
+    if (dto.groupId) {
+      qb.andWhere('athlete.primaryGroupId = :groupId', { groupId: dto.groupId });
+    }
+
+    if (dto.teamId) {
+      qb.innerJoin(
+        AthleteTeamMembership,
+        'membership',
+        'membership.tenantId = athlete.tenantId AND membership.athleteId = athlete.id AND membership.teamId = :teamId AND membership.endedAt IS NULL',
+        { teamId: dto.teamId },
+      );
+    }
+
+    qb.andWhere('athlete.status IN (:...statuses)', { statuses });
+
+    const athletes = await qb.orderBy('athlete.lastName', 'ASC').addOrderBy('athlete.firstName', 'ASC').getMany();
+
+    if (hasSelectedAthletes && athletes.length !== selectedAthleteIds.length) {
+      throw new BadRequestException('One or more selected athletes were not found for this tenant');
+    }
+
+    return athletes;
+  }
+
+  private async buildPeriodicChargePlan(tenantId: string, dto: GeneratePeriodicAthleteChargesDto) {
+    const [item, targets] = await Promise.all([
+      this.chargeItems.findOne({ where: { id: dto.chargeItemId, tenantId } }),
+      this.resolvePeriodicChargeTargets(tenantId, dto),
+    ]);
+
+    if (!item) {
+      throw new BadRequestException('Charge item not found');
+    }
+
+    const amount = dto.amount ?? Number(item.defaultAmount);
+    const targetIds = targets.map((athlete) => athlete.id);
+    const existingRows =
+      targetIds.length === 0
+        ? []
+        : await this.athleteCharges.find({
+            where: targetIds.map((athleteId) => ({
+              tenantId,
+              athleteId,
+              chargeItemId: dto.chargeItemId,
+              billingPeriodKey: dto.billingPeriodKey,
+            })),
+          });
+
+    const skippedAthleteIds = new Set(existingRows.map((row) => row.athleteId));
+
+    return {
+      item,
+      amount,
+      targets,
+      skippedAthleteIds,
+    };
+  }
+
+  async previewPeriodicAthleteCharges(tenantId: string, dto: GeneratePeriodicAthleteChargesDto) {
+    const { item, amount, targets, skippedAthleteIds } = await this.buildPeriodicChargePlan(tenantId, dto);
+
+    return {
+      targetCount: targets.length,
+      createCount: targets.filter((athlete) => !skippedAthleteIds.has(athlete.id)).length,
+      skippedCount: skippedAthleteIds.size,
+      amount: amount.toFixed(2),
+      currency: item.currency,
+      billingPeriodKey: dto.billingPeriodKey,
+      billingPeriodLabel: dto.billingPeriodLabel,
+      targets: targets.map((athlete) => ({
+        id: athlete.id,
+        firstName: athlete.firstName,
+        lastName: athlete.lastName,
+        preferredName: athlete.preferredName,
+        status: athlete.status,
+        primaryGroupId: athlete.primaryGroupId,
+      })),
+      skippedAthleteIds: Array.from(skippedAthleteIds),
+    };
+  }
+
+  async generatePeriodicAthleteCharges(tenantId: string, dto: GeneratePeriodicAthleteChargesDto) {
+    const preview = await this.previewPeriodicAthleteCharges(tenantId, dto);
+    if (preview.createCount === 0) {
+      return { ...preview, createdIds: [] };
+    }
+
+    const rows = preview.targets
+      .filter((athlete) => !preview.skippedAthleteIds.includes(athlete.id))
+      .map((athlete) =>
+        this.athleteCharges.create({
+          tenantId,
+          athleteId: athlete.id,
+          chargeItemId: dto.chargeItemId,
+          amount: preview.amount,
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+          billingPeriodKey: dto.billingPeriodKey,
+          billingPeriodLabel: dto.billingPeriodLabel,
+          status: AthleteChargeStatus.PENDING,
+          notes: dto.notes ?? null,
+        }),
+      );
+
+    const created = await this.athleteCharges.save(rows);
+    await this.syncChargeStatuses(created.map((row) => row.id));
+
+    return {
+      ...preview,
+      createdIds: created.map((row) => row.id),
+    };
+  }
+
+  private async listPrivateLessonCollectionSignals(tenantId: string, athleteId?: string) {
+    const qb = this.privateLessons
+      .createQueryBuilder('lesson')
+      .leftJoinAndSelect('lesson.athlete', 'athlete')
+      .leftJoinAndSelect('lesson.charge', 'charge')
+      .leftJoinAndSelect('charge.chargeItem', 'chargeItem')
+      .where('lesson.tenantId = :tenantId', { tenantId });
+
+    if (athleteId) {
+      qb.andWhere('lesson.athleteId = :athleteId', { athleteId });
+    }
+
+    const lessons = await qb.orderBy('lesson.scheduledStart', 'ASC').take(20).getMany();
+    const lessonCharges = lessons
+      .map((lesson) => lesson.charge)
+      .filter((charge): charge is AthleteCharge => Boolean(charge));
+
+    const chargeSummaries = await this.buildChargeSummaries(tenantId, lessonCharges);
+    const summaryMap = new Map(chargeSummaries.map((charge) => [charge.id, charge]));
+
+    return lessons
+      .map((lesson) => ({
+        ...lesson,
+        charge: lesson.charge ? ((summaryMap.get(lesson.charge.id) as AthleteCharge | undefined) ?? lesson.charge) : null,
+      }))
+      .filter(
+        (lesson) =>
+          lesson.charge === null ||
+          Number(lesson.charge.remainingAmount ?? lesson.charge.amount) > 0 ||
+          lesson.status !== 'completed',
+      )
+      .slice(0, 10);
   }
 
   async createChargeItem(tenantId: string, dto: CreateChargeItemDto): Promise<ChargeItem> {
@@ -271,6 +452,8 @@ export class FinanceService {
         chargeItemId: dto.chargeItemId,
         amount: amount.toFixed(2),
         dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        billingPeriodKey: null,
+        billingPeriodLabel: null,
         status: dto.status === AthleteChargeStatus.CANCELLED ? AthleteChargeStatus.CANCELLED : AthleteChargeStatus.PENDING,
         notes: dto.notes ?? null,
       }),
@@ -425,6 +608,7 @@ export class FinanceService {
 
     const charges = await chargeQuery.orderBy('ac.dueDate', 'ASC').addOrderBy('ac.createdAt', 'DESC').getMany();
     const chargeSummaries = await this.buildChargeSummaries(tenantId, charges);
+    const privateLessons = await this.listPrivateLessonCollectionSignals(tenantId, query.athleteId);
 
     const paymentQuery = this.payments
       .createQueryBuilder('payment')
@@ -511,6 +695,7 @@ export class FinanceService {
       charges: chargeSummaries,
       recentPayments: payments,
       athletes: Array.from(athleteMap.values()).sort((a, b) => b.totalOutstanding - a.totalOutstanding),
+      privateLessons,
     };
   }
 

@@ -110,7 +110,10 @@ export class AthleteService {
   }
 
   async findOne(tenantId: string, id: string): Promise<Athlete> {
-    const a = await this.athletes.findOne({ where: { id, tenantId } });
+    const a = await this.athletes.findOne({
+      where: { id, tenantId },
+      relations: ['sportBranch', 'primaryGroup'],
+    });
     if (!a) throw new NotFoundException('Athlete not found');
     return a;
   }

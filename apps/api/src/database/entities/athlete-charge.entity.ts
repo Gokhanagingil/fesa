@@ -10,6 +10,10 @@ import { AthleteChargeStatus } from '../enums';
 @Index(['tenantId', 'status'])
 @Index(['tenantId', 'dueDate'])
 @Index(['tenantId', 'privateLessonId'])
+@Index(['tenantId', 'athleteId', 'chargeItemId', 'billingPeriodKey'], {
+  unique: true,
+  where: '"billingPeriodKey" IS NOT NULL',
+})
 export class AthleteCharge {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -47,6 +51,12 @@ export class AthleteCharge {
 
   @Column({ type: 'date', nullable: true })
   dueDate!: Date | null;
+
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  billingPeriodKey!: string | null;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  billingPeriodLabel!: string | null;
 
   @Column({
     type: 'enum',

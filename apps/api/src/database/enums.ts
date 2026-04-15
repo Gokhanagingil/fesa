@@ -2,6 +2,7 @@
 
 export enum AthleteStatus {
   ACTIVE = 'active',
+  PAUSED = 'paused',
   INACTIVE = 'inactive',
   TRIAL = 'trial',
   ARCHIVED = 'archived',
