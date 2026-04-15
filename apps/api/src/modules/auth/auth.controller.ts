@@ -44,3 +44,14 @@ export class AuthController {
     return this.auth.getClubOverview(req.staffUserId!, req.tenantId!);
   }
 }
+
+@Controller('tenants')
+export class AuthTenantController {
+  constructor(private readonly auth: AuthService) {}
+
+  @Get()
+  @UseGuards(StaffAuthGuard)
+  list(@Req() req: Request) {
+    return this.auth.listAccessibleTenants(req.staffUserId!);
+  }
+}

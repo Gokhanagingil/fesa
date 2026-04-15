@@ -10,7 +10,7 @@ import { StaffUser } from '../../database/entities/staff-user.entity';
 import { Team } from '../../database/entities/team.entity';
 import { TenantMembership } from '../../database/entities/tenant-membership.entity';
 import { TenantModule } from '../tenant/tenant.module';
-import { AuthController } from './auth.controller';
+import { AuthController, AuthTenantController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { StaffAuthGuard } from './staff-auth.guard';
 
@@ -29,7 +29,7 @@ import { StaffAuthGuard } from './staff-auth.guard';
       GuardianPortalAccess,
     ]),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AuthTenantController],
   providers: [AuthService, StaffAuthGuard],
   exports: [AuthService, StaffAuthGuard],
 })
