@@ -3,92 +3,87 @@
 set -euo pipefail
 
 API_PORT="${API_PORT:-3000}"
-# When invoked over SSH with FESA_REPO_ROOT, align with apps/api/.env without sourcing the whole file.
-if [[ -n "${FESA_REPO_ROOT:-}" && -f "${FESA_REPO_ROOT}/apps/api/.env" ]]; then
-  _line="$(grep -E '^[[:space:]]*(export[[:space:]]+)?API_PORT=' "${FESA_REPO_ROOT}/apps/api/.env" | tail -1 || true)"
-  if [[ -n "$_line" ]]; then
-    _val="${_line#*=}"
-    _val="${_val#\"}"
-    _val="${_val%\"}"
-    _val="${_val#\'}"
-    _val="${_val%\'}"
-    [[ -n "$_val" ]] && API_PORT="$_val"
-  fi
-fi
-BASE="http://127.0.0.1:${API_PORT}"
 PM2_APP_NAME="${PM2_APP_NAME:-fesa-api-staging}"
-PM2_HOME_DIR="${PM2_HOME:-${HOME}/.pm2}"
 
-print_pm2_diagnostics() {
-  echo ""
-  echo "==> PM2 diagnostics"
-  if ! command -v pm2 >/dev/null 2>&1; then
-    echo "(pm2 not in PATH — skipped)"
-    return 0
-  fi
-
-  pm2 describe "${PM2_APP_NAME}" --no-color || pm2 list || true
-
-  local err_log="${PM2_HOME_DIR}/logs/${PM2_APP_NAME}-error.log"
-  local out_log="${PM2_HOME_DIR}/logs/${PM2_APP_NAME}-out.log"
-
-  echo ""
-  echo "==> PM2 error log (${err_log})"
-  if [[ -f "${err_log}" ]]; then
-    tail -n 100 "${err_log}" || true
-  else
-    echo "(missing)"
-  fi
-
-  echo ""
-  echo "==> PM2 out log (${out_log})"
-  if [[ -f "${out_log}" ]]; then
-    tail -n 100 "${out_log}" || true
-  else
-    echo "(missing)"
+resolve_api_port() {
+  if [[ -n "${FESA_REPO_ROOT:-}" && -f "${FESA_REPO_ROOT}/apps/api/.env" ]]; then
+    local line
+    line="$(grep -E '^[[:space:]]*(export[[:space:]]+)?API_PORT=' "${FESA_REPO_ROOT}/apps/api/.env" | tail -1 || true)"
+    if [[ -n "${line}" ]]; then
+      local value="${line#*=}"
+      value="${value#\"}"
+      value="${value%\"}"
+      value="${value#\'}"
+      value="${value%\'}"
+      [[ -n "${value}" ]] && API_PORT="${value}"
+    fi
   fi
 }
 
-report_failure() {
+locate_diagnostics_script() {
+  if [[ -n "${FESA_REPO_ROOT:-}" && -f "${FESA_REPO_ROOT}/deploy/staging/diagnostics.sh" ]]; then
+    printf '%s\n' "${FESA_REPO_ROOT}/deploy/staging/diagnostics.sh"
+    return 0
+  fi
+
+  if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [[ -f "${script_dir}/diagnostics.sh" ]]; then
+      printf '%s\n' "${script_dir}/diagnostics.sh"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+print_failure_diagnostics() {
   local label="$1"
+  local diagnostics_script
+
   echo ""
   echo "FAILED: ${label}" >&2
-  echo "==> curl context"
-  curl -sS -D - "${BASE}/api/health/live" -o /tmp/fesa-health-live.body || true
-  if [[ -f /tmp/fesa-health-live.body ]]; then
-    echo "-- live body --"
-    sed -n '1,80p' /tmp/fesa-health-live.body || true
+
+  diagnostics_script="$(locate_diagnostics_script || true)"
+  if [[ -n "${diagnostics_script:-}" ]]; then
+    bash "${diagnostics_script}" full || true
+  else
+    echo "Diagnostics script not found; skipping extended diagnostics." >&2
   fi
-  print_pm2_diagnostics
 }
 
 try_curl() {
   local url="$1"
   local label="$2"
   local attempt=1
-  local max=12
-  while [ "$attempt" -le "$max" ]; do
-    if out=$(curl -fsS "$url" 2>/dev/null); then
-      printf '%s\n' "$out"
+  local max=15
+  local response
+
+  while [[ "${attempt}" -le "${max}" ]]; do
+    if response="$(curl -fsS "${url}" 2>/dev/null)"; then
+      printf '%s\n' "${response}"
       return 0
     fi
-    echo "  (attempt $attempt/$max, waiting for API...)"
+
+    echo "  (attempt ${attempt}/${max}, waiting for API...)"
     sleep 2
     attempt=$((attempt + 1))
   done
-  report_failure "$label"
+
+  print_failure_diagnostics "${label}"
   return 1
 }
 
+resolve_api_port
+BASE="http://127.0.0.1:${API_PORT}"
+
 echo "==> GET ${BASE}/api/health/live"
-try_curl "${BASE}/api/health/live" "live health"
+try_curl "${BASE}/api/health/live" "live health (process did not become responsive)"
 echo ""
 
 echo "==> GET ${BASE}/api/health (includes DB)"
-try_curl "${BASE}/api/health" "full health (check DATABASE_URL and PostgreSQL)"
-echo ""
-
-print_pm2_diagnostics
+try_curl "${BASE}/api/health" "full health (app responded but dependency or DB health failed)"
 
 echo ""
 echo "health-check.sh: OK"

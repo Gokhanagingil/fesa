@@ -12,10 +12,11 @@
 # Prerequisites: Node 20+, npm, git, PostgreSQL reachable via DATABASE_URL in apps/api/.env
 #
 
-set -euo pipefail
+set -Eeuo pipefail
 
 DEPLOY_GIT_REF="${DEPLOY_GIT_REF:-main}"
 NPM_CI="${NPM_CI:-1}"
+CURRENT_STAGE="initialization"
 
 log() {
   printf '\n[%s] %s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" "$*"
@@ -25,6 +26,15 @@ die() {
   printf '\n[ERROR] %s\n' "$*" >&2
   exit 1
 }
+
+on_error() {
+  local exit_code="$1"
+  local line_no="$2"
+  printf '\n[ERROR] Stage failed: %s (exit=%s, line=%s)\n' "${CURRENT_STAGE}" "${exit_code}" "${line_no}" >&2
+  exit "${exit_code}"
+}
+
+trap 'on_error $? $LINENO' ERR
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
@@ -86,6 +96,50 @@ ensure_api_env() {
   [[ -n "${DATABASE_URL:-}" ]] || die "DATABASE_URL must be set in apps/api/.env on the server"
 }
 
+run_stage() {
+  local stage_name="$1"
+  shift
+  CURRENT_STAGE="$stage_name"
+  log "==> ${stage_name}"
+  "$@"
+  log "<== ${stage_name} OK"
+}
+
+install_dependencies() {
+  local root="$1"
+  if [[ "$NPM_CI" == "1" ]]; then
+    (cd "$root" && npm ci)
+  else
+    (cd "$root" && npm install)
+  fi
+}
+
+build_monorepo() {
+  local root="$1"
+  (cd "$root" && npm run build)
+}
+
+run_database_migrations() {
+  local root="$1"
+  (cd "$root" && npm run migration:run -w @amateur/api)
+}
+
+run_demo_seed() {
+  local root="$1"
+  (cd "$root" && npm run seed:demo)
+}
+
+reload_pm2_api() {
+  local root="$1"
+  if command -v pm2 >/dev/null 2>&1; then
+    export FESA_REPO_ROOT="$root"
+    pm2 startOrReload "$root/deploy/staging/ecosystem.config.cjs" --only fesa-api-staging
+    pm2 save || true
+  else
+    die "pm2 not found — install with: sudo npm install -g pm2"
+  fi
+}
+
 main() {
   guard_repo_root
   require_cmd git
@@ -101,39 +155,23 @@ main() {
   log "Node $(node -v 2>/dev/null || echo '?') / npm $(npm -v 2>/dev/null || echo '?')"
 
   mkdir -p "$root"
-  sync_repo "$root"
+  run_stage "Git sync" sync_repo "$root"
 
   local api_dir="$root/apps/api"
   local web_dir="$root/apps/web"
   [[ -f "$root/package.json" ]] || die "Invalid repo: missing package.json"
   [[ -f "$api_dir/package.json" ]] || die "Invalid repo: missing apps/api"
+  [[ -f "$web_dir/package.json" ]] || die "Invalid repo: missing apps/web"
 
-  ensure_api_env "$api_dir/.env" "$api_dir/.env.example"
+  run_stage "API environment validation" ensure_api_env "$api_dir/.env" "$api_dir/.env.example"
 
-  log "Installing dependencies (root)"
-  if [[ "$NPM_CI" == "1" ]]; then
-    (cd "$root" && npm ci)
-  else
-    (cd "$root" && npm install)
-  fi
+  run_stage "Install dependencies (root)" install_dependencies "$root"
+  run_stage "Build monorepo" build_monorepo "$root"
+  run_stage "Run database migrations" run_database_migrations "$root"
+  run_stage "Run demo seed (idempotent)" run_demo_seed "$root"
+  run_stage "Reload PM2 API process" reload_pm2_api "$root"
 
-  log "Building monorepo"
-  (cd "$root" && npm run build)
-
-  log "Running database migrations"
-  (cd "$root" && npm run migration:run -w @amateur/api)
-
-  log "Running demo seed (idempotent)"
-  (cd "$root" && npm run seed:demo)
-
-  log "Reloading PM2 API process"
-  if command -v pm2 >/dev/null 2>&1; then
-    export FESA_REPO_ROOT="$root"
-    pm2 startOrReload "$root/deploy/staging/ecosystem.config.cjs" --only fesa-api-staging
-    pm2 save || true
-  else
-    die "pm2 not found — install with: sudo npm install -g pm2"
-  fi
+  CURRENT_STAGE="completed"
 
   log "Deploy script finished OK"
 }

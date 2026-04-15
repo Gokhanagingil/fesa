@@ -10,11 +10,31 @@ concurrency:
 
 jobs:
   validate:
-    name: Install, guard, lint, build
+    name: Install, guard, lint, build, and smoke
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fesa_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fesa_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fesa_ci
+      NODE_ENV: staging
+      DB_SYNCHRONIZE: 'false'
+      DB_RUN_MIGRATIONS: 'false'
+      API_PORT: '3101'
 
     steps:
       - name: Checkout repository
@@ -35,5 +55,17 @@ jobs:
       - name: Lint (workspaces)
         run: npm run lint
 
+      - name: i18n parity check
+        run: npm run i18n:check
+
       - name: Build (workspaces)
         run: npm run build
+
+      - name: Migration readiness (disposable PostgreSQL)
+        run: npm run migration:run -w @amateur/api
+
+      - name: Demo seed repeatability
+        run: npm run seed:demo:verify
+
+      - name: Backend boot smoke
+        run: npm run api:boot:smoke
