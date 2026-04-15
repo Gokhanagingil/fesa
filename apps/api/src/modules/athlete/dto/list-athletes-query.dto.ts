@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { AthleteStatus, FamilyReadinessStatus } from '../../../database/enums';
 
 export class ListAthletesQueryDto {
@@ -28,6 +28,11 @@ export class ListAthletesQueryDto {
   @IsEnum(FamilyReadinessStatus)
   @Type(() => String)
   familyReadinessStatus?: FamilyReadinessStatus;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  needsFamilyFollowUp?: boolean;
 
   @IsOptional()
   @Type(() => Number)

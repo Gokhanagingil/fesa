@@ -355,6 +355,14 @@ export class CommunicationService {
         guardians: guardianCount,
         primaryContacts,
         withOverdueBalance: items.filter((item) => item.hasOverdueBalance).length,
+        incompleteAthletes: items.filter((item) => item.familyReadinessStatus === FamilyReadinessStatus.INCOMPLETE).length,
+        awaitingGuardianAction: items.filter(
+          (item) => item.familyReadinessStatus === FamilyReadinessStatus.AWAITING_GUARDIAN_ACTION,
+        ).length,
+        awaitingStaffReview: items.filter(
+          (item) => item.familyReadinessStatus === FamilyReadinessStatus.AWAITING_STAFF_REVIEW,
+        ).length,
+        needingFollowUp: items.filter((item) => item.familyReadinessStatus !== FamilyReadinessStatus.COMPLETE).length,
       },
     };
   }

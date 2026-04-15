@@ -60,6 +60,10 @@ export function getFamilyReadinessLabel(t: TFunction, status: FamilyReadinessSta
   return t(`app.enums.familyReadinessStatus.${status}`);
 }
 
+export function getFamilyReadinessStatusLabel(t: TFunction, status: FamilyReadinessStatus): string {
+  return getFamilyReadinessLabel(t, status);
+}
+
 export function getFamilyReadinessTone(
   status: FamilyReadinessStatus,
 ): 'default' | 'danger' | 'warning' | 'success' {
@@ -79,8 +83,16 @@ export function getFamilyActionRequestTypeLabel(t: TFunction, type: FamilyAction
   return t(`app.enums.familyActionRequestType.${type}`);
 }
 
+export function getFamilyActionTypeLabel(t: TFunction, type: FamilyActionRequestType): string {
+  return getFamilyActionRequestTypeLabel(t, type);
+}
+
 export function getFamilyActionRequestStatusLabel(t: TFunction, status: FamilyActionRequestStatus): string {
   return t(`app.enums.familyActionRequestStatus.${status}`);
+}
+
+export function getFamilyActionStatusLabel(t: TFunction, status: FamilyActionRequestStatus): string {
+  return getFamilyActionRequestStatusLabel(t, status);
 }
 
 export function getFamilyActionActorLabel(t: TFunction, actor: FamilyActionRequest['events'][number]['actor']): string {
@@ -117,8 +129,8 @@ export function getPrivateLessonReasonLabel(t: TFunction, reason: string): strin
     'finance:outstanding': t('pages.communications.reasonOutstanding'),
     training_session: t('pages.communications.reasonTraining'),
     coach_assignment: t('pages.communications.reasonCoach'),
-    'family_action:pending': t('pages.communications.reasonFamilyPending'),
-    'family_action:review': t('pages.communications.reasonFamilyReview'),
+    'family_action:pending': t('pages.communications.reasonPendingFamily'),
+    'family_action:review': t('pages.communications.reasonAwaitingReview'),
     manual_selection: t('pages.communications.reasonManual'),
   };
   return labels[reason] ?? reason;

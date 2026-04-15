@@ -101,15 +101,15 @@ export class FamilyActionService {
   }
 
   private isPendingFamilyStatus(status: FamilyActionRequestStatus): boolean {
-    return PENDING_FAMILY_STATUSES.includes(status);
+    return (PENDING_FAMILY_STATUSES as readonly FamilyActionRequestStatus[]).includes(status);
   }
 
   private isAwaitingStaffStatus(status: FamilyActionRequestStatus): boolean {
-    return AWAITING_STAFF_STATUSES.includes(status);
+    return (AWAITING_STAFF_STATUSES as readonly FamilyActionRequestStatus[]).includes(status);
   }
 
   private isClosedStatus(status: FamilyActionRequestStatus): boolean {
-    return CLOSED_STATUSES.includes(status);
+    return (CLOSED_STATUSES as readonly FamilyActionRequestStatus[]).includes(status);
   }
 
   private getAllowedTransitions(status: FamilyActionRequestStatus): FamilyActionRequestStatus[] {
