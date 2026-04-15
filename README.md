@@ -130,6 +130,7 @@ The current product wave extends the existing command center into a more complet
 - **Periodic collections automation:** finance can now generate period-based athlete charges with duplicate protection using billing period keys, without replacing the existing manual charge workflow.
 - **Communication readiness:** the product now helps staff assemble audiences by group, team, session, private-lesson context, and financial follow-up so family outreach can start from clear operational targets.
 - **Family action workflows:** athlete and guardian readiness now extend into a controlled family-action queue with request creation, pending family action, staff review, approval/rejection, and closure tracking.
+- **Notification center + staff work queue:** the product now surfaces tenant-safe in-app action items for overdue finance follow-up, family review, guardian response, readiness gaps, upcoming training preparation, and private-lesson preparation with read/dismiss/complete controls.
 - **Portal readiness without public exposure:** the product now keeps family-facing completion signals, staff review queues, and follow-up targeting inside the internal club surface so a future guardian portal can build on the same model later.
 - **Dashboard + reporting:** the dashboard and reports pages now surface live operational, coaching, private-lesson, and collection summaries instead of placeholder counts and disabled report affordances.
 

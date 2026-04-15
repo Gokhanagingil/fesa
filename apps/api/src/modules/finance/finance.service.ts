@@ -421,10 +421,13 @@ export class FinanceService {
       ? await qb.orderBy('ac.createdAt', 'DESC').getMany()
       : await qb.orderBy('ac.createdAt', 'DESC').skip(offset).take(limit).getMany();
     const summaries = await this.buildChargeSummaries(tenantId, items);
-    const filtered = query.status ? summaries.filter((item) => item.derivedStatus === query.status) : summaries;
+    let filtered = query.status ? summaries.filter((item) => item.derivedStatus === query.status) : summaries;
+    if (query.overdueOnly) {
+      filtered = filtered.filter((item) => item.isOverdue);
+    }
     return {
       items: query.status ? filtered.slice(offset, offset + limit) : filtered,
-      total: query.status ? filtered.length : total,
+      total: query.status || query.overdueOnly ? filtered.length : total,
     };
   }
 

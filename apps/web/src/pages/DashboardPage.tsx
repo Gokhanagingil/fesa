@@ -4,8 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
+import { StatusBadge } from '../components/ui/StatusBadge';
 import { apiGet } from '../lib/api';
-import { getLessonStatusLabel, getPersonName } from '../lib/display';
+import {
+  getActionCenterItemSummary,
+  getActionCenterUrgencyLabel,
+  getActionCenterUrgencyTone,
+  getLessonStatusLabel,
+  getPersonName,
+} from '../lib/display';
 import type { Coach, CommandCenterResponse, Payment, PrivateLesson } from '../lib/domain-types';
 import { useTenant } from '../lib/tenant-hooks';
 
@@ -82,13 +89,19 @@ export function DashboardPage() {
       key: 'overdue',
       label: t('pages.dashboard.stats.overdueTotal'),
       value: summary?.stats.overdueTotal ?? '0.00',
-      href: '/app/finance/athlete-charges?status=pending',
+      href: '/app/finance/athlete-charges?overdueOnly=true',
     },
     {
       key: 'follow-up',
       label: t('pages.dashboard.stats.familyFollowUp'),
       value: summary?.familyWorkflow?.pendingFamilyAction ?? 0,
       href: '/app/communications?needsFollowUp=true',
+    },
+    {
+      key: 'action-center',
+      label: t('pages.dashboard.stats.actionCenterUnread'),
+      value: summary?.actionCenter?.counts.unread ?? 0,
+      href: '/app/action-center',
     },
   ];
 
@@ -125,7 +138,7 @@ export function DashboardPage() {
       />
       {!tenantId && !tenantLoading ? <InlineAlert tone="info">{t('app.errors.needTenant')}</InlineAlert> : null}
       {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         {statCards.map((card) => (
           <Link
             key={card.key}
@@ -135,7 +148,11 @@ export function DashboardPage() {
             <StatCard
               label={card.label}
               value={loading && !summary ? '…' : card.value}
-              tone={card.key === 'overdue' || card.key === 'follow-up' ? 'danger' : 'default'}
+              tone={
+                card.key === 'overdue' || card.key === 'follow-up' || card.key === 'action-center'
+                  ? 'danger'
+                  : 'default'
+              }
             />
           </Link>
         ))}
@@ -229,6 +246,76 @@ export function DashboardPage() {
                 compact
               />
             </div>
+          </div>
+          <div className="mt-4 rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+                  {t('pages.dashboard.actionCenterTitle')}
+                </p>
+                <p className="mt-1 text-sm text-amateur-muted">{t('pages.dashboard.actionCenterHint')}</p>
+              </div>
+              <Link to="/app/action-center" className="text-sm font-semibold text-amateur-accent hover:underline">
+                {t('pages.dashboard.openActionCenter')}
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+              <StatCard
+                label={t('pages.dashboard.actionCenterUnread')}
+                value={summary?.actionCenter?.counts.unread ?? 0}
+                compact
+                tone={(summary?.actionCenter?.counts.unread ?? 0) > 0 ? 'danger' : 'default'}
+              />
+              <StatCard
+                label={t('pages.dashboard.actionCenterOverdue')}
+                value={summary?.actionCenter?.counts.overdue ?? 0}
+                compact
+                tone={(summary?.actionCenter?.counts.overdue ?? 0) > 0 ? 'danger' : 'default'}
+              />
+              <StatCard
+                label={t('pages.dashboard.actionCenterToday')}
+                value={summary?.actionCenter?.counts.today ?? 0}
+                compact
+                tone={(summary?.actionCenter?.counts.today ?? 0) > 0 ? 'danger' : 'default'}
+              />
+              <StatCard
+                label={t('pages.dashboard.actionCenterFinance')}
+                value={summary?.actionCenter?.counts.byCategory.finance ?? 0}
+                compact
+              />
+            </div>
+            {(summary?.actionCenter?.items ?? []).length > 0 ? (
+              <div className="mt-4 space-y-3">
+                {summary?.actionCenter?.items.map((item) => (
+                  <Link
+                    key={item.itemKey}
+                    to={item.deepLink}
+                    className="block rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3 transition hover:border-amateur-accent/30"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <StatusBadge tone={getActionCenterUrgencyTone(item.urgency)}>
+                            {getActionCenterUrgencyLabel(t, item.urgency)}
+                          </StatusBadge>
+                          {!item.read ? (
+                            <StatusBadge tone="warning">{t('pages.dashboard.actionCenterNeedsReview')}</StatusBadge>
+                          ) : null}
+                        </div>
+                        <p className="mt-2 font-medium text-amateur-ink">{item.subjectName}</p>
+                        <p className="mt-1 text-xs text-amateur-muted">
+                          {getActionCenterItemSummary(t, item)}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-dashed border-amateur-border bg-amateur-surface/60 px-4 py-5 text-sm text-amateur-muted">
+                {t('pages.dashboard.actionCenterEmpty')}
+              </div>
+            )}
           </div>
         </section>
 

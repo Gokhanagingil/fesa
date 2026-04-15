@@ -1,5 +1,9 @@
 import type { TFunction } from 'i18next';
 import type {
+  ActionCenterItem,
+  ActionCenterItemCategory,
+  ActionCenterItemType,
+  ActionCenterItemUrgency,
   Athlete,
   AthleteCharge,
   AthleteChargeStatus,
@@ -176,4 +180,70 @@ export function getChargeVisualStatus(charge: AthleteCharge): AthleteChargeStatu
 
 export function formatEnumLabel(t: TFunction, key: string, fallback: string): string {
   return t(key, { defaultValue: fallback });
+}
+
+export function getActionCenterCategoryLabel(t: TFunction, category: ActionCenterItemCategory): string {
+  return t(`pages.actionCenter.categories.${category}`);
+}
+
+export function getActionCenterTypeLabel(t: TFunction, type: ActionCenterItemType): string {
+  return t(`pages.actionCenter.types.${type}`);
+}
+
+export function getActionCenterUrgencyLabel(t: TFunction, urgency: ActionCenterItemUrgency): string {
+  return t(`pages.actionCenter.urgency.${urgency}`);
+}
+
+export function getActionCenterUrgencyTone(
+  urgency: ActionCenterItemUrgency,
+): 'danger' | 'warning' | 'default' | 'success' {
+  switch (urgency) {
+    case 'overdue':
+      return 'danger';
+    case 'today':
+      return 'warning';
+    case 'upcoming':
+      return 'default';
+    case 'normal':
+    default:
+      return 'success';
+  }
+}
+
+export function getActionCenterItemSummary(t: TFunction, item: ActionCenterItem): string {
+  const count = Number(item.context.issueCount ?? item.count ?? 0);
+  const amount = typeof item.amount === 'string' && item.amount ? getMoneyAmount(item.amount, item.currency) : null;
+
+  switch (item.type) {
+    case 'finance_follow_up':
+      return t('pages.actionCenter.summaries.finance', {
+        count,
+        amount: amount ?? getMoneyAmount('0.00', item.currency),
+      });
+    case 'family_review':
+      return t('pages.actionCenter.summaries.familyReview', { count });
+    case 'guardian_response':
+      return t('pages.actionCenter.summaries.guardianResponse', { count });
+    case 'readiness_gap':
+      return t('pages.actionCenter.summaries.readiness', { count });
+    case 'private_lesson_prep':
+      return t('pages.actionCenter.summaries.privateLessonPrep', { count });
+    case 'training_prep':
+      return t('pages.actionCenter.summaries.trainingPrep', { count });
+    case 'training_attendance':
+      return t('pages.actionCenter.summaries.trainingAttendance');
+    default:
+      return getActionCenterTypeLabel(t, item.type);
+  }
+}
+
+export function getActionCenterItemTitle(t: TFunction, item: ActionCenterItem): string {
+  return t('pages.actionCenter.itemTitle', {
+    type: getActionCenterTypeLabel(t, item.type),
+    subject: item.subjectName,
+  });
+}
+
+export function getActionCenterMutationLabel(t: TFunction, action: ActionCenterItemMutation): string {
+  return t(`pages.actionCenter.actions.${action}`);
 }

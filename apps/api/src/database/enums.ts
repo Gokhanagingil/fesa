@@ -59,3 +59,36 @@ export enum FamilyReadinessStatus {
   AWAITING_GUARDIAN_ACTION = 'awaiting_guardian_action',
   AWAITING_STAFF_REVIEW = 'awaiting_staff_review',
 }
+
+export enum ActionCenterItemCategory {
+  FINANCE = 'finance',
+  FAMILY = 'family',
+  READINESS = 'readiness',
+  PRIVATE_LESSONS = 'private_lessons',
+  TRAINING = 'training',
+}
+
+export enum ActionCenterItemType {
+  FINANCE_FOLLOW_UP = 'finance_follow_up',
+  FAMILY_REVIEW = 'family_review',
+  GUARDIAN_RESPONSE = 'guardian_response',
+  READINESS_GAP = 'readiness_gap',
+  PRIVATE_LESSON_PREP = 'private_lesson_prep',
+  TRAINING_PREP = 'training_prep',
+  TRAINING_ATTENDANCE = 'training_attendance',
+}
+
+export enum ActionCenterItemUrgency {
+  OVERDUE = 'overdue',
+  TODAY = 'today',
+  UPCOMING = 'upcoming',
+  NORMAL = 'normal',
+}
+
+export enum ActionCenterItemMutation {
+  MARK_READ = 'mark_read',
+  MARK_UNREAD = 'mark_unread',
+  DISMISS = 'dismiss',
+  COMPLETE = 'complete',
+  SNOOZE = 'snooze',
+}

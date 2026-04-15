@@ -11,6 +11,7 @@ import { Attendance } from '../../database/entities/attendance.entity';
 import { ClubGroup } from '../../database/entities/club-group.entity';
 import { Coach } from '../../database/entities/coach.entity';
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
+import { ActionCenterModule } from '../action-center/action-center.module';
 import { CommunicationModule } from '../communication/communication.module';
 import { FamilyActionModule } from '../family-action/family-action.module';
 import { FinanceModule } from '../finance/finance.module';
@@ -19,6 +20,7 @@ import { ReportingService } from './reporting.service';
 
 @Module({
   imports: [
+    ActionCenterModule,
     CommunicationModule,
     FamilyActionModule,
     FinanceModule,

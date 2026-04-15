@@ -20,6 +20,7 @@ import { CoachModule } from './modules/coach/coach.module';
 import { PrivateLessonModule } from './modules/private-lesson/private-lesson.module';
 import { CommunicationModule } from './modules/communication/communication.module';
 import { FamilyActionModule } from './modules/family-action/family-action.module';
+import { ActionCenterModule } from './modules/action-center/action-center.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { FamilyActionModule } from './modules/family-action/family-action.module
     PrivateLessonModule,
     CommunicationModule,
     FamilyActionModule,
+    ActionCenterModule,
   ],
 })
 export class AppModule {}
