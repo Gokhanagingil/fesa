@@ -172,10 +172,15 @@ export function AthleteDetailPage() {
   }
 
   const activeTeams = teams.filter((m) => !m.endedAt);
+  const endedTeams = teams.filter((m) => m.endedAt);
   const availableGuardians = useMemo(
     () => allGuardians.filter((g) => !guardians.some((row) => row.guardian.id === g.id)),
     [allGuardians, guardians],
   );
+  const primaryContacts = guardians.filter((row) => row.isPrimaryContact);
+  const outstandingTotal = charges.reduce((sum, charge) => sum + Number(charge.remainingAmount ?? 0), 0);
+  const overdueCount = charges.filter((charge) => charge.isOverdue).length;
+  const openLessons = privateLessons.filter((lesson) => lesson.status !== 'completed').length;
 
   if (loading || !athlete) {
     return (
@@ -189,6 +194,63 @@ export function AthleteDetailPage() {
   }
 
   const displayName = getPersonName(athlete);
+  const enrollmentChecklist = [
+    {
+      key: 'status',
+      done: athlete.status === 'active' || athlete.status === 'trial' || athlete.status === 'paused',
+      label: t('pages.athletes.readinessStatus'),
+      detail: getAthleteStatusLabel(t, athlete.status),
+      actionLabel: t('pages.athletes.edit'),
+      actionHref: `/app/athletes/${athlete.id}/edit`,
+    },
+    {
+      key: 'guardian',
+      done: primaryContacts.length > 0,
+      label: t('pages.athletes.readinessGuardian'),
+      detail:
+        primaryContacts.length > 0
+          ? t('pages.athletes.readinessGuardianReady', { count: primaryContacts.length })
+          : t('pages.athletes.readinessGuardianMissing'),
+      actionLabel: t('pages.athletes.linkGuardian'),
+      actionHref: '#guardians',
+    },
+    {
+      key: 'group',
+      done: Boolean(athlete.primaryGroupId),
+      label: t('pages.athletes.readinessGroup'),
+      detail: athlete.primaryGroup?.name ?? t('pages.athletes.readinessGroupMissing'),
+      actionLabel: t('pages.athletes.edit'),
+      actionHref: `/app/athletes/${athlete.id}/edit`,
+    },
+    {
+      key: 'team',
+      done: true,
+      label: t('pages.athletes.readinessTeam'),
+      detail:
+        activeTeams.length > 0
+          ? t('pages.athletes.readinessTeamAssigned', { count: activeTeams.length })
+          : t('pages.athletes.readinessTeamOptional'),
+      actionLabel: t('pages.athletes.addTeam'),
+      actionHref: '#teams',
+    },
+    {
+      key: 'finance',
+      done: outstandingTotal <= 0,
+      label: t('pages.athletes.readinessFinance'),
+      detail:
+        outstandingTotal > 0
+          ? t('pages.athletes.readinessFinanceOpen', {
+              amount: getMoneyAmount(
+                outstandingTotal,
+                charges.find((charge) => charge.chargeItem?.currency)?.chargeItem?.currency ?? 'TRY',
+              ),
+            })
+          : t('pages.athletes.readinessFinanceReady'),
+      actionLabel: t('pages.finance.athleteChargesLink'),
+      actionHref: `/app/finance/athlete-charges?athleteId=${athlete.id}`,
+    },
+  ];
+  const nextActions = enrollmentChecklist.filter((item) => !item.done).slice(0, 3);
 
   return (
     <div>
@@ -294,6 +356,88 @@ export function AthleteDetailPage() {
       </div>
 
       <section className="mt-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-amateur-accent">{t('pages.athletes.enrollmentTitle')}</p>
+            <h3 className="mt-1 font-display text-lg font-semibold text-amateur-ink">
+              {t('pages.athletes.enrollmentSubtitle')}
+            </h3>
+            <p className="mt-2 max-w-2xl text-sm text-amateur-muted">{t('pages.athletes.enrollmentHint')}</p>
+          </div>
+          <div className="grid min-w-[14rem] gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <StatCard
+              label={t('pages.athletes.enrollmentOutstanding')}
+              value={getMoneyAmount(
+                outstandingTotal,
+                charges.find((charge) => charge.chargeItem?.currency)?.chargeItem?.currency ?? 'TRY',
+              )}
+              tone={outstandingTotal > 0 ? 'danger' : 'default'}
+              compact
+            />
+            <StatCard
+              label={t('pages.athletes.enrollmentOverdue')}
+              value={overdueCount}
+              tone={overdueCount > 0 ? 'danger' : 'default'}
+              compact
+            />
+            <StatCard label={t('pages.athletes.enrollmentLessons')} value={openLessons} compact />
+          </div>
+        </div>
+        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <div className="grid gap-3">
+            {enrollmentChecklist.map((item) => (
+              <div
+                key={item.key}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3"
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                      item.done
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {item.done ? '✓' : '!'}
+                  </span>
+                  <div>
+                    <p className="font-medium text-amateur-ink">{item.label}</p>
+                    <p className="text-sm text-amateur-muted">{item.detail}</p>
+                  </div>
+                </div>
+                <Link to={item.actionHref} className="text-sm font-semibold text-amateur-accent hover:underline">
+                  {item.actionLabel}
+                </Link>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+              {t('pages.athletes.nextActionsTitle')}
+            </p>
+            {nextActions.length === 0 ? (
+              <p className="mt-3 text-sm text-amateur-muted">{t('pages.athletes.nextActionsClear')}</p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {nextActions.map((item) => (
+                  <li key={item.key} className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-3">
+                    <p className="font-medium text-amateur-ink">{item.label}</p>
+                    <p className="mt-1 text-sm text-amateur-muted">{item.detail}</p>
+                    <Link
+                      to={item.actionHref}
+                      className="mt-2 inline-flex text-sm font-semibold text-amateur-accent hover:underline"
+                    >
+                      {item.actionLabel}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section id="guardians" className="mt-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-display text-lg font-semibold">{t('pages.athletes.guardians')}</h3>
@@ -401,7 +545,7 @@ export function AthleteDetailPage() {
         </p>
       </section>
 
-      <section className="mt-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+      <section id="teams" className="mt-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
         <h3 className="font-display text-lg font-semibold">{t('pages.athletes.teams')}</h3>
         <p className="text-sm text-amateur-muted">{t('pages.athletes.teamsHint')}</p>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -443,6 +587,21 @@ export function AthleteDetailPage() {
               ))
           )}
         </ul>
+        {endedTeams.length > 0 ? (
+          <div className="mt-4 rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+              {t('pages.athletes.teamHistory')}
+            </p>
+            <ul className="mt-3 space-y-2 text-sm text-amateur-muted">
+              {endedTeams.map((membership) => (
+                <li key={membership.id} className="flex items-center justify-between gap-3">
+                  <span>{membership.team.name}</span>
+                  <span>{formatDate(membership.endedAt, i18n.language)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
 
       <section className="mt-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
@@ -458,10 +617,7 @@ export function AthleteDetailPage() {
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <StatCard
             label={t('pages.athleteCharges.summaryOutstanding')}
-            value={getMoneyAmount(
-              charges.reduce((sum, charge) => sum + Number(charge.remainingAmount ?? 0), 0),
-              charges.find((charge) => charge.chargeItem?.currency)?.chargeItem?.currency ?? 'TRY',
-            )}
+            value={getMoneyAmount(outstandingTotal, charges.find((charge) => charge.chargeItem?.currency)?.chargeItem?.currency ?? 'TRY')}
             tone="danger"
             compact
           />
@@ -616,10 +772,7 @@ export function AthleteDetailPage() {
             <ul className="mt-3 space-y-2 text-sm text-amateur-muted">
               <li>
                 {t('pages.communications.signalOutstanding', {
-                  amount: getMoneyAmount(
-                    charges.reduce((sum, charge) => sum + Number(charge.remainingAmount ?? 0), 0),
-                    charges.find((charge) => charge.chargeItem?.currency)?.chargeItem?.currency ?? 'TRY',
-                  ),
+                  amount: getMoneyAmount(outstandingTotal, charges.find((charge) => charge.chargeItem?.currency)?.chargeItem?.currency ?? 'TRY'),
                 })}
               </li>
               <li>

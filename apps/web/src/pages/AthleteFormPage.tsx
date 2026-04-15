@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
+import { InlineAlert } from '../components/ui/InlineAlert';
 import { PageHeader } from '../components/ui/PageHeader';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
 import { getAthleteStatusLabel } from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
 import type { Athlete, AthleteStatus, ClubGroup, SportBranch } from '../lib/domain-types';
 
-const statuses: AthleteStatus[] = ['active', 'inactive', 'trial', 'archived'];
+const statuses: AthleteStatus[] = ['trial', 'active', 'paused', 'inactive', 'archived'];
 
 export function AthleteFormPage() {
   const { id } = useParams();
@@ -33,6 +34,23 @@ export function AthleteFormPage() {
   const [status, setStatus] = useState<AthleteStatus>('active');
   const [jerseyNumber, setJerseyNumber] = useState('');
   const [notes, setNotes] = useState('');
+  const selectedBranch = branches.find((branch) => branch.id === sportBranchId) ?? null;
+  const statusGuideKey = useMemo(() => {
+    switch (status) {
+      case 'trial':
+        return 'pages.athletes.statusGuideTrial';
+      case 'active':
+        return 'pages.athletes.statusGuideActive';
+      case 'paused':
+        return 'pages.athletes.statusGuidePaused';
+      case 'inactive':
+        return 'pages.athletes.statusGuideInactive';
+      case 'archived':
+        return 'pages.athletes.statusGuideArchived';
+      default:
+        return 'pages.athletes.statusGuideActive';
+    }
+  }, [status]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -124,7 +142,7 @@ export function AthleteFormPage() {
     <div>
       <PageHeader
         title={isNew ? t('pages.athletes.new') : t('pages.athletes.edit')}
-        subtitle={t('pages.athletes.subtitle')}
+        subtitle={isNew ? t('pages.athletes.intakeSubtitle') : t('pages.athletes.editSubtitle')}
       />
       <div className="mx-auto max-w-xl rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
         {loading ? (
@@ -132,6 +150,9 @@ export function AthleteFormPage() {
         ) : (
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            <InlineAlert tone="info">
+              {isNew ? t('pages.athletes.intakeIntro') : t('pages.athletes.editIntro')}
+            </InlineAlert>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="font-medium text-amateur-ink">{t('pages.athletes.firstName')}</span>
@@ -201,6 +222,11 @@ export function AthleteFormPage() {
                   ))
                 )}
               </select>
+              <span className="text-xs text-amateur-muted">
+                {selectedBranch
+                  ? t('pages.athletes.branchReadyHint', { branch: selectedBranch.name })
+                  : t('pages.athletes.branchHint')}
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-amateur-ink">{t('pages.athletes.primaryGroup')}</span>
@@ -231,6 +257,7 @@ export function AthleteFormPage() {
                   </option>
                 ))}
               </select>
+              <span className="text-xs text-amateur-muted">{t(statusGuideKey)}</span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-amateur-ink">{t('pages.athletes.jersey')}</span>
@@ -251,7 +278,7 @@ export function AthleteFormPage() {
             </label>
             <div className="flex flex-wrap gap-2 pt-2">
               <Button type="submit" disabled={saving || branches.length === 0}>
-                {t('pages.athletes.save')}
+                {isNew ? t('pages.athletes.saveAndOpen') : t('pages.athletes.save')}
               </Button>
               <Link to={isNew ? '/app/athletes' : `/app/athletes/${id}`}>
                 <Button type="button" variant="ghost">

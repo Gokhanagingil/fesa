@@ -12,6 +12,7 @@ import { Tenant } from './tenant.entity';
 import { Athlete } from './athlete.entity';
 import { SportBranch } from './sport-branch.entity';
 import { Coach } from './coach.entity';
+import { AthleteCharge } from './athlete-charge.entity';
 import { AttendanceStatus, TrainingSessionStatus } from '../enums';
 
 @Entity('private_lessons')
@@ -81,6 +82,9 @@ export class PrivateLesson {
 
   @Column({ type: 'varchar', length: 1000, nullable: true })
   notes!: string | null;
+
+  @ManyToOne(() => AthleteCharge, { nullable: true })
+  charge?: AthleteCharge | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

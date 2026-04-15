@@ -114,16 +114,20 @@ A first-wave **staging** path uses GitHub Actions (`workflow_dispatch`) to SSH i
 
 Turkish and English are wired via `i18next` in `apps/web`. Locale files live under `apps/web/src/i18n/locales/`. See [docs/i18n.md](docs/i18n.md).
 
+This wave also adds a locale parity guard (`npm run i18n:check`) so missing TR/EN keys are caught before raw keys or mixed-language drift reach staging.
+
 ## Club operations core workflows
 
 The current product wave extends the existing command center into a more complete daily operating system without introducing parallel modules:
 
 - **Athletes + guardians:** athlete profiles now combine guardians, team context, finance state, private lessons, and communication follow-up signals in one place.
+- **Membership lifecycle:** athlete onboarding now starts from a lighter intake flow, and staff can track `trial`, `active`, `paused`, `inactive`, and `archived` states with explicit enrollment-readiness cues.
 - **Groups + teams:** the group-first / optional-team model remains unchanged and now also supports lightweight coach assignment for operational ownership.
 - **Coaches:** clubs can manage a focused coaching roster, then assign coaches to groups, teams, training sessions, and private lessons without turning the product into an HR suite.
 - **Training + attendance:** training stays group-first / team-optional, with recurring session generation, safe bulk cancellation / rescheduling, and optional coach visibility in planning and attendance views.
 - **Private lessons:** 1-to-1 lessons are now a first-class workflow with athlete, coach, schedule, attendance, notes, and optional linked charge visibility.
 - **Collections + balances:** charge assignment still starts from reusable charge items, payments still use explicit allocations, and private-lesson charges now fit inside the same finance model.
+- **Periodic collections automation:** finance can now generate period-based athlete charges with duplicate protection using billing period keys, without replacing the existing manual charge workflow.
 - **Communication readiness:** the product now helps staff assemble audiences by group, team, session, private-lesson context, and financial follow-up so family outreach can start from clear operational targets.
 - **Dashboard + reporting:** the dashboard and reports pages now surface live operational, coaching, private-lesson, and collection summaries instead of placeholder counts and disabled report affordances.
 

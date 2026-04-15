@@ -1,6 +1,6 @@
 /** Client-side shapes mirroring API responses (subset). */
 
-export type AthleteStatus = 'active' | 'inactive' | 'trial' | 'archived';
+export type AthleteStatus = 'active' | 'paused' | 'inactive' | 'trial' | 'archived';
 export type TrainingSessionStatus = 'planned' | 'completed' | 'cancelled';
 export type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late';
 export type AthleteChargeStatus = 'pending' | 'partially_paid' | 'paid' | 'cancelled';
@@ -141,6 +141,8 @@ export type AthleteCharge = {
   privateLessonId?: string | null;
   amount: string;
   dueDate: string | null;
+  billingPeriodKey?: string | null;
+  billingPeriodLabel?: string | null;
   status: AthleteChargeStatus;
   derivedStatus?: AthleteChargeStatus;
   allocatedAmount?: string;
@@ -232,6 +234,7 @@ export type AthleteFinanceSummaryResponse = {
   charges: AthleteCharge[];
   recentPayments: Payment[];
   athletes: AthleteFinanceAggregate[];
+  privateLessons?: PrivateLesson[];
 };
 
 export type DashboardSummary = {
@@ -273,4 +276,31 @@ export type CommandCenterResponse = DashboardSummary & {
     reachableGuardians: number;
     athletesWithOverdueBalance: number;
   };
+};
+
+export type PeriodicChargeTargetScope = 'selected' | 'group' | 'team';
+
+export type PeriodicChargeTargetPreview = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  preferredName: string | null;
+  status: AthleteStatus;
+  primaryGroupId: string | null;
+};
+
+export type PeriodicChargePreviewResponse = {
+  targetCount: number;
+  createCount: number;
+  skippedCount: number;
+  amount: string;
+  currency: string;
+  billingPeriodKey: string;
+  billingPeriodLabel: string;
+  targets: PeriodicChargeTargetPreview[];
+  skippedAthleteIds: string[];
+};
+
+export type PeriodicChargeGenerateResponse = PeriodicChargePreviewResponse & {
+  createdIds: string[];
 };

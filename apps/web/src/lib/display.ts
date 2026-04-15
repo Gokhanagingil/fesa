@@ -48,6 +48,10 @@ export function getAthleteStatusLabel(t: TFunction, status: AthleteStatus): stri
   return t(`app.enums.athleteStatus.${status}`);
 }
 
+export function getEnrollmentReadinessTone(missingCount: number): 'default' | 'danger' {
+  return missingCount > 0 ? 'danger' : 'default';
+}
+
 export function getTrainingStatusLabel(t: TFunction, status: TrainingSessionStatus): string {
   return t(`app.enums.trainingStatus.${status}`);
 }

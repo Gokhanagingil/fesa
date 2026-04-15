@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { ReportDefinition } from '../../database/entities/report-definition.entity';
 import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.entity';
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
+import { CommunicationService } from '../communication/communication.service';
 import { FinanceService } from '../finance/finance.service';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class ReportingService {
     @InjectRepository(PrivateLesson)
     private readonly privateLessons: Repository<PrivateLesson>,
     private readonly finance: FinanceService,
+    private readonly communications: CommunicationService,
   ) {}
 
   async definitions(tenantId: string) {
@@ -57,7 +59,7 @@ export class ReportingService {
   }
 
   async commandCenter(tenantId: string) {
-    const [dashboard, financeSummary, lessons] = await Promise.all([
+    const [dashboard, financeSummary, lessons, communicationAudience] = await Promise.all([
       this.finance.getDashboardSummary(tenantId),
       this.finance.listAthleteFinanceSummaries(tenantId, {}),
       this.privateLessons.find({
@@ -66,6 +68,7 @@ export class ReportingService {
         order: { scheduledStart: 'ASC' },
         take: 20,
       }),
+      this.communications.listAudience(tenantId, {}),
     ]);
 
     const today = new Date();
@@ -87,6 +90,11 @@ export class ReportingService {
         upcoming: upcomingLessons.length,
         followUp: followUpLessons.length,
         billed: lessons.filter((lesson) => financeSummary.charges.some((charge) => charge.privateLessonId === lesson.id)).length,
+      },
+      communicationReadiness: {
+        audienceAthletes: communicationAudience.counts.athletes,
+        reachableGuardians: communicationAudience.counts.guardians,
+        athletesWithOverdueBalance: communicationAudience.counts.withOverdueBalance,
       },
     };
   }

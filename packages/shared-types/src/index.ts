@@ -102,7 +102,7 @@ export interface BulkActionRequest {
 
 // —— Wave two: operational core (subset for clients; API is source of truth) ——
 
-export type AthleteStatus = 'active' | 'inactive' | 'trial' | 'archived';
+export type AthleteStatus = 'active' | 'paused' | 'inactive' | 'trial' | 'archived';
 
 export interface AthleteSummary {
   id: Uuid;

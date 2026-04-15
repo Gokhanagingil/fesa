@@ -11,12 +11,14 @@ import { Attendance } from '../../database/entities/attendance.entity';
 import { ClubGroup } from '../../database/entities/club-group.entity';
 import { Coach } from '../../database/entities/coach.entity';
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
+import { CommunicationModule } from '../communication/communication.module';
 import { FinanceModule } from '../finance/finance.module';
 import { ReportingController } from './reporting.controller';
 import { ReportingService } from './reporting.service';
 
 @Module({
   imports: [
+    CommunicationModule,
     FinanceModule,
     TypeOrmModule.forFeature([
       ReportDefinition,

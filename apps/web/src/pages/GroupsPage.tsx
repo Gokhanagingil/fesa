@@ -6,7 +6,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
-import { apiGet } from '../lib/api';
+import { apiGet, apiPatch } from '../lib/api';
 import { getPersonName } from '../lib/display';
 import type { ClubGroup, Coach } from '../lib/domain-types';
 import { useTenant } from '../lib/tenant-hooks';
@@ -68,20 +68,7 @@ export function GroupsPage() {
     setError(null);
     setMessage(null);
     try {
-      await apiGet(`/api/groups/${groupId}`);
-      await fetch(`/api/groups/${groupId}/head-coach`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(tenantId ? { 'X-Tenant-Id': tenantId } : {}),
-        },
-        body: JSON.stringify({ headCoachId: headCoachId || null }),
-      }).then(async (res) => {
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || t('app.errors.saveFailed'));
-        }
-      });
+      await apiPatch(`/api/groups/${groupId}/head-coach`, { headCoachId: headCoachId || null });
       setMessage(t('pages.groups.headCoachSaved'));
       await load();
     } catch (e) {
