@@ -83,7 +83,7 @@ export class PrivateLesson {
   @Column({ type: 'varchar', length: 1000, nullable: true })
   notes!: string | null;
 
-  @ManyToOne(() => AthleteCharge, { nullable: true })
+  // Query builders map this from athlete_charges.privateLessonId.
   charge?: AthleteCharge | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
