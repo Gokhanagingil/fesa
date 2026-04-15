@@ -190,6 +190,40 @@ export function CommunicationsPage() {
     [groupId, teams],
   );
 
+  const hasActiveFilters = useMemo(
+    () =>
+      Boolean(
+        query.trim() ||
+          groupId ||
+          teamId ||
+          coachId ||
+          financialState ||
+          privateLessonStatus ||
+          trainingSessionId ||
+          portalEnabledOnly ||
+          portalPendingOnly ||
+          familyReadiness ||
+          needsFollowUp ||
+          primaryContactsOnly ||
+          athleteIds.length > 0,
+      ),
+    [
+      athleteIds.length,
+      coachId,
+      familyReadiness,
+      financialState,
+      groupId,
+      needsFollowUp,
+      portalEnabledOnly,
+      portalPendingOnly,
+      primaryContactsOnly,
+      privateLessonStatus,
+      query,
+      teamId,
+      trainingSessionId,
+    ],
+  );
+
   const contactLines = useMemo(() => {
     if (!audience) return [];
     return audience.items.flatMap((item) =>
@@ -436,8 +470,43 @@ export function CommunicationsPage() {
                 </div>
 
                 {audience.items.length === 0 ? (
-                  <div className="mt-4">
-                    <EmptyState title={t('pages.communications.empty')} hint={t('pages.communications.emptyHint')} />
+                  <div className="mt-4 space-y-4">
+                    <EmptyState
+                      title={t('pages.communications.empty')}
+                      hint={
+                        hasActiveFilters
+                          ? t('pages.communications.emptyFilteredHint')
+                          : t('pages.communications.emptyHint')
+                      }
+                    />
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {hasActiveFilters ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            setGroupId('');
+                            setTeamId('');
+                            setCoachId('');
+                            setFinancialState('');
+                            setPrivateLessonStatus('');
+                            setTrainingSessionId('');
+                            setPortalEnabledOnly(false);
+                            setPortalPendingOnly(false);
+                            setFamilyReadiness('');
+                            setNeedsFollowUp(false);
+                            setPrimaryContactsOnly(false);
+                            setAthleteIds([]);
+                            setQuery('');
+                          }}
+                        >
+                          {t('app.actions.clear')}
+                        </Button>
+                      ) : null}
+                      <Button type="button" variant="ghost" onClick={() => void loadAudience()}>
+                        {t('app.actions.refresh')}
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="mt-4 space-y-3">

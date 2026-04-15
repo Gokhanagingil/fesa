@@ -1,6 +1,12 @@
 import { createContext } from 'react';
 
-export type TenantRow = { id: string; name: string; slug: string };
+export type TenantRow = {
+  id: string;
+  name: string;
+  slug: string;
+  role?: 'club_admin' | 'staff' | 'coach' | null;
+  isDefault?: boolean;
+};
 
 export type TenantContextValue = {
   tenants: TenantRow[];

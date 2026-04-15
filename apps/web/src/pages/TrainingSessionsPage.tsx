@@ -292,6 +292,19 @@ export function TrainingSessionsPage() {
     [items],
   );
 
+  const hasActiveFilters = useMemo(
+    () =>
+      Boolean(
+        q.trim() ||
+          groupId ||
+          teamId ||
+          status ||
+          from !== toDateInput(initialWeekStart) ||
+          to !== toDateInput(initialWeekEnd),
+      ),
+    [from, groupId, initialWeekEnd, initialWeekStart, q, status, teamId, to],
+  );
+
   return (
     <div>
       <PageHeader
@@ -565,7 +578,60 @@ export function TrainingSessionsPage() {
         ) : loading ? (
           <p className="text-sm text-amateur-muted">{t('app.states.loading')}</p>
         ) : items.length === 0 ? (
-          <EmptyState title={t('pages.training.empty')} hint={t('pages.training.emptyHint')} />
+          <div className="space-y-4">
+            <EmptyState
+              title={t('pages.training.empty')}
+              hint={
+                hasActiveFilters
+                  ? t('pages.training.emptyFilteredHint', {
+                      from: formatDate(from, i18n.language),
+                      to: formatDate(to, i18n.language),
+                    })
+                  : t('pages.training.emptyWindowHint', {
+                      from: formatDate(from, i18n.language),
+                      to: formatDate(to, i18n.language),
+                    })
+              }
+            />
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setFrom(toDateInput(initialWeekStart));
+                  setTo(toDateInput(initialWeekEnd));
+                }}
+              >
+                {t('pages.training.resetWeek')}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setFrom(toDateInput(initialWeekStart));
+                  setTo(toDateInput(addDays(initialWeekStart, 30)));
+                }}
+              >
+                {t('pages.training.expandWindow')}
+              </Button>
+              {hasActiveFilters ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setQ('');
+                    setGroupId('');
+                    setTeamId('');
+                    setStatus('');
+                    setFrom(toDateInput(initialWeekStart));
+                    setTo(toDateInput(initialWeekEnd));
+                  }}
+                >
+                  {t('app.actions.clear')}
+                </Button>
+              ) : null}
+            </div>
+          </div>
         ) : (
           <div className="space-y-6">
             <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
