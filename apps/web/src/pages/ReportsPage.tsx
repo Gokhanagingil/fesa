@@ -9,7 +9,13 @@ import { StatCard } from '../components/ui/StatCard';
 import { apiGet } from '../lib/api';
 import { formatDateTime, getMoneyAmount, getPersonName } from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
-import type { AthleteCharge, CommandCenterResponse, Payment, ReportingDefinitionsResponse } from '../lib/domain-types';
+import type {
+  AthleteCharge,
+  CommandCenterResponse,
+  Payment,
+  PrivateLesson,
+  ReportingDefinitionsResponse,
+} from '../lib/domain-types';
 
 export function ReportsPage() {
   const { t, i18n } = useTranslation();
@@ -221,6 +227,99 @@ export function ReportsPage() {
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                      {t('pages.reports.commandCenter.privateLessons')}
+                    </h2>
+                    <p className="mt-1 text-sm text-amateur-muted">
+                      {t('pages.reports.commandCenter.privateLessonsHint')}
+                    </p>
+                  </div>
+                  <Link
+                    to="/app/private-lessons"
+                    className="text-sm font-medium text-amateur-accent hover:underline"
+                  >
+                    {t('pages.privateLessons.openBoard')} →
+                  </Link>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {(report.upcomingPrivateLessons ?? []).length === 0 ? (
+                    <EmptyState
+                      title={t('pages.reports.commandCenter.noPrivateLessons')}
+                      hint={t('pages.reports.commandCenter.noPrivateLessonsHint')}
+                    />
+                  ) : (
+                    (report.upcomingPrivateLessons ?? []).map((lesson: PrivateLesson) => (
+                      <div
+                        key={lesson.id}
+                        className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-amateur-ink">
+                              {lesson.athlete ? getPersonName(lesson.athlete) : '—'}
+                            </p>
+                            <p className="text-xs text-amateur-muted">
+                              {lesson.coach
+                                ? `${lesson.coach.preferredName || `${lesson.coach.firstName} ${lesson.coach.lastName}`}`
+                                : '—'}
+                              {' · '}
+                              {formatDateTime(lesson.scheduledStart, i18n.language)}
+                            </p>
+                          </div>
+                          <span className="text-sm font-semibold text-amateur-ink">
+                            {lesson.charge?.remainingAmount
+                              ? getMoneyAmount(lesson.charge.remainingAmount, lesson.charge.chargeItem?.currency)
+                              : t('app.states.empty')}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                      {t('pages.reports.commandCenter.communication')}
+                    </h2>
+                    <p className="mt-1 text-sm text-amateur-muted">
+                      {t('pages.reports.commandCenter.communicationHint')}
+                    </p>
+                  </div>
+                  <Link
+                    to="/app/communications"
+                    className="text-sm font-medium text-amateur-accent hover:underline"
+                  >
+                    {t('pages.communications.openBuilder')} →
+                  </Link>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <StatCard
+                    label={t('pages.communications.summaryAthletes')}
+                    value={report.communicationReadiness?.audienceAthletes ?? 0}
+                    compact
+                  />
+                  <StatCard
+                    label={t('pages.communications.summaryGuardians')}
+                    value={report.communicationReadiness?.reachableGuardians ?? 0}
+                    compact
+                  />
+                  <StatCard
+                    label={t('pages.communications.summaryOverdue')}
+                    value={report.communicationReadiness?.athletesWithOverdueBalance ?? 0}
+                    compact
+                    tone="danger"
+                  />
                 </div>
               </div>
             </section>

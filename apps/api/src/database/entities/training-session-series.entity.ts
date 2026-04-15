@@ -12,12 +12,14 @@ import { Tenant } from './tenant.entity';
 import { SportBranch } from './sport-branch.entity';
 import { ClubGroup } from './club-group.entity';
 import { Team } from './team.entity';
+import { Coach } from './coach.entity';
 import { TrainingSessionStatus } from '../enums';
 
 @Entity('training_session_series')
 @Index(['tenantId', 'groupId'])
 @Index(['tenantId', 'teamId'])
 @Index(['tenantId', 'startsOn'])
+@Index(['tenantId', 'coachId'])
 export class TrainingSessionSeries {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -52,6 +54,13 @@ export class TrainingSessionSeries {
   @ManyToOne(() => Team, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'teamId' })
   team!: Team | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  coachId!: string | null;
+
+  @ManyToOne(() => Coach, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'coachId' })
+  coach!: Coach | null;
 
   @Column({ type: 'date' })
   startsOn!: string;

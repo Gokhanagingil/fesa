@@ -5,6 +5,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { apiGet } from '../lib/api';
+import { getPersonName } from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
 
 type FinanceSummaryResponse = {
@@ -29,10 +30,22 @@ type FinanceSummaryResponse = {
     amount: string;
     currency: string;
   }>;
+  privateLessons?: Array<{
+    id: string;
+    athleteId: string;
+    scheduledStart: string;
+    status: string;
+    athlete?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      preferredName: string | null;
+    };
+  }>;
 };
 
 export function FinanceHubPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { tenantId, loading: tenantLoading } = useTenant();
   const [summary, setSummary] = useState<FinanceSummaryResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -113,6 +126,24 @@ export function FinanceHubPage() {
               </h2>
               <p className="mt-2 text-sm text-amateur-muted">{t('pages.athleteCharges.subtitle')}</p>
             </Link>
+            <Link
+              to="/app/private-lessons"
+              className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm transition hover:border-amateur-accent/40"
+            >
+              <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                {t('pages.privateLessons.title')}
+              </h2>
+              <p className="mt-2 text-sm text-amateur-muted">{t('pages.privateLessons.financeHint')}</p>
+            </Link>
+            <Link
+              to="/app/communications"
+              className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm transition hover:border-amateur-accent/40"
+            >
+              <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                {t('pages.communications.title')}
+              </h2>
+              <p className="mt-2 text-sm text-amateur-muted">{t('pages.communications.financeHint')}</p>
+            </Link>
           </div>
           <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
             <div className="flex items-center justify-between gap-3">
@@ -152,6 +183,43 @@ export function FinanceHubPage() {
               </ul>
             ) : (
               <p className="mt-4 text-sm text-amateur-muted">{t('pages.finance.noPriorityCollections')}</p>
+            )}
+          </section>
+          <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                  {t('pages.finance.privateLessonCollections')}
+                </h2>
+                <p className="mt-1 text-sm text-amateur-muted">{t('pages.finance.privateLessonCollectionsHint')}</p>
+              </div>
+              <Link to="/app/private-lessons" className="text-sm font-semibold text-amateur-accent hover:underline">
+                {t('pages.privateLessons.openBoard')} →
+              </Link>
+            </div>
+            {summary?.privateLessons?.length ? (
+              <ul className="mt-4 divide-y divide-amateur-border">
+                {summary.privateLessons.slice(0, 5).map((lesson) => (
+                  <li key={lesson.id} className="flex items-center justify-between gap-3 py-3">
+                    <div>
+                      <p className="font-medium text-amateur-ink">
+                        {lesson.athlete ? getPersonName(lesson.athlete) : t('pages.athleteCharges.openAthlete')}
+                      </p>
+                      <p className="text-xs text-amateur-muted">
+                        {new Date(lesson.scheduledStart).toLocaleString(i18n.language)} · {lesson.status}
+                      </p>
+                    </div>
+                    <Link
+                      to={`/app/private-lessons?athleteId=${lesson.athleteId}`}
+                      className="text-sm font-semibold text-amateur-accent hover:underline"
+                    >
+                      {t('pages.privateLessons.openBoard')}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-4 text-sm text-amateur-muted">{t('pages.finance.noPrivateLessonCollections')}</p>
             )}
           </section>
         </div>

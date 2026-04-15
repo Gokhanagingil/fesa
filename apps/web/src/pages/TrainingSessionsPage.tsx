@@ -9,7 +9,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { apiGet, apiPost } from '../lib/api';
 import { formatDate, formatDateTime, getTrainingStatusLabel } from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
-import type { ClubGroup, Team, TrainingSession, TrainingSessionStatus } from '../lib/domain-types';
+import type { ClubGroup, Coach, Team, TrainingSession, TrainingSessionStatus } from '../lib/domain-types';
 
 type ListResponse = { items: TrainingSession[]; total: number };
 type BulkResponse = TrainingSession[];
@@ -68,6 +68,7 @@ export function TrainingSessionsPage() {
   const [items, setItems] = useState<TrainingSession[]>([]);
   const [groups, setGroups] = useState<ClubGroup[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -115,15 +116,18 @@ export function TrainingSessionsPage() {
     if (!tenantId) return;
     void (async () => {
       try {
-        const [groupRes, teamRes] = await Promise.all([
+        const [groupRes, teamRes, coachRes] = await Promise.all([
           apiGet<{ items: ClubGroup[] }>('/api/groups?limit=200'),
           apiGet<{ items: Team[] }>('/api/teams?limit=200'),
+          apiGet<{ items: Coach[] }>('/api/coaches?limit=200&isActive=true'),
         ]);
         setGroups(groupRes.items);
         setTeams(teamRes.items);
+        setCoaches(coachRes.items);
       } catch {
         setGroups([]);
         setTeams([]);
+        setCoaches([]);
       }
     })();
   }, [tenantId]);
@@ -163,6 +167,7 @@ export function TrainingSessionsPage() {
 
   const groupMap = useMemo(() => new Map(groups.map((group) => [group.id, group.name])), [groups]);
   const teamMap = useMemo(() => new Map(teams.map((team) => [team.id, team.name])), [teams]);
+  const coachMap = useMemo(() => new Map(coaches.map((coach) => [coach.id, coach.preferredName || `${coach.firstName} ${coach.lastName}`])), [coaches]);
   const visibleTeams = useMemo(
     () => (groupId ? teams.filter((team) => team.groupId === groupId) : teams),
     [groupId, teams],
@@ -672,6 +677,11 @@ export function TrainingSessionsPage() {
                                       ? ` · ${teamMap.get(item.teamId) ?? t('pages.training.unknownTeam')}`
                                       : ` · ${t('pages.training.fullGroupOption')}`}
                                   </p>
+                                  {item.coachId ? (
+                                    <p className="mt-1 text-xs text-amateur-muted">
+                                      {t('pages.training.coach')}: {coachMap.get(item.coachId) ?? t('pages.coaches.unknownCoach')}
+                                    </p>
+                                  ) : null}
                                 </div>
                                 <span className="rounded-full bg-amateur-surface px-2 py-1 text-[11px] font-medium text-amateur-accent">
                                   {getTrainingStatusLabel(t, item.status)}
@@ -712,6 +722,11 @@ export function TrainingSessionsPage() {
                       <td className="py-3">
                         <p className="font-medium text-amateur-ink">{session.title}</p>
                         {session.location ? <p className="text-xs text-amateur-muted">{session.location}</p> : null}
+                        {session.coachId ? (
+                          <p className="text-xs text-amateur-muted">
+                            {t('pages.training.coach')}: {coachMap.get(session.coachId) ?? t('pages.coaches.unknownCoach')}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="py-3 text-amateur-muted">
                         {rangeLabel(session.scheduledStart, session.scheduledEnd, i18n.language)}

@@ -5,11 +5,14 @@ import { useTranslation } from 'react-i18next';
 const links = [
   { to: '/app/dashboard', key: 'dashboard' as const },
   { to: '/app/athletes', key: 'athletes' as const },
+  { to: '/app/coaches', key: 'coaches' as const },
   { to: '/app/guardians', key: 'guardians' as const },
   { to: '/app/groups', key: 'groups' as const },
   { to: '/app/teams', key: 'teams' as const },
   { to: '/app/training', key: 'training' as const },
+  { to: '/app/private-lessons', key: 'privateLessons' as const },
   { to: '/app/finance', key: 'finance' as const },
+  { to: '/app/communications', key: 'communications' as const },
   { to: '/app/reports', key: 'reports' as const },
   { to: '/app/settings', key: 'settings' as const },
 ];

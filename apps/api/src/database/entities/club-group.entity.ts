@@ -12,6 +12,7 @@ import { Tenant } from './tenant.entity';
 import { SportBranch } from './sport-branch.entity';
 import { AgeGroup } from './age-group.entity';
 import { Team } from './team.entity';
+import { Coach } from './coach.entity';
 
 /**
  * Training / cohort bucket (e.g. birth-year group). Distinct from Team.
@@ -45,6 +46,13 @@ export class ClubGroup {
 
   @Column({ type: 'varchar', length: 200 })
   name!: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  headCoachId!: string | null;
+
+  @ManyToOne(() => Coach, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'headCoachId' })
+  headCoach!: Coach | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

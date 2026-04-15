@@ -49,6 +49,19 @@ export interface TeamRef {
   code?: string;
 }
 
+export interface CoachRef {
+  id: Uuid;
+  tenantId: Uuid;
+  firstName: string;
+  lastName: string;
+  preferredName?: string;
+  sportBranchId: Uuid;
+  phone?: string;
+  email?: string;
+  specialties?: string;
+  isActive: boolean;
+}
+
 // —— Reporting & bulk operations (placeholders, not runtime logic) ——
 
 /** Identifier for a report definition (versioned later). */
@@ -120,6 +133,7 @@ export interface TrainingSessionSummary {
   sportBranchId: Uuid;
   groupId: Uuid;
   teamId?: Uuid;
+  coachId?: Uuid;
   scheduledStart: string;
   scheduledEnd: string;
   status: TrainingSessionStatus;
@@ -128,6 +142,20 @@ export interface TrainingSessionSummary {
 export type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late';
 
 export type AthleteChargeStatus = 'pending' | 'partially_paid' | 'paid' | 'cancelled';
+
+export interface PrivateLessonSummary {
+  id: Uuid;
+  tenantId: Uuid;
+  athleteId: Uuid;
+  coachId: Uuid;
+  sportBranchId: Uuid;
+  focus?: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+  location?: string;
+  status: TrainingSessionStatus;
+  attendanceStatus?: AttendanceStatus;
+}
 
 export interface ChargeItemSummary {
   id: Uuid;

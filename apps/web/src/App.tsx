@@ -16,6 +16,9 @@ import { AthleteChargesPage } from './pages/AthleteChargesPage';
 import { TrainingSessionsPage } from './pages/TrainingSessionsPage';
 import { TrainingSessionFormPage } from './pages/TrainingSessionFormPage';
 import { TrainingSessionDetailPage } from './pages/TrainingSessionDetailPage';
+import { CoachesPage } from './pages/CoachesPage';
+import { PrivateLessonsPage } from './pages/PrivateLessonsPage';
+import { CommunicationsPage } from './pages/CommunicationsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -36,9 +39,12 @@ export default function App() {
         <Route path="/app/guardians" element={<GuardiansPage />} />
         <Route path="/app/groups" element={<GroupsPage />} />
         <Route path="/app/teams" element={<TeamsPage />} />
+        <Route path="/app/coaches" element={<CoachesPage />} />
         <Route path="/app/training/new" element={<TrainingSessionFormPage />} />
         <Route path="/app/training/:id" element={<TrainingSessionDetailPage />} />
         <Route path="/app/training" element={<TrainingSessionsPage />} />
+        <Route path="/app/private-lessons" element={<PrivateLessonsPage />} />
+        <Route path="/app/communications" element={<CommunicationsPage />} />
         <Route path="/app/finance/charge-items" element={<ChargeItemsPage />} />
         <Route path="/app/finance/athlete-charges" element={<AthleteChargesPage />} />
         <Route path="/app/finance" element={<FinanceHubPage />} />

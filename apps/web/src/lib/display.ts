@@ -6,7 +6,9 @@ import type {
   AthleteGuardianLink,
   AthleteStatus,
   AttendanceStatus,
+  Coach,
   Guardian,
+  PrivateLesson,
   TrainingSessionStatus,
 } from './domain-types';
 
@@ -15,6 +17,11 @@ type NameLike = Pick<Athlete, 'firstName' | 'lastName' | 'preferredName'> | Guar
 export function getPersonName(person: NameLike): string {
   const preferredName = 'preferredName' in person ? person.preferredName?.trim() : null;
   return preferredName || `${person.firstName} ${person.lastName}`;
+}
+
+export function getCoachName(coach: Coach | null | undefined): string {
+  if (!coach) return '—';
+  return coach.preferredName?.trim() || `${coach.firstName} ${coach.lastName}`;
 }
 
 export function formatDate(value: string | null | undefined, language: string): string {
@@ -43,6 +50,37 @@ export function getAthleteStatusLabel(t: TFunction, status: AthleteStatus): stri
 
 export function getTrainingStatusLabel(t: TFunction, status: TrainingSessionStatus): string {
   return t(`app.enums.trainingStatus.${status}`);
+}
+
+export function getLessonStatusLabel(t: TFunction, status: TrainingSessionStatus): string {
+  return getTrainingStatusLabel(t, status);
+}
+
+export function getPrivateLessonReasonLabel(t: TFunction, reason: string): string {
+  if (reason.startsWith('group:')) {
+    return t('pages.communications.reasonGroup', { name: reason.slice('group:'.length) });
+  }
+  if (reason.startsWith('team:')) {
+    return t('pages.communications.reasonTeam', { name: reason.slice('team:'.length) });
+  }
+  if (reason.startsWith('private_lesson:')) {
+    return t('pages.communications.reasonPrivateLesson', {
+      status: getTrainingStatusLabel(t, reason.slice('private_lesson:'.length) as TrainingSessionStatus),
+    });
+  }
+  const labels: Record<string, string> = {
+    'finance:overdue': t('pages.communications.reasonOverdue'),
+    'finance:outstanding': t('pages.communications.reasonOutstanding'),
+    training_session: t('pages.communications.reasonTraining'),
+    coach_assignment: t('pages.communications.reasonCoach'),
+    manual_selection: t('pages.communications.reasonManual'),
+  };
+  return labels[reason] ?? reason;
+}
+
+export function getPrivateLessonAttendanceLabel(t: TFunction, status: PrivateLesson['attendanceStatus']): string {
+  if (!status) return t('pages.privateLessons.noAttendance');
+  return getAttendanceStatusLabel(t, status);
 }
 
 export function getAttendanceStatusLabel(t: TFunction, status: AttendanceStatus): string {

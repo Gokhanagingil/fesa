@@ -5,13 +5,16 @@ import { InlineAlert } from '../components/ui/InlineAlert';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { apiGet } from '../lib/api';
-import type { DashboardSummary, Payment } from '../lib/domain-types';
+import { getPersonName } from '../lib/display';
+import type { Coach, DashboardSummary, Payment, PrivateLesson } from '../lib/domain-types';
 import { useTenant } from '../lib/tenant-hooks';
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const { tenantId, loading: tenantLoading } = useTenant();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [privateLessons, setPrivateLessons] = useState<PrivateLesson[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,9 +23,11 @@ export function DashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const [dashboard, guardians] = await Promise.all([
+      const [dashboard, guardians, coachRes, privateLessonRes] = await Promise.all([
         apiGet<DashboardSummary>('/api/finance/dashboard-summary'),
         apiGet<{ total: number }>('/api/guardians?limit=1'),
+        apiGet<{ items: Coach[] }>('/api/coaches?limit=50&isActive=true'),
+        apiGet<{ items: PrivateLesson[] }>('/api/private-lessons?limit=5'),
       ]);
       setSummary({
         ...dashboard,
@@ -31,6 +36,8 @@ export function DashboardPage() {
           guardians: guardians.total,
         },
       });
+      setCoaches(coachRes.items);
+      setPrivateLessons(privateLessonRes.items);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
     } finally {
@@ -201,6 +208,75 @@ export function DashboardPage() {
           ) : (
             <ul className="mt-4 divide-y divide-amateur-border">
               {summary.recentPayments.slice(0, 5).map(renderPayment)}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                {t('pages.dashboard.coachesTitle')}
+              </h2>
+              <p className="mt-1 text-sm text-amateur-muted">{t('pages.dashboard.coachesHint')}</p>
+            </div>
+            <Link to="/app/coaches" className="text-sm font-semibold text-amateur-accent hover:underline">
+              {t('app.nav.coaches')}
+            </Link>
+          </div>
+          {coaches.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-dashed border-amateur-border bg-amateur-canvas/60 px-4 py-6 text-sm text-amateur-muted">
+              {t('pages.coaches.empty')}
+            </div>
+          ) : (
+            <ul className="mt-4 divide-y divide-amateur-border">
+              {coaches.slice(0, 4).map((coach) => (
+                <li key={coach.id} className="flex items-center justify-between gap-3 py-3">
+                  <div>
+                    <p className="font-medium text-amateur-ink">{getPersonName(coach)}</p>
+                    <p className="text-xs text-amateur-muted">
+                      {coach.sportBranch?.name ?? '—'}
+                      {coach.specialties ? ` · ${coach.specialties}` : ''}
+                    </p>
+                  </div>
+                  <span className="text-xs text-amateur-muted">{coach.isActive ? t('pages.coaches.activeState') : t('pages.coaches.inactiveState')}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                {t('pages.dashboard.privateLessonsTitle')}
+              </h2>
+              <p className="mt-1 text-sm text-amateur-muted">{t('pages.dashboard.privateLessonsHint')}</p>
+            </div>
+            <Link to="/app/private-lessons" className="text-sm font-semibold text-amateur-accent hover:underline">
+              {t('app.nav.privateLessons')}
+            </Link>
+          </div>
+          {privateLessons.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-dashed border-amateur-border bg-amateur-canvas/60 px-4 py-6 text-sm text-amateur-muted">
+              {t('pages.privateLessons.empty')}
+            </div>
+          ) : (
+            <ul className="mt-4 divide-y divide-amateur-border">
+              {privateLessons.map((lesson) => (
+                <li key={lesson.id} className="flex items-center justify-between gap-3 py-3">
+                  <div>
+                    <p className="font-medium text-amateur-ink">{lesson.athlete ? getPersonName(lesson.athlete) : '—'}</p>
+                    <p className="text-xs text-amateur-muted">
+                      {lesson.coach ? getPersonName(lesson.coach) : '—'} · {lesson.focus || t('pages.privateLessons.focus')}
+                    </p>
+                  </div>
+                  <span className="text-xs text-amateur-muted">{lesson.status}</span>
+                </li>
+              ))}
             </ul>
           )}
         </section>

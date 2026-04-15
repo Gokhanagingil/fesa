@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ReportDefinition } from '../../database/entities/report-definition.entity';
 import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.entity';
+import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { FinanceService } from '../finance/finance.service';
 
 @Injectable()
@@ -12,6 +13,8 @@ export class ReportingService {
     private readonly reportDefinitions: Repository<ReportDefinition>,
     @InjectRepository(SavedFilterPreset)
     private readonly savedFilterPresets: Repository<SavedFilterPreset>,
+    @InjectRepository(PrivateLesson)
+    private readonly privateLessons: Repository<PrivateLesson>,
     private readonly finance: FinanceService,
   ) {}
 
@@ -32,6 +35,16 @@ export class ReportingService {
         titleKey: 'pages.reports.cards.balances.title',
         domains: ['finance', 'athletes'],
       },
+      {
+        key: 'private-lessons',
+        titleKey: 'pages.reports.cards.privateLessons.title',
+        domains: ['training', 'coaches', 'finance'],
+      },
+      {
+        key: 'communication-audiences',
+        titleKey: 'pages.reports.cards.communications.title',
+        domains: ['guardians', 'finance', 'training'],
+      },
     ];
 
     const presetCount = await this.savedFilterPresets.count({ where: { tenantId } });
@@ -44,8 +57,22 @@ export class ReportingService {
   }
 
   async commandCenter(tenantId: string) {
-    const dashboard = await this.finance.getDashboardSummary(tenantId);
-    const financeSummary = await this.finance.listAthleteFinanceSummaries(tenantId, {});
+    const [dashboard, financeSummary, lessons] = await Promise.all([
+      this.finance.getDashboardSummary(tenantId),
+      this.finance.listAthleteFinanceSummaries(tenantId, {}),
+      this.privateLessons.find({
+        where: { tenantId },
+        relations: ['coach', 'athlete', 'charge'],
+        order: { scheduledStart: 'ASC' },
+        take: 20,
+      }),
+    ]);
+
+    const today = new Date();
+    const upcomingLessons = lessons.filter((lesson) => lesson.scheduledStart >= today);
+    const followUpLessons = lessons.filter(
+      (lesson) => lesson.status === 'cancelled' || lesson.attendanceStatus === 'absent',
+    );
 
     return {
       stats: dashboard.stats,
@@ -55,6 +82,12 @@ export class ReportingService {
       recentPayments: dashboard.recentPayments,
       topOutstandingAthletes: dashboard.topOutstandingAthletes,
       overdueCharges: financeSummary.charges.filter((charge) => charge.isOverdue).slice(0, 10),
+      upcomingPrivateLessons: upcomingLessons.slice(0, 8),
+      privateLessonStats: {
+        upcoming: upcomingLessons.length,
+        followUp: followUpLessons.length,
+        billed: lessons.filter((lesson) => financeSummary.charges.some((charge) => charge.privateLessonId === lesson.id)).length,
+      },
     };
   }
 }

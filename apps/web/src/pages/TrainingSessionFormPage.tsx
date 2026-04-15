@@ -7,6 +7,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { apiGet, apiPost } from '../lib/api';
 import { useTenant } from '../lib/tenant-hooks';
 import type {
+  Coach,
   ClubGroup,
   SportBranch,
   Team,
@@ -33,9 +34,11 @@ export function TrainingSessionFormPage() {
   const [branches, setBranches] = useState<SportBranch[]>([]);
   const [groups, setGroups] = useState<ClubGroup[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
   const [sportBranchId, setSportBranchId] = useState('');
   const [groupId, setGroupId] = useState('');
   const [teamId, setTeamId] = useState('');
+  const [coachId, setCoachId] = useState('');
   const [title, setTitle] = useState('');
   const [scheduledStart, setScheduledStart] = useState('');
   const [scheduledEnd, setScheduledEnd] = useState('');
@@ -56,9 +59,13 @@ export function TrainingSessionFormPage() {
     if (!tenantId) return;
     void (async () => {
       try {
-        const b = await apiGet<SportBranch[]>('/api/sport-branches');
-        setBranches(b);
-        if (b.length > 0) setSportBranchId((prev) => prev || b[0].id);
+        const [branchRes, coachRes] = await Promise.all([
+          apiGet<SportBranch[]>('/api/sport-branches'),
+          apiGet<{ items: Coach[] }>('/api/coaches?limit=200&isActive=true'),
+        ]);
+        setBranches(branchRes);
+        setCoaches(coachRes.items);
+        if (branchRes.length > 0) setSportBranchId((prev) => prev || branchRes[0].id);
       } catch {
         setError(t('app.errors.loadFailed'));
       }
@@ -142,6 +149,7 @@ export function TrainingSessionFormPage() {
         sportBranchId,
         groupId,
         teamId: teamId || null,
+        coachId: coachId || undefined,
         location: location || undefined,
         notes: notes || undefined,
         status,
@@ -260,6 +268,24 @@ export function TrainingSessionFormPage() {
               ))}
             </select>
             <span className="text-xs text-amateur-muted">{t('pages.training.teamHint')}</span>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">{t('pages.coaches.assignment')}</span>
+            <select
+              value={coachId}
+              onChange={(e) => setCoachId(e.target.value)}
+              className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+            >
+              <option value="">{t('pages.coaches.unassigned')}</option>
+              {coaches
+                .filter((coach) => coach.sportBranchId === sportBranchId)
+                .map((coach) => (
+                  <option key={coach.id} value={coach.id}>
+                    {coach.preferredName || `${coach.firstName} ${coach.lastName}`}
+                  </option>
+                ))}
+            </select>
+            <span className="text-xs text-amateur-muted">{t('pages.training.coachHint')}</span>
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">{t('pages.training.status')}</span>
