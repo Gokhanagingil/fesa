@@ -24,6 +24,39 @@ This supports:
 
 Guardians use a classic **M:N** link table `athlete_guardians` with relationship metadata (`relationshipType`, `isPrimaryContact`).
 
+## Staff identity, tenant membership, and admin roles
+
+The internal product now treats staff identity as a first-class domain boundary instead of an implied browser state:
+
+| Concept | Table / entity | Meaning |
+|---------|----------------|---------|
+| **Staff user** | `staff_users` | Internal authenticated person for the operational app. |
+| **Tenant membership** | `tenant_memberships` | Explicit link between a staff user and a club tenant, with a tenant-scoped role. |
+| **Staff session** | `staff_sessions` | Secure session row for internal app login, stored separately from guardian sessions. |
+
+### Role semantics in this wave
+
+- **`global_admin`** (platform role on `staff_users`)
+  - platform-superior
+  - can access platform-facing administration
+  - can intentionally act in multiple tenant contexts
+- **`club_admin`** (tenant membership role)
+  - bound to a specific tenant
+  - can manage only that club’s operational surfaces
+- **`staff` / `coach`** (tenant membership roles)
+  - included as lean growth-ready semantics for future expansion
+  - not expanded into fine-grained RBAC in this wave
+
+### Why membership is explicit
+
+The product now avoids fragile “chosen tenant in the browser equals authorization” assumptions.
+
+Instead:
+
+- the backend loads allowed tenant memberships from `tenant_memberships`
+- the frontend tenant switcher only shows accessible clubs
+- tenant context is still explicit in the UI, but membership now drives what is actually allowed
+
 ## Athlete lifecycle and enrollment readiness
 
 - `athletes.status` now covers a lean club-operations lifecycle:
@@ -116,7 +149,7 @@ That makes standard sessions excellent for cohort operations, but awkward for 1-
 ## Guardian portal MVP and controlled self-service
 
 - The platform now exposes a controlled guardian portal MVP with tenant-scoped guardian invitation, activation, and session handling in this wave.
-- Instead, it now adds a tenant-scoped internal workflow foundation built for future portal usage without forcing immediate public exposure:
+- The same wave family also adds a tenant-scoped internal workflow foundation built for future portal usage without forcing immediate public exposure:
   - **`family_action_requests`** for staff-created family-facing requests,
   - **`family_action_events`** for audit-friendly workflow history.
 
@@ -229,6 +262,10 @@ The output is intentionally simple:
 - reuse of **`saved_filter_presets`** as the groundwork for future saved communication audiences.
 
 `report_definitions` and `saved_filter_presets` stay lean so future saved filters/export flows can evolve without reshaping the operational entities above.
+
+### Release-quality note
+
+Reporting and command-center surfaces now treat some metadata/support tables as optional during partial deploy states. The app still prefers the full schema, but overview pages now fall back gracefully instead of throwing tenant-wide 500s when a later-wave support table is temporarily unavailable on staging.
 
 ## Future packaging (tiers)
 

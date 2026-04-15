@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 type ListPageFrameProps = {
   toolbar?: ReactNode;
+  toolbarLabel?: string;
   children: ReactNode;
   /** When set, search is interactive; otherwise shows a read-only placeholder (shell demos). */
   search?: {
@@ -16,13 +17,14 @@ type ListPageFrameProps = {
 /**
  * Established pattern for export-ready lists: toolbar (search, filters, bulk) + content.
  */
-export function ListPageFrame({ toolbar, children, search }: ListPageFrameProps) {
+export function ListPageFrame({ toolbar, toolbarLabel, children, search }: ListPageFrameProps) {
   const { t } = useTranslation();
 
   return (
     <div className="rounded-2xl border border-amateur-border bg-amateur-surface shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-amateur-border p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative min-w-0 flex-1">
+      <div className="border-b border-amateur-border p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="relative min-w-0 flex-1 lg:max-w-sm">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-amateur-muted">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
@@ -45,7 +47,17 @@ export function ListPageFrame({ toolbar, children, search }: ListPageFrameProps)
             aria-label={t('app.actions.search')}
           />
         </div>
-        <div className="flex flex-wrap gap-2">{toolbar}</div>
+          {toolbar ? (
+            <div className="space-y-2">
+              {toolbarLabel ? (
+                <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+                  {toolbarLabel}
+                </p>
+              ) : null}
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">{toolbar}</div>
+            </div>
+          ) : null}
+        </div>
       </div>
       <div className="p-4">{children}</div>
     </div>

@@ -15,6 +15,8 @@ import {
   PrivateLesson,
   ChargeItem,
   AthleteCharge,
+  StaffUser,
+  TenantMembership,
 } from '../entities';
 import {
   DEMO_TENANT_ID,
@@ -68,16 +70,26 @@ import {
   AC_KEREM_CAMP_ID,
   AC_BURAK_DUES_ID,
   AC_EFE_PRIVATE_LESSON_ID,
+  STAFF_GLOBAL_ADMIN_ID,
+  STAFF_CLUB_ADMIN_ID,
 } from './constants';
 import {
+  StaffPlatformRole,
+  StaffUserStatus,
   AthleteStatus,
   AthleteChargeStatus,
   AttendanceStatus,
+  TenantMembershipRole,
   TrainingSessionStatus,
 } from '../enums';
+import { pbkdf2Sync } from 'crypto';
 
 function d(y: number, m: number, day: number): Date {
   return new Date(Date.UTC(y, m - 1, day, 12, 0, 0));
+}
+
+function hashPassword(password: string, salt: string): string {
+  return pbkdf2Sync(password, salt, 120_000, 64, 'sha512').toString('hex');
 }
 
 /**
@@ -101,11 +113,50 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     const privateLessons = manager.getRepository(PrivateLesson);
     const chargeItems = manager.getRepository(ChargeItem);
     const athleteCharges = manager.getRepository(AthleteCharge);
+    const staffUsers = manager.getRepository(StaffUser);
+    const membershipsRepo = manager.getRepository(TenantMembership);
 
     await tenants.save({
       id: DEMO_TENANT_ID,
       name: DEMO_TENANT_NAME,
       slug: DEMO_TENANT_SLUG,
+    });
+
+    const globalAdminSalt = 'wave8-global-admin-salt';
+    const clubAdminSalt = 'wave8-club-admin-salt';
+    await staffUsers.save([
+      {
+        id: STAFF_GLOBAL_ADMIN_ID,
+        email: 'platform.admin@amateur.local',
+        firstName: 'Platform',
+        lastName: 'Admin',
+        passwordSalt: globalAdminSalt,
+        passwordHash: hashPassword('Admin123!', globalAdminSalt),
+        platformRole: StaffPlatformRole.GLOBAL_ADMIN,
+        status: StaffUserStatus.ACTIVE,
+        lastLoginAt: null,
+      },
+      {
+        id: STAFF_CLUB_ADMIN_ID,
+        email: 'club.admin@amateur.local',
+        firstName: 'Club',
+        lastName: 'Admin',
+        passwordSalt: clubAdminSalt,
+        passwordHash: hashPassword('Admin123!', clubAdminSalt),
+        platformRole: StaffPlatformRole.STANDARD,
+        status: StaffUserStatus.ACTIVE,
+        lastLoginAt: null,
+      },
+    ]);
+
+    await membershipsRepo.save({
+      tenantId: DEMO_TENANT_ID,
+      staffUserId: STAFF_CLUB_ADMIN_ID,
+      role: TenantMembershipRole.CLUB_ADMIN,
+      isDefault: true,
+      createdByUserId: STAFF_GLOBAL_ADMIN_ID,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     await branches.save([

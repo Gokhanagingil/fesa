@@ -23,6 +23,9 @@ import { PaymentAllocation } from './payment-allocation.entity';
 import { FamilyActionRequest } from './family-action-request.entity';
 import { FamilyActionEvent } from './family-action-event.entity';
 import { ActionCenterItemState } from './action-center-item-state.entity';
+import { StaffUser } from './staff-user.entity';
+import { TenantMembership } from './tenant-membership.entity';
+import { StaffSession } from './staff-session.entity';
 
 export const domainEntities = [
   Tenant,
@@ -50,6 +53,9 @@ export const domainEntities = [
   FamilyActionRequest,
   FamilyActionEvent,
   ActionCenterItemState,
+  StaffUser,
+  TenantMembership,
+  StaffSession,
 ];
 
 export {
@@ -78,4 +84,7 @@ export {
   FamilyActionRequest,
   FamilyActionEvent,
   ActionCenterItemState,
+  StaffUser,
+  TenantMembership,
+  StaffSession,
 };

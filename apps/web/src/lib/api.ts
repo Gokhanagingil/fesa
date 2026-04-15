@@ -8,6 +8,10 @@ export function setStoredTenantId(id: string): void {
   localStorage.setItem(STORAGE_KEY, id);
 }
 
+export function clearStoredTenantId(): void {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
 function headers(): HeadersInit {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
   const tid = getStoredTenantId();

@@ -17,6 +17,7 @@ import {
   TrainingSessionStatus,
 } from '../../database/enums';
 import { FamilyActionService } from '../family-action/family-action.service';
+import { isMissingRelationError, isMissingTableError } from '../core/database-error.util';
 import { FinanceService } from '../finance/finance.service';
 import {
   ActionCenterView,
@@ -642,15 +643,38 @@ export class ActionCenterService {
   }
 
   private async buildCandidateItems(tenantId: string, now: Date): Promise<GeneratedActionCenterItem[]> {
-    const [financeItems, familyItems, privateLessonItems, trainingPrepItems, trainingAttendanceItems] = await Promise.all(
-      [
-        this.buildFinanceItems(tenantId, now),
-        this.buildFamilyItems(tenantId, now),
-        this.buildPrivateLessonItems(tenantId, now),
-        this.buildTrainingPrepItems(tenantId, now),
-        this.buildTrainingAttendanceItems(tenantId, now),
-      ],
-    );
+    const [financeItems, familyItems, privateLessonItems, trainingPrepItems, trainingAttendanceItems] = await Promise.all([
+      this.buildFinanceItems(tenantId, now).catch((error: unknown) => {
+        if (isMissingTableError(error) || isMissingRelationError(error)) {
+          return [];
+        }
+        throw error;
+      }),
+      this.buildFamilyItems(tenantId, now).catch((error: unknown) => {
+        if (isMissingTableError(error) || isMissingRelationError(error)) {
+          return [];
+        }
+        throw error;
+      }),
+      this.buildPrivateLessonItems(tenantId, now).catch((error: unknown) => {
+        if (isMissingTableError(error) || isMissingRelationError(error)) {
+          return [];
+        }
+        throw error;
+      }),
+      this.buildTrainingPrepItems(tenantId, now).catch((error: unknown) => {
+        if (isMissingTableError(error) || isMissingRelationError(error)) {
+          return [];
+        }
+        throw error;
+      }),
+      this.buildTrainingAttendanceItems(tenantId, now).catch((error: unknown) => {
+        if (isMissingTableError(error) || isMissingRelationError(error)) {
+          return [];
+        }
+        throw error;
+      }),
+    ]);
 
     return [
       ...financeItems,
@@ -700,6 +724,20 @@ export class ActionCenterService {
       items: items.slice(0, limit),
       counts,
     };
+  }
+
+  async listItemsSafe(tenantId: string, query: ListActionCenterItemsQueryDto) {
+    try {
+      return await this.listItems(tenantId, query);
+    } catch (error) {
+      if (isMissingTableError(error) || isMissingRelationError(error)) {
+        return {
+          items: [],
+          counts: this.createCounts(),
+        };
+      }
+      throw error;
+    }
   }
 
   async summary(tenantId: string) {

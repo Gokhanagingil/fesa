@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { TenantModule } from '../tenant/tenant.module';
 import { TenantContextService } from './tenant-context.service';
 import { TenantGuard } from './tenant.guard';
@@ -6,7 +7,7 @@ import { TenantGuard } from './tenant.guard';
 /** Cross-cutting providers (tenant resolution for pre-auth development). */
 @Global()
 @Module({
-  imports: [TenantModule],
+  imports: [TenantModule, AuthModule],
   providers: [TenantContextService, TenantGuard],
   exports: [TenantContextService, TenantGuard, TenantModule],
 })

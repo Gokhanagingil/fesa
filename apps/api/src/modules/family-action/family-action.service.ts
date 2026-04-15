@@ -12,6 +12,7 @@ import {
   FamilyActionRequestType,
   FamilyReadinessStatus,
 } from '../../database/enums';
+import { isRecoverableSchemaError } from '../core/database-error.util';
 import { CreateFamilyActionRequestDto } from './dto/create-family-action-request.dto';
 import { ListFamilyActionRequestsQueryDto } from './dto/list-family-action-requests-query.dto';
 import { TransitionFamilyActionRequestDto } from './dto/transition-family-action-request.dto';
@@ -861,5 +862,27 @@ export class FamilyActionService {
       },
       items: allRequests.items.slice(0, 8),
     };
+  }
+
+  async getWorkflowSummarySafe(tenantId: string) {
+    try {
+      return await this.getWorkflowSummary(tenantId);
+    } catch (error) {
+      if (isRecoverableSchemaError(error)) {
+        return {
+          counts: {
+            open: 0,
+            pendingFamilyAction: 0,
+            awaitingStaffReview: 0,
+            completed: 0,
+            incompleteAthletes: 0,
+            athletesAwaitingGuardianAction: 0,
+            athletesAwaitingStaffReview: 0,
+          },
+          items: [],
+        };
+      }
+      throw error;
+    }
   }
 }

@@ -222,6 +222,7 @@ export function CommunicationsPage() {
           disabled: !tenantId || tenantLoading,
           placeholder: t('pages.communications.searchPlaceholder'),
         }}
+        toolbarLabel={t('app.actions.filter')}
         toolbar={
           <>
             <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
@@ -255,7 +256,11 @@ export function CommunicationsPage() {
             </label>
             <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
               <span>{t('pages.coaches.title')}</span>
-              <select value={coachId} onChange={(e) => setCoachId(e.target.value)} className="bg-transparent text-amateur-ink outline-none">
+              <select
+                value={coachId}
+                onChange={(e) => setCoachId(e.target.value)}
+                className="bg-transparent text-amateur-ink outline-none"
+              >
                 <option value="">{t('pages.communications.allCoaches')}</option>
                 {coaches.map((coach) => (
                   <option key={coach.id} value={coach.id}>
@@ -349,6 +354,27 @@ export function CommunicationsPage() {
               />
               <span>{t('pages.communications.primaryContactsOnly')}</span>
             </label>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setGroupId('');
+                setTeamId('');
+                setCoachId('');
+                setFinancialState('');
+                setPrivateLessonStatus('');
+                setTrainingSessionId('');
+                setPortalEnabledOnly(false);
+                setPortalPendingOnly(false);
+                setFamilyReadiness('');
+                setNeedsFollowUp(false);
+                setPrimaryContactsOnly(false);
+                setAthleteIds([]);
+                setQuery('');
+              }}
+            >
+              {t('app.actions.clear')}
+            </Button>
           </>
         }
       >
@@ -404,26 +430,8 @@ export function CommunicationsPage() {
                     </h2>
                     <p className="mt-1 text-sm text-amateur-muted">{t('pages.communications.audienceHint')}</p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setGroupId('');
-                      setTeamId('');
-                      setCoachId('');
-                      setFinancialState('');
-                      setPrivateLessonStatus('');
-                      setTrainingSessionId('');
-                      setPortalEnabledOnly(false);
-                      setPortalPendingOnly(false);
-                      setFamilyReadiness('');
-                      setNeedsFollowUp(false);
-                      setPrimaryContactsOnly(false);
-                      setAthleteIds([]);
-                      setQuery('');
-                    }}
-                  >
-                    {t('app.actions.clear')}
+                  <Button type="button" variant="ghost" onClick={() => void loadAudience()}>
+                    {t('app.actions.refresh')}
                   </Button>
                 </div>
 

@@ -14,6 +14,7 @@ import { GuardianPortalAccess } from '../../database/entities/guardian-portal-ac
 import { FamilyReadinessStatus } from '../../database/enums';
 import { FinanceService } from '../finance/finance.service';
 import { FamilyActionService } from '../family-action/family-action.service';
+import { isRelationTableMissingError } from '../core/database-error.util';
 import { ListCommunicationAudienceQueryDto } from './dto/list-communication-audience-query.dto';
 
 type AudienceMember = {
@@ -69,6 +70,20 @@ export class CommunicationService {
 
   private unique(values: string[]): string[] {
     return Array.from(new Set(values.filter(Boolean)));
+  }
+
+  private async safeListPortalAccesses(tenantId: string): Promise<Array<Pick<GuardianPortalAccess, 'guardianId' | 'status'>>> {
+    try {
+      return await this.guardianPortalAccesses.find({
+        where: { tenantId },
+        select: { guardianId: true, status: true },
+      });
+    } catch (error) {
+      if (isRelationTableMissingError(error)) {
+        return [];
+      }
+      throw error;
+    }
   }
 
   private async getCandidateAthleteIds(
@@ -172,10 +187,7 @@ export class CommunicationService {
     }
 
     if (query.portalEnabledOnly || query.portalPendingOnly) {
-      const accessRows = await this.guardianPortalAccesses.find({
-        where: { tenantId },
-        select: { guardianId: true, status: true },
-      });
+      const accessRows = await this.safeListPortalAccesses(tenantId);
       const guardianIds = accessRows
         .filter((row) =>
           query.portalEnabledOnly
@@ -217,34 +229,31 @@ export class CommunicationService {
 
     const [athletes, guardians, memberships, groups, teams, financeSummary, upcomingLessons, readinessMap, portalAccesses] =
       await Promise.all([
-      this.athletes.find({
-        where: { tenantId, id: In(athleteIds) },
-        relations: ['primaryGroup'],
-        order: { lastName: 'ASC', firstName: 'ASC' },
-      }),
-      this.athleteGuardians.find({
-        where: { tenantId, athleteId: In(athleteIds) },
-        relations: ['guardian'],
-        order: { isPrimaryContact: 'DESC', createdAt: 'ASC' },
-      }),
-      this.teamMemberships.find({
-        where: { tenantId, athleteId: In(athleteIds), endedAt: IsNull() },
-        relations: ['team'],
-      }),
-      this.groups.find({ where: { tenantId } }),
-      this.teams.find({ where: { tenantId } }),
-      this.finance.listAthleteFinanceSummaries(tenantId, {}),
-      this.privateLessons.find({
-        where: { tenantId, athleteId: In(athleteIds) },
-        relations: ['coach'],
-        order: { scheduledStart: 'ASC' },
-      }),
-      this.familyActions.getReadinessMap(tenantId, athleteIds),
-      this.guardianPortalAccesses.find({
-        where: { tenantId },
-        select: { guardianId: true, status: true },
-      }),
-    ]);
+        this.athletes.find({
+          where: { tenantId, id: In(athleteIds) },
+          relations: ['primaryGroup'],
+          order: { lastName: 'ASC', firstName: 'ASC' },
+        }),
+        this.athleteGuardians.find({
+          where: { tenantId, athleteId: In(athleteIds) },
+          relations: ['guardian'],
+          order: { isPrimaryContact: 'DESC', createdAt: 'ASC' },
+        }),
+        this.teamMemberships.find({
+          where: { tenantId, athleteId: In(athleteIds), endedAt: IsNull() },
+          relations: ['team'],
+        }),
+        this.groups.find({ where: { tenantId } }),
+        this.teams.find({ where: { tenantId } }),
+        this.finance.listAthleteFinanceSummaries(tenantId, {}),
+        this.privateLessons.find({
+          where: { tenantId, athleteId: In(athleteIds) },
+          relations: ['coach'],
+          order: { scheduledStart: 'ASC' },
+        }),
+        this.familyActions.getReadinessMap(tenantId, athleteIds),
+        this.safeListPortalAccesses(tenantId),
+      ]);
 
     const financeMap = new Map(financeSummary.athletes.map((row) => [row.athlete.id, row]));
     const guardiansByAthlete = new Map<string, AthleteGuardian[]>();
@@ -427,6 +436,29 @@ export class CommunicationService {
         needingFollowUp: items.filter((item) => item.familyReadinessStatus !== FamilyReadinessStatus.COMPLETE).length,
       },
     };
+  }
+
+  async listAudienceSafe(tenantId: string, query: ListCommunicationAudienceQueryDto) {
+    try {
+      return await this.listAudience(tenantId, query);
+    } catch (error) {
+      if (isRelationTableMissingError(error)) {
+        return {
+          items: [],
+          counts: {
+            athletes: 0,
+            guardians: 0,
+            primaryContacts: 0,
+            withOverdueBalance: 0,
+            incompleteAthletes: 0,
+            awaitingGuardianAction: 0,
+            awaitingStaffReview: 0,
+            needingFollowUp: 0,
+          },
+        };
+      }
+      throw error;
+    }
   }
 
   async listPresets(tenantId: string) {

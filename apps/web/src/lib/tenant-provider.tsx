@@ -1,17 +1,29 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { apiGet, getStoredTenantId, setStoredTenantId } from './api';
 import { TenantContext, type TenantRow } from './tenant-context';
+import { useAuth } from './auth-context';
 
 /** Matches demo seed slug (`npm run seed:demo`) so first-run picks the curated tenant when present. */
 const PREFERRED_DEMO_TENANT_SLUG = 'kadikoy-genc-spor';
 
 export function TenantProvider({ children }: { children: ReactNode }) {
+  const { session, loading: authLoading } = useAuth();
   const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [tenantId, setTenantIdState] = useState<string | null>(getStoredTenantId());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    if (authLoading) {
+      return;
+    }
+    if (!session) {
+      setTenants([]);
+      setTenantIdState(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -33,7 +45,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authLoading, session]);
 
   useEffect(() => {
     void refresh();

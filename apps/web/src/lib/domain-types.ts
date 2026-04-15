@@ -33,6 +33,9 @@ export type ActionCenterItemType =
   | 'training_attendance';
 export type ActionCenterItemUrgency = 'overdue' | 'today' | 'upcoming' | 'normal';
 export type ActionCenterItemMutation = 'mark_read' | 'mark_unread' | 'dismiss' | 'complete' | 'snooze';
+export type StaffPlatformRole = 'global_admin' | 'standard';
+export type StaffUserStatus = 'active' | 'disabled';
+export type TenantMembershipRole = 'club_admin' | 'staff' | 'coach';
 
 export type SportBranch = { id: string; code: string; name: string };
 export type Coach = {
@@ -517,6 +520,30 @@ export type ActionCenterSummary = {
 };
 
 export type ActionCenterResponse = ActionCenterSummary;
+
+export type StaffMembershipSummary = {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  role: TenantMembershipRole;
+  isActive: boolean;
+};
+
+export type StaffIdentity = {
+  id: string;
+  fullName: string;
+  email: string;
+  platformRole: StaffPlatformRole;
+  status: StaffUserStatus;
+};
+
+export type StaffSessionSummary = {
+  user: StaffIdentity;
+  memberships: StaffMembershipSummary[];
+  activeTenantId: string | null;
+  allowedTenants: Array<{ id: string; name: string; slug: string }>;
+};
 
 export type PeriodicChargeTargetScope = 'selected' | 'group' | 'team';
 

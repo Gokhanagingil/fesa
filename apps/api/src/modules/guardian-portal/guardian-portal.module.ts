@@ -14,6 +14,7 @@ import { FamilyActionModule } from '../family-action/family-action.module';
 import { FinanceModule } from '../finance/finance.module';
 import { GuardianModule } from '../guardian/guardian.module';
 import { PrivateLessonModule } from '../private-lesson/private-lesson.module';
+import { TenantModule } from '../tenant/tenant.module';
 import { TrainingModule } from '../training/training.module';
 import { GuardianPortalController } from './guardian-portal.controller';
 import { GuardianPortalGuard } from './guardian-portal.guard';
@@ -25,6 +26,7 @@ import { GuardianPortalService } from './guardian-portal.service';
     FamilyActionModule,
     FinanceModule,
     PrivateLessonModule,
+    TenantModule,
     TrainingModule,
     TypeOrmModule.forFeature([
       Guardian,

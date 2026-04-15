@@ -16,14 +16,37 @@ npm workspaces unite `apps/*` and `packages/*`. Shared code lives in packages; a
 - **Stack**: NestJS 11, TypeORM, PostgreSQL driver, `@nestjs/config` with Joi validation.
 - **Config**: Environment variables validated at bootstrap; see `apps/api/.env.example`.
 - **Health**: `GET /api/health` checks DB connectivity; `GET /api/health/live` for process liveness.
-- **Modules**: Feature folders under `src/modules/*` (`tenant`, `athlete`, `guardian`, `group`, `team`, `coach`, `sport-branch`, `training`, `private-lesson`, `communication`, `finance`, `reporting`). Domain APIs are tenant-scoped via `X-Tenant-Id` (see `TenantGuard`).
+- **Modules**: Feature folders under `src/modules/*` (`auth`, `tenant`, `athlete`, `guardian`, `group`, `team`, `coach`, `sport-branch`, `training`, `private-lesson`, `communication`, `finance`, `reporting`). Domain APIs remain tenant-aware, but internal staff endpoints now rely on authenticated staff sessions plus explicit tenant membership.
 - **Migrations**: SQL migrations under `src/database/migrations`; see [migrations.md](./migrations.md).
 
 ## Multi-tenant direction
 
 - Data is modeled with `tenantId` on tenant-scoped entities.
-- No fake auth: tenant resolution from JWT/subdomain belongs in a later wave.
 - `Tenant` is a first-class entity to avoid retrofitting boundaries later.
+- Internal staff access now has a lean but real identity foundation:
+  - `staff_users`
+  - `tenant_memberships`
+  - `staff_sessions`
+- The backend still resolves an active tenant per request, but authenticated staff users are now constrained to:
+  - their explicit memberships for tenant-scoped work, or
+  - platform-level access when their platform role is `global_admin`.
+- Guardian portal authentication stays separate from staff/admin authentication on purpose:
+  - guardian sessions remain limited and family-facing
+  - staff sessions power the internal operational shell
+
+## Auth/session model
+
+- **Staff/admin**: httpOnly session cookie backed by hashed session tokens in the database.
+- **Guardian portal**: separate httpOnly session cookie and session table, already scoped to guardian + tenant.
+- **Frontend shell**:
+  - `AuthProvider` loads the current staff session
+  - `TenantProvider` loads the authenticated user’s available tenant memberships
+  - route protection sends unauthenticated staff users to `/login`
+
+## Release-quality hardening
+
+- Dashboard, reports, communications, and action-center summaries now degrade gracefully when optional/supporting reporting tables are unavailable during a partial staging migration state.
+- This keeps critical overview pages available instead of allowing one missing support relation to crash the whole command-center surface.
 
 ## Docker / deployment
 

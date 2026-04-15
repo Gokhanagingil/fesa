@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../lib/auth-context';
 
 const links = [
   { to: '/app/dashboard', key: 'dashboard' as const },
@@ -20,6 +21,9 @@ const links = [
 
 export function Sidebar() {
   const { t } = useTranslation();
+  const { session } = useAuth();
+  const isGlobalAdmin = session?.user.platformRole === 'global_admin';
+  const visibleLinks = links.filter((link) => (link.key === 'settings' ? true : !isGlobalAdmin || link.key !== 'reports'));
 
   return (
     <aside className="border-amateur-border bg-amateur-surface md:w-56 md:shrink-0 md:border-r">
@@ -32,7 +36,7 @@ export function Sidebar() {
         </div>
       </div>
       <nav className="flex gap-1 overflow-x-auto px-2 pb-3 md:flex-col md:px-3 md:pb-0">
-        {links.map((l) => (
+        {visibleLinks.map((l) => (
           <NavLink
             key={l.to}
             to={l.to}

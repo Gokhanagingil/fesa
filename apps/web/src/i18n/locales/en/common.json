@@ -155,6 +155,15 @@
         "invited": "Invited",
         "active": "Active",
         "disabled": "Disabled"
+      },
+      "staffPlatformRole": {
+        "global_admin": "Global admin",
+        "standard": "Staff"
+      },
+      "tenantMembershipRole": {
+        "club_admin": "Club admin",
+        "staff": "Staff",
+        "coach": "Coach"
       }
     }
   },
@@ -925,8 +934,46 @@
     },
     "settings": {
       "title": "Settings",
-      "subtitle": "Club profile and preferences.",
-      "placeholder": "Tenant profile, notifications, and locale defaults will land here after authentication."
+      "subtitle": "Administration, club context, and operating preferences.",
+      "platformTitle": "Platform administration",
+      "platformHint": "Global admins can see the clubs they can act in and switch context intentionally before entering club operations.",
+      "platformRole": "Platform role",
+      "platformMemberships": "Accessible clubs",
+      "platformMembershipHint": "Your memberships determine which clubs can be opened from the shared shell.",
+      "clubTitle": "Club administration",
+      "clubHint": "Keep club context, staff access, and day-to-day operating preferences visible in one calm admin surface.",
+      "currentClub": "Current club",
+      "clubRole": "Club role",
+      "clubSlug": "Club slug",
+      "clubContextTitle": "Current working context",
+      "clubContextHint": "This is the club scope used by day-to-day operations, finance follow-up, communications, and reports.",
+      "switchContextTitle": "Tenant context",
+      "switchContextHint": "Global admins can switch clubs intentionally. Club admins stay bound to their assigned club.",
+      "preferencesTitle": "Operational preferences",
+      "preferencesHint": "A lightweight settings surface keeps the product feeling real even before deeper configuration modules arrive.",
+      "localePreference": "Interface language follows the switcher in the header.",
+      "notificationsPreference": "Notifications and action-center priorities use live operational signals.",
+      "securityTitle": "Security model",
+      "securityHint": "Staff access now uses secure server sessions and membership-based tenant scoping. Guardian portal access remains separate.",
+      "securityPointStaff": "Staff/admin actions require a staff session.",
+      "securityPointMembership": "Tenant access is filtered by membership, not only by frontend hiding.",
+      "securityPointGuardian": "Guardian sessions stay isolated from staff/admin sessions.",
+      "openPlatformHome": "Open platform dashboard",
+      "openClubHome": "Open club dashboard"
+    },
+    "staffLogin": {
+      "badge": "Staff access",
+      "title": "Sign in to Amateur",
+      "subtitle": "A calm workspace for club managers, staff, and platform admins.",
+      "hint": "Use your staff account to enter the platform. Your memberships decide which club contexts you can open after signing in.",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "sessionError": "Your session could not be restored.",
+      "helperTitle": "Why this matters",
+      "helperBody": "Staff access is now separated from the guardian portal and bound to real tenant memberships.",
+      "backHome": "Back to home"
     },
     "guardianPortal": {
       "backHome": "Back to portal home",
@@ -950,11 +997,15 @@
     "badge": "Amateur sports",
     "headline": "Run your club with calm confidence.",
     "sub": "One place for groups, teams, schedules, and money — without the clutter.",
-    "ctaPrimary": "Open app",
-    "ctaSecondary": "Learn more",
+    "ctaPrimary": "Staff sign in",
+    "ctaSecondary": "Guardian portal",
     "pill1": "Multilingual",
     "pill2": "Mobile-friendly",
-    "pill3": "Built for growth"
+    "pill3": "Built for growth",
+    "staffCardTitle": "Staff & admins",
+    "staffCardBody": "Enter the club operating system with role-aware access, membership-based tenant context, and a calm admin shell.",
+    "guardianCardTitle": "Guardians",
+    "guardianCardBody": "Use the separate family portal for invitations, family actions, and athlete-linked updates."
   },
   "portal": {
     "brand": "Amateur family portal",

@@ -55,13 +55,15 @@ Populate the database with a realistic amateur club tenant, athletes, training, 
 npm run seed:demo
 ```
 
-Details, idempotency, and the demo tenant id are documented in [docs/bootstrap.md](docs/bootstrap.md). After seeding, you can set `DEV_TENANT_ID` in `apps/api/.env` to the documented UUID so the API defaults to the demo tenant without `X-Tenant-Id`.
+Details, idempotency, demo tenant ids, and seeded staff/admin credentials are documented in [docs/bootstrap.md](docs/bootstrap.md). After seeding, you can set `DEV_TENANT_ID` in `apps/api/.env` to the documented UUID so local development can still fall back to the demo tenant when needed.
 
 API defaults:
 
 - Base URL: `http://localhost:3000`
 - Global prefix: `api` → health: `http://localhost:3000/api/health`
-- **Tenant context (pre-auth):** send `X-Tenant-Id` with requests, or set `DEV_TENANT_ID` in `apps/api/.env`, or rely on the first tenant returned by `GET /api/tenants`. The web app stores the choice in `localStorage` and sends `X-Tenant-Id` automatically.
+- **Staff/admin auth:** the internal app now uses a secure staff session cookie with explicit tenant memberships. Staff log in through `/login`, then the web app loads only the clubs that account can access.
+- **Tenant context:** authenticated staff requests still resolve an active tenant, but the allowed tenant list now comes from real memberships instead of an unrestricted public tenant directory.
+- **Guardian auth remains separate:** guardian portal access continues to use its own invitation + activation + guardian session cookie flow under `/portal/*`.
 
 ### Run the web app
 
@@ -72,6 +74,16 @@ npm run dev -w @amateur/web
 ```
 
 Open `http://localhost:5173`. The dev server proxies `/api` to the API.
+
+### Login flows
+
+- **Staff/admin app:** open `http://localhost:5173/login`
+- **Guardian portal:** open `http://localhost:5173/portal/login`
+
+The demo seed now creates:
+
+- one **global admin** account for platform-level administration and cross-tenant context switching
+- one **club admin** account bound to the demo club tenant
 
 ### Build everything
 
@@ -133,6 +145,7 @@ The current product wave extends the existing command center into a more complet
 - **Notification center + staff work queue:** the product now surfaces tenant-safe in-app action items for overdue finance follow-up, family review, guardian response, readiness gaps, upcoming training preparation, and private-lesson preparation with read/dismiss/complete controls.
 - **Guardian Portal MVP:** the platform now includes a controlled guardian-facing portal with invitation/activation, linked-athlete visibility, pending family requests, and portal submissions that still flow through staff review before authoritative records change.
 - **Dashboard + reporting:** the dashboard and reports pages now surface live operational, coaching, private-lesson, and collection summaries instead of placeholder counts and disabled report affordances.
+- **Staff identity + tenant administration:** staff/admin users now have a real login flow, explicit tenant memberships, role-aware entry, and a lightweight admin/settings surface for platform vs club administration.
 
 ## Domain: Group vs Team vs Athlete
 

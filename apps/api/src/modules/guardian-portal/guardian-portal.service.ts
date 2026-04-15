@@ -20,6 +20,7 @@ import { Team } from '../../database/entities/team.entity';
 import { ClubGroup } from '../../database/entities/club-group.entity';
 import { FamilyActionService } from '../family-action/family-action.service';
 import { FinanceService } from '../finance/finance.service';
+import { TenantService } from '../tenant/tenant.service';
 import { GUARDIAN_PORTAL_SESSION_COOKIE } from './guardian-portal.constants';
 
 type AccessStatus = GuardianPortalAccess['status'];
@@ -73,6 +74,7 @@ export class GuardianPortalService {
     private readonly teams: Repository<Team>,
     private readonly familyActions: FamilyActionService,
     private readonly finance: FinanceService,
+    private readonly tenants: TenantService,
     private readonly config: ConfigService,
   ) {}
 
@@ -160,6 +162,10 @@ export class GuardianPortalService {
       maxAge: undefined,
       expires: undefined,
     });
+  }
+
+  async listTenants() {
+    return this.tenants.findAll();
   }
 
   private async assertGuardian(tenantId: string, guardianId: string): Promise<Guardian> {

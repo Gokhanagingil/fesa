@@ -92,3 +92,19 @@ export enum ActionCenterItemMutation {
   COMPLETE = 'complete',
   SNOOZE = 'snooze',
 }
+
+export enum StaffPlatformRole {
+  GLOBAL_ADMIN = 'global_admin',
+  STANDARD = 'standard',
+}
+
+export enum StaffUserStatus {
+  ACTIVE = 'active',
+  DISABLED = 'disabled',
+}
+
+export enum TenantMembershipRole {
+  CLUB_ADMIN = 'club_admin',
+  STAFF = 'staff',
+  COACH = 'coach',
+}

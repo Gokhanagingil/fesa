@@ -1,16 +1,15 @@
-import { Controller, Get } from '@nestjs/common';
-import { TenantService } from './tenant.service';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
+import { StaffAuthGuard } from '../auth/staff-auth.guard';
+import { AuthService } from '../auth/auth.service';
 
-/**
- * Public tenant directory for development UIs (no auth yet).
- * Replace with auth-scoped listing when RBAC lands.
- */
 @Controller('tenants')
 export class TenantController {
-  constructor(private readonly tenants: TenantService) {}
+  constructor(private readonly auth: AuthService) {}
 
   @Get()
-  list() {
-    return this.tenants.findAll();
+  @UseGuards(StaffAuthGuard)
+  list(@Req() req: Request) {
+    return this.auth.listAccessibleTenants(req.staffUserId!);
   }
 }

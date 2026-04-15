@@ -172,12 +172,12 @@ export function ActionCenterPage() {
       <ListPageFrame
         toolbar={
           <>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+            <label className="flex min-w-0 items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
               <span>{t('pages.actionCenter.filterCategory')}</span>
               <select
                 value={category}
                 onChange={(e) => setCategory((e.target.value as ActionCenterItemCategory) || '')}
-                className="bg-transparent text-amateur-ink outline-none"
+                className="min-w-0 flex-1 bg-transparent text-amateur-ink outline-none"
               >
                 {categories.map((value) => (
                   <option key={value || 'all'} value={value}>
@@ -186,12 +186,12 @@ export function ActionCenterPage() {
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+            <label className="flex min-w-0 items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
               <span>{t('pages.actionCenter.filterUrgency')}</span>
               <select
                 value={urgency}
                 onChange={(e) => setUrgency((e.target.value as ActionCenterItemUrgency) || '')}
-                className="bg-transparent text-amateur-ink outline-none"
+                className="min-w-0 flex-1 bg-transparent text-amateur-ink outline-none"
               >
                 {urgencies.map((value) => (
                   <option key={value || 'all'} value={value}>
@@ -207,6 +207,7 @@ export function ActionCenterPage() {
             <Button
               type="button"
               variant="ghost"
+              className="justify-center"
               onClick={() => {
                 setCategory('');
                 setUrgency('');
