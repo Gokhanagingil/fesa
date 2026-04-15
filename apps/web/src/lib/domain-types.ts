@@ -22,6 +22,17 @@ export type FamilyActionRequestStatus =
   | 'closed';
 export type FamilyActionActor = 'club' | 'family' | 'system';
 export type FamilyReadinessStatus = 'complete' | 'incomplete' | 'awaiting_guardian_action' | 'awaiting_staff_review';
+export type ActionCenterItemCategory = 'finance' | 'family' | 'readiness' | 'private_lessons' | 'training';
+export type ActionCenterItemType =
+  | 'finance_follow_up'
+  | 'family_review'
+  | 'guardian_response'
+  | 'readiness_gap'
+  | 'private_lesson_prep'
+  | 'training_prep'
+  | 'training_attendance';
+export type ActionCenterItemUrgency = 'overdue' | 'today' | 'upcoming' | 'normal';
+export type ActionCenterItemMutation = 'mark_read' | 'mark_unread' | 'dismiss' | 'complete' | 'snooze';
 
 export type SportBranch = { id: string; code: string; name: string };
 export type Coach = {
@@ -385,7 +396,43 @@ export type CommandCenterResponse = DashboardSummary & {
   familyWorkflow?: FamilyActionWorkflowSummary['counts'] & {
     items: FamilyActionRequest[];
   };
+  actionCenter?: ActionCenterSummary;
 };
+
+export type ActionCenterItem = {
+  itemKey: string;
+  snapshotToken: string;
+  category: ActionCenterItemCategory;
+  type: ActionCenterItemType;
+  urgency: ActionCenterItemUrgency;
+  subjectId: string;
+  subjectName: string;
+  relatedName: string | null;
+  count: number;
+  amount: string | null;
+  currency: string | null;
+  dueAt: string | null;
+  occurredAt: string | null;
+  deepLink: string;
+  communicationLink: string | null;
+  context: Record<string, string | number | boolean | string[] | null>;
+  read: boolean;
+  snoozedUntil: string | null;
+};
+
+export type ActionCenterSummary = {
+  counts: {
+    total: number;
+    unread: number;
+    overdue: number;
+    today: number;
+    byCategory: Record<ActionCenterItemCategory, number>;
+    byUrgency: Record<ActionCenterItemUrgency, number>;
+  };
+  items: ActionCenterItem[];
+};
+
+export type ActionCenterResponse = ActionCenterSummary;
 
 export type PeriodicChargeTargetScope = 'selected' | 'group' | 'team';
 

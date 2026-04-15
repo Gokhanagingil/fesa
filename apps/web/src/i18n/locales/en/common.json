@@ -4,6 +4,7 @@
     "tagline": "Club operations for amateur sports",
     "nav": {
       "dashboard": "Dashboard",
+      "actionCenter": "Action center",
       "athletes": "Athletes",
       "guardians": "Guardians",
       "groups": "Groups",
@@ -51,6 +52,15 @@
       "saveFailed": "Could not save.",
       "needTenant": "Select a club in the header.",
       "noBranches": "Add a sport branch in the database first."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "subtitle": "Operational follow-up that needs attention now.",
+      "empty": "No active notifications right now.",
+      "unread": "Unread",
+      "markAllRead": "Mark all read",
+      "summary": "{{unread}} unread of {{total}} active items",
+      "openQueue": "Open action center"
     },
     "count": {
       "rows_one": "{{count}} row",
@@ -143,7 +153,8 @@
         "collectedTotal": "Collections recorded",
         "outstandingTotal": "Outstanding balance",
         "overdueTotal": "Overdue balance",
-        "familyFollowUp": "Family follow-up"
+        "familyFollowUp": "Family follow-up",
+        "actionCenterUnread": "Unread actions"
       },
       "needTenant": "Choose a club to load the command center.",
       "financeTitle": "Collections at a glance",
@@ -177,7 +188,16 @@
       "familyWorkflowPending": "Pending family action",
       "familyWorkflowReview": "Awaiting review",
       "familyWorkflowIncomplete": "Incomplete athletes",
-      "familyWorkflowCompleted": "Closed this cycle"
+      "familyWorkflowCompleted": "Closed this cycle",
+      "actionCenterTitle": "Action center",
+      "actionCenterHint": "See the most important operational follow-up without hunting across multiple screens.",
+      "openActionCenter": "Open action center",
+      "actionCenterUnread": "Unread actions",
+      "actionCenterOverdue": "Overdue actions",
+      "actionCenterToday": "Due today",
+      "actionCenterFinance": "Finance follow-up",
+      "actionCenterNeedsReview": "Needs review",
+      "actionCenterEmpty": "No active action-center items are visible right now."
     },
     "athletes": {
       "title": "Athletes",
@@ -770,6 +790,87 @@
         "needingFollowUp": "Needs follow-up",
         "empty": "No family workflow items need attention.",
         "emptyHint": "When staff creates or reviews family requests, the queue will appear here."
+      },
+      "actionCenter": {
+        "title": "Action center",
+        "hint": "A single operational backlog for finance, family workflow, readiness, and scheduling attention.",
+        "openQueue": "Open action center",
+        "unread": "Unread",
+        "overdue": "Overdue",
+        "today": "Due today",
+        "total": "Active items",
+        "empty": "No active action-center items right now.",
+        "emptyHint": "As follow-up signals appear, they will be grouped here."
+      }
+    },
+    "actionCenter": {
+      "title": "Action center",
+      "subtitle": "A calm, actionable work queue for finance, family workflow, readiness, and schedule follow-up.",
+      "openCommunications": "Open communications",
+      "empty": "No action-center items match these filters.",
+      "emptyHint": "Clear filters or wait for the next operational follow-up signal.",
+      "bulkTitle": "Bulk actions",
+      "bulkHint": "Use bulk actions for lightweight operational housekeeping only.",
+      "bulkSuccess": "{{count}} items updated: {{action}}.",
+      "selectedCount_one": "{{count}} item selected",
+      "selectedCount_other": "{{count}} items selected",
+      "filterCategory": "Category",
+      "filterUrgency": "Urgency",
+      "allCategories": "All categories",
+      "allUrgencies": "All urgency levels",
+      "showRead": "Show read items",
+      "readState": "Read",
+      "unreadState": "Unread",
+      "dueAt": "Due",
+      "amount": "Amount",
+      "issueCount": "Signals",
+      "openItem": "Open item",
+      "openCommunication": "Open communications",
+      "itemTitle": "{{type}} · {{subject}}",
+      "categories": {
+        "finance": "Finance",
+        "family": "Family workflow",
+        "readiness": "Readiness",
+        "private_lessons": "Private lessons",
+        "training": "Training"
+      },
+      "types": {
+        "finance_follow_up": "Finance follow-up",
+        "family_review": "Family review",
+        "guardian_response": "Guardian response",
+        "readiness_gap": "Readiness gap",
+        "private_lesson_prep": "Private lesson prep",
+        "training_prep": "Training prep",
+        "training_attendance": "Attendance follow-up"
+      },
+      "urgency": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "upcoming": "Upcoming",
+        "normal": "Normal"
+      },
+      "actions": {
+        "mark_read": "Mark read",
+        "mark_unread": "Mark unread",
+        "dismiss": "Dismiss",
+        "complete": "Resolve",
+        "snooze": "Snooze 24h"
+      },
+      "summary": {
+        "total": "Active items",
+        "unread": "Unread",
+        "overdue": "Overdue",
+        "today": "Due today",
+        "followUp": "Finance + family"
+      },
+      "summaries": {
+        "finance": "{{count}} finance signals · {{amount}} needs follow-up",
+        "familyReview": "{{count}} family requests await staff review",
+        "guardianResponse": "{{count}} family responses are still outstanding",
+        "readiness": "{{count}} readiness gaps remain open",
+        "privateLessonPrep": "{{count}} private-lesson prep details need attention",
+        "trainingPrep": "{{count}} training prep details need attention",
+        "trainingAttendance": "Attendance has not been recorded yet"
       }
     },
     "settings": {

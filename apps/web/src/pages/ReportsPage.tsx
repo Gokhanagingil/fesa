@@ -7,7 +7,14 @@ import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { apiGet } from '../lib/api';
-import { formatDateTime, getFamilyActionStatusLabel, getMoneyAmount, getPersonName } from '../lib/display';
+import {
+  formatDateTime,
+  getActionCenterItemSummary,
+  getActionCenterTypeLabel,
+  getFamilyActionStatusLabel,
+  getMoneyAmount,
+  getPersonName,
+} from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
 import type {
   AthleteCharge,
@@ -107,6 +114,82 @@ export function ReportsPage() {
               />
             </section>
 
+            <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                    {t('pages.reports.actionCenter.title')}
+                  </h2>
+                  <p className="mt-1 text-sm text-amateur-muted">
+                    {t('pages.reports.actionCenter.hint')}
+                  </p>
+                </div>
+                <Link
+                  to="/app/action-center"
+                  className="text-sm font-medium text-amateur-accent hover:underline"
+                >
+                  {t('pages.reports.actionCenter.openQueue')} →
+                </Link>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-4">
+                <StatCard
+                  label={t('pages.reports.actionCenter.unread')}
+                  value={report.actionCenter?.counts.unread ?? 0}
+                  compact
+                  tone={(report.actionCenter?.counts.unread ?? 0) > 0 ? 'danger' : 'default'}
+                />
+                <StatCard
+                  label={t('pages.reports.actionCenter.overdue')}
+                  value={report.actionCenter?.counts.overdue ?? 0}
+                  compact
+                  tone={(report.actionCenter?.counts.overdue ?? 0) > 0 ? 'danger' : 'default'}
+                />
+                <StatCard
+                  label={t('pages.reports.actionCenter.today')}
+                  value={report.actionCenter?.counts.today ?? 0}
+                  compact
+                  tone={(report.actionCenter?.counts.today ?? 0) > 0 ? 'danger' : 'default'}
+                />
+                <StatCard
+                  label={t('pages.reports.actionCenter.total')}
+                  value={report.actionCenter?.counts.total ?? 0}
+                  compact
+                />
+              </div>
+              <div className="mt-4 space-y-3">
+                {(report.actionCenter?.items ?? []).length === 0 ? (
+                  <EmptyState
+                    title={t('pages.reports.actionCenter.empty')}
+                    hint={t('pages.reports.actionCenter.emptyHint')}
+                  />
+                ) : (
+                  (report.actionCenter?.items ?? []).map((item) => (
+                    <div
+                      key={item.itemKey}
+                      className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-amateur-ink">
+                            {getActionCenterTypeLabel(t, item.type)}
+                          </p>
+                          <p className="mt-1 text-xs text-amateur-muted">
+                            {[item.subjectName, getActionCenterItemSummary(t, item)].filter(Boolean).join(' · ')}
+                          </p>
+                        </div>
+                        <Link
+                          to={item.deepLink}
+                          className="text-sm font-medium text-amateur-accent hover:underline"
+                        >
+                          {t('pages.actionCenter.openItem')}
+                        </Link>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
             <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
                 <h2 className="font-display text-lg font-semibold text-amateur-ink">
@@ -181,7 +264,7 @@ export function ReportsPage() {
                     </p>
                   </div>
                   <Link
-                    to="/app/finance/athlete-charges?status=pending"
+                    to="/app/finance/athlete-charges?overdueOnly=true"
                     className="text-sm font-medium text-amateur-accent hover:underline"
                   >
                     {t('pages.athleteCharges.viewAll')} →

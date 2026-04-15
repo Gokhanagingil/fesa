@@ -20,7 +20,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 - **What**: operations beyond CRUD — schedules, attendance, fixtures, finance, reporting — introduced in later waves.
 - **Wave one (done)**: scaffolding, health/config, minimal domain model, UX shell, i18n, conventions.
 - **Wave two (done)**: athlete/guardian/training/attendance/finance primitives plus recurring scheduling, collections tracking, and command-center reporting.
-- **Wave three (current)**: coach-aware operations, private lessons as a first-class workflow, and communication audience building on top of athlete/guardian/training/finance data.
+- **Wave six (current)**: notification center, reminder-style follow-up assistance, and an actionable staff work queue built on the existing command-center, finance, family workflow, training, and private-lesson foundations.
 
 ## Repository map
 

@@ -4,6 +4,7 @@
     "tagline": "Amatör spor kulüpleri için kulüp operasyonları",
     "nav": {
       "dashboard": "Panel",
+      "actionCenter": "Aksiyon merkezi",
       "athletes": "Sporcular",
       "guardians": "Veliler",
       "groups": "Gruplar",
@@ -120,6 +121,15 @@
       "needTenant": "Üstte kulüp seçin.",
       "noBranches": "Önce veritabanına bir spor branşı ekleyin.",
       "validation": "Lütfen gerekli alanları kontrol edin."
+    },
+    "notifications": {
+      "title": "Bildirimler",
+      "subtitle": "Dikkat gerektiren operasyon işleriniz.",
+      "markAllRead": "Tümünü okundu yap",
+      "empty": "Şu anda yeni bildirim yok.",
+      "unread": "Okunmadı",
+      "summary": "{{total}} aktif kaydın {{unread}} tanesi okunmadı.",
+      "openQueue": "Aksiyon merkezini aç"
     }
   },
   "pages": {
@@ -142,7 +152,8 @@
         "collectedTotal": "Tahsilatlar",
         "outstandingTotal": "Açık bakiye",
         "overdueTotal": "Gecikmiş bakiye",
-        "familyFollowUp": "Aile takibi"
+        "familyFollowUp": "Aile takibi",
+        "actionCenterUnread": "Okunmamış işler"
       },
       "sections": {
         "today": "Bugünün operasyon özeti",
@@ -172,7 +183,16 @@
       "familyWorkflowPending": "Aile aksiyonu bekleyen",
       "familyWorkflowReview": "İnceleme bekleyen",
       "familyWorkflowIncomplete": "Eksik sporcular",
-      "familyWorkflowCompleted": "Bu döngüde kapanan"
+      "familyWorkflowCompleted": "Bu döngüde kapanan",
+      "actionCenterTitle": "Aksiyon merkezi",
+      "actionCenterHint": "Finans, aile iş akışı, hazırlık açıkları ve planlama dikkatini tek sakin iş kuyruğunda toplayın.",
+      "openActionCenter": "Aksiyon merkezini aç",
+      "actionCenterUnread": "Okunmamış işler",
+      "actionCenterOverdue": "Gecikmiş işler",
+      "actionCenterToday": "Bugün dikkat isteyenler",
+      "actionCenterFinance": "Finans takibi",
+      "actionCenterNeedsReview": "Aksiyon gerekli",
+      "actionCenterEmpty": "Şu anda dikkat bekleyen aktif kayıt görünmüyor."
     },
     "athletes": {
       "title": "Sporcular",
@@ -717,6 +737,87 @@
         "needingFollowUp": "Takip gerekenler",
         "empty": "Dikkat isteyen aile iş akışı kaydı yok.",
         "emptyHint": "Personel aile talebi oluşturduğunda veya incelediğinde kuyruk burada görünür."
+      },
+      "actionCenter": {
+        "title": "Aksiyon merkezi",
+        "hint": "Finans, aile iş akışları, hazırlık ve planlama açıklarını tek operasyon kuyruğunda görün.",
+        "openQueue": "Kuyruğu aç",
+        "unread": "Okunmamış",
+        "overdue": "Gecikmiş",
+        "today": "Bugün",
+        "total": "Toplam aktif",
+        "empty": "Aktif aksiyon kaydı yok.",
+        "emptyHint": "Yeni yüksek değerli işler burada görünecek."
+      }
+    },
+    "actionCenter": {
+      "title": "Aksiyon merkezi",
+      "subtitle": "Kulüp personelinin şimdi ne yapması gerektiğini gösteren tek operasyon kuyruğu.",
+      "openCommunications": "İletişim oluşturucuyu aç",
+      "summary": {
+        "total": "Toplam aktif",
+        "unread": "Okunmamış",
+        "overdue": "Gecikmiş",
+        "today": "Bugün",
+        "followUp": "Takip işleri"
+      },
+      "filterCategory": "Kategori",
+      "filterUrgency": "Öncelik",
+      "allCategories": "Tüm kategoriler",
+      "allUrgencies": "Tüm öncelikler",
+      "showRead": "Okunanları göster",
+      "empty": "Aktif aksiyon kaydı görünmüyor.",
+      "emptyHint": "Yüksek değerli operasyon durumları oluştuğunda burada toplanır.",
+      "bulkTitle": "Toplu işlemler",
+      "bulkHint": "Gerekli olduğunda görünür iş gruplarını okundu, tamamlandı veya kapatıldı olarak işaretleyin.",
+      "selectedCount_one": "{{count}} kayıt seçildi",
+      "selectedCount_other": "{{count}} kayıt seçildi",
+      "bulkSuccess": "{{count}} kayıt için {{action}} uygulandı.",
+      "readState": "Okundu",
+      "unreadState": "Okunmadı",
+      "dueAt": "Son zaman",
+      "amount": "Tutar",
+      "issueCount": "Kayıt sayısı",
+      "openItem": "Kaydı aç",
+      "openCommunication": "İletişim hazırlığı",
+      "itemTitle": "{{type}} · {{subject}}",
+      "categories": {
+        "finance": "Finans",
+        "family": "Aile iş akışı",
+        "readiness": "Hazırlık",
+        "private_lessons": "Özel dersler",
+        "training": "Antrenman"
+      },
+      "types": {
+        "finance_follow_up": "Finans takibi",
+        "family_review": "Aile incelemesi",
+        "guardian_response": "Veli yanıtı bekleniyor",
+        "readiness_gap": "Hazırlık açığı",
+        "private_lesson_prep": "Özel ders hazırlığı",
+        "training_prep": "Antrenman hazırlığı",
+        "training_attendance": "Yoklama kapanışı"
+      },
+      "urgency": {
+        "overdue": "Gecikmiş",
+        "today": "Bugün",
+        "upcoming": "Yaklaşan",
+        "normal": "Normal"
+      },
+      "actions": {
+        "mark_read": "Okundu yap",
+        "mark_unread": "Okunmadı yap",
+        "dismiss": "Gözden kaldır",
+        "complete": "Tamamlandı",
+        "snooze": "1 gün ertele"
+      },
+      "summaries": {
+        "finance": "{{count}} ücret için {{amount}} takip gerekiyor.",
+        "familyReview": "{{count}} aile kaydı personel incelemesi bekliyor.",
+        "guardianResponse": "{{count}} aile kaydı veli yanıtı bekliyor.",
+        "readiness": "{{count}} hazırlık açığı görünür durumda.",
+        "privateLessonPrep": "{{count}} özel ders hazırlık girdisi eksik.",
+        "trainingPrep": "{{count}} antrenman hazırlık girdisi eksik.",
+        "trainingAttendance": "Yoklama henüz kapanmadı."
       }
     },
     "communications": {

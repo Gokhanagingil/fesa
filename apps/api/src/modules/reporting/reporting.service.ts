@@ -6,6 +6,7 @@ import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.e
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { AthleteCharge } from '../../database/entities/athlete-charge.entity';
 import { CommunicationService } from '../communication/communication.service';
+import { ActionCenterService } from '../action-center/action-center.service';
 import { FamilyActionService } from '../family-action/family-action.service';
 import { FinanceService } from '../finance/finance.service';
 
@@ -20,6 +21,7 @@ export class ReportingService {
     private readonly privateLessons: Repository<PrivateLesson>,
     private readonly finance: FinanceService,
     private readonly communications: CommunicationService,
+    private readonly actionCenter: ActionCenterService,
     private readonly familyActions: FamilyActionService,
   ) {}
 
@@ -77,12 +79,13 @@ export class ReportingService {
       .orderBy('lesson.scheduledStart', 'ASC')
       .take(20);
 
-    const [dashboard, financeSummary, lessons, communicationAudience, workflowSummary] = await Promise.all([
+    const [dashboard, financeSummary, lessons, communicationAudience, workflowSummary, actionSummary] = await Promise.all([
       this.finance.getDashboardSummary(tenantId),
       this.finance.listAthleteFinanceSummaries(tenantId, {}),
       lessonsQuery.getMany(),
       this.communications.listAudience(tenantId, {}),
       this.familyActions.getWorkflowSummary(tenantId),
+      this.actionCenter.listItems(tenantId, { limit: 6, includeRead: true }),
     ]);
 
     const today = new Date();
@@ -117,6 +120,10 @@ export class ReportingService {
       familyWorkflow: {
         ...workflowSummary.counts,
         items: workflowSummary.items,
+      },
+      actionCenter: {
+        counts: actionSummary.counts,
+        items: actionSummary.items.slice(0, 6),
       },
     };
   }

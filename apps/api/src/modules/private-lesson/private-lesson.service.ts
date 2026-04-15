@@ -167,8 +167,11 @@ export class PrivateLessonService {
       qb.andWhere(
         new Brackets((where) => {
           where
-            .where('lesson.status IN (:...followStatuses)', { followStatuses: ['missed', 'cancelled'] })
-            .orWhere('charge.id IS NOT NULL AND charge.status != :paidStatus', { paidStatus: AthleteChargeStatus.PAID });
+            .where('lesson.status = :cancelledStatus', { cancelledStatus: TrainingSessionStatus.CANCELLED })
+            .orWhere(
+              'charge.id IS NOT NULL AND charge.status NOT IN (:...closedStatuses)',
+              { closedStatuses: [AthleteChargeStatus.PAID, AthleteChargeStatus.CANCELLED] },
+            );
         }),
       );
     }

@@ -19,6 +19,7 @@ import { TrainingSessionDetailPage } from './pages/TrainingSessionDetailPage';
 import { CoachesPage } from './pages/CoachesPage';
 import { PrivateLessonsPage } from './pages/PrivateLessonsPage';
 import { CommunicationsPage } from './pages/CommunicationsPage';
+import { ActionCenterPage } from './pages/ActionCenterPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/app/training" element={<TrainingSessionsPage />} />
         <Route path="/app/private-lessons" element={<PrivateLessonsPage />} />
         <Route path="/app/communications" element={<CommunicationsPage />} />
+        <Route path="/app/action-center" element={<ActionCenterPage />} />
         <Route path="/app/finance/charge-items" element={<ChargeItemsPage />} />
         <Route path="/app/finance/athlete-charges" element={<AthleteChargesPage />} />
         <Route path="/app/finance" element={<FinanceHubPage />} />
