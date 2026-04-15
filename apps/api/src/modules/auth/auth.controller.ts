@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, Res, UseGuards, Body } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { TenantGuard } from '../core/tenant.guard';
 import { AuthService } from './auth.service';
@@ -42,5 +42,16 @@ export class AuthController {
   @UseGuards(TenantGuard)
   clubOverview(@Req() req: Request) {
     return this.auth.getClubOverview(req.staffUserId!, req.tenantId!);
+  }
+}
+
+@Controller('tenants')
+export class AuthTenantController {
+  constructor(private readonly auth: AuthService) {}
+
+  @Get()
+  @UseGuards(StaffAuthGuard)
+  list(@Req() req: Request) {
+    return this.auth.listAccessibleTenants(req.staffUserId!);
   }
 }

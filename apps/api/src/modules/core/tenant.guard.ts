@@ -1,4 +1,5 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { Request } from 'express';
 import { AuthService } from '../auth/auth.service';
 import { TenantContextService } from './tenant-context.service';
@@ -7,12 +8,17 @@ import { TenantContextService } from './tenant-context.service';
 export class TenantGuard implements CanActivate {
   constructor(
     private readonly tenantContext: TenantContextService,
-    private readonly auth: AuthService,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
-    const authContext = await this.auth.getRequestContext(req);
+    const auth = this.moduleRef.get(AuthService, { strict: false });
+    if (!auth) {
+      throw new UnauthorizedException('Staff authentication is not configured');
+    }
+
+    const authContext = await auth.getRequestContext(req);
     const header =
       (req.headers['x-tenant-id'] as string | undefined) ??
       (req.headers['X-Tenant-Id'] as string | undefined);
