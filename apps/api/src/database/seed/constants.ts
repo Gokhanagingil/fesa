@@ -6,6 +6,41 @@ export const DEMO_TENANT_ID = 'a0000001-0000-4000-8000-000000000001';
 export const DEMO_TENANT_SLUG = 'kadikoy-genc-spor';
 export const DEMO_TENANT_NAME = 'Kadıköy Gençlik Spor Kulübü';
 
+export const FESA_TENANT_ID = 'a0000001-0000-4000-8000-000000000010';
+export const FESA_TENANT_SLUG = 'fesa-basketbol';
+export const FESA_TENANT_NAME = 'Fesa Basketbol';
+
+export const MODA_TENANT_ID = 'a0000001-0000-4000-8000-000000000020';
+export const MODA_TENANT_SLUG = 'moda-voleybol-akademi';
+export const MODA_TENANT_NAME = 'Moda Voleybol Akademi';
+
+export const MARMARA_TENANT_ID = 'a0000001-0000-4000-8000-000000000030';
+export const MARMARA_TENANT_SLUG = 'marmara-futbol-okulu';
+export const MARMARA_TENANT_NAME = 'Marmara Futbol Okulu';
+
+export const DEMO_TENANTS = [
+  {
+    id: FESA_TENANT_ID,
+    slug: FESA_TENANT_SLUG,
+    name: FESA_TENANT_NAME,
+  },
+  {
+    id: DEMO_TENANT_ID,
+    slug: DEMO_TENANT_SLUG,
+    name: DEMO_TENANT_NAME,
+  },
+  {
+    id: MARMARA_TENANT_ID,
+    slug: MARMARA_TENANT_SLUG,
+    name: MARMARA_TENANT_NAME,
+  },
+  {
+    id: MODA_TENANT_ID,
+    slug: MODA_TENANT_SLUG,
+    name: MODA_TENANT_NAME,
+  },
+] as const;
+
 export const BRANCH_BASKETBALL_ID = 'a0000002-0001-4000-8000-000000000001';
 export const BRANCH_VOLLEYBALL_ID = 'a0000002-0002-4000-8000-000000000002';
 export const BRANCH_FOOTBALL_ID = 'a0000002-0003-4000-8000-000000000003';
@@ -69,3 +104,72 @@ export const AC_EFE_PRIVATE_LESSON_ID = 'a00000a0-0009-4000-8000-000000000009';
 export const STAFF_GLOBAL_ADMIN_ID = 'a00000b0-0001-4000-8000-000000000001';
 export const STAFF_CLUB_ADMIN_ID = 'a00000b0-0002-4000-8000-000000000002';
 export const MEMBERSHIP_CLUB_ADMIN_ID = 'a00000b1-0001-4000-8000-000000000001';
+
+export const GLOBAL_ADMIN_EMAIL = 'platform.admin@amateur.local';
+export const KADIKOY_CLUB_ADMIN_EMAIL = 'club.admin@amateur.local';
+export const FESA_CLUB_ADMIN_EMAIL = 'admin@fesabasketbol.local';
+export const MODA_CLUB_ADMIN_EMAIL = 'admin@modavoleybol.local';
+export const MARMARA_CLUB_ADMIN_EMAIL = 'admin@marmarafutbol.local';
+
+export const DEMO_CLUB_ADMINS = [
+  {
+    email: KADIKOY_CLUB_ADMIN_EMAIL,
+    tenantSlug: DEMO_TENANT_SLUG,
+  },
+  {
+    email: FESA_CLUB_ADMIN_EMAIL,
+    tenantSlug: FESA_TENANT_SLUG,
+  },
+  {
+    email: MODA_CLUB_ADMIN_EMAIL,
+    tenantSlug: MODA_TENANT_SLUG,
+  },
+  {
+    email: MARMARA_CLUB_ADMIN_EMAIL,
+    tenantSlug: MARMARA_TENANT_SLUG,
+  },
+] as const;
+
+export const CLUB_IDS = {
+  kadikoy: DEMO_TENANT_ID,
+  fesa: FESA_TENANT_ID,
+  moda: MODA_TENANT_ID,
+  marmara: MARMARA_TENANT_ID,
+} as const;
+
+export const CLUB_SLUGS = {
+  kadikoy: DEMO_TENANT_SLUG,
+  fesa: FESA_TENANT_SLUG,
+  moda: MODA_TENANT_SLUG,
+  marmara: MARMARA_TENANT_SLUG,
+} as const;
+
+export const KADIKOY_CLUB_ADMIN_ID = STAFF_CLUB_ADMIN_ID;
+export const FESA_CLUB_ADMIN_ID = 'a00000b0-0003-4000-8000-000000000003';
+export const MODA_CLUB_ADMIN_ID = 'a00000b0-0004-4000-8000-000000000004';
+export const MARMARA_CLUB_ADMIN_ID = 'a00000b0-0005-4000-8000-000000000005';
+
+export const PLATFORM_ADMIN_EMAIL = GLOBAL_ADMIN_EMAIL;
+
+export const CLUB_ADMIN_ACCOUNTS = {
+  kadikoy: {
+    email: KADIKOY_CLUB_ADMIN_EMAIL,
+    firstName: 'Cem',
+    lastName: 'Akar',
+  },
+  fesa: {
+    email: FESA_CLUB_ADMIN_EMAIL,
+    firstName: 'Gökhan',
+    lastName: 'Agingil',
+  },
+  moda: {
+    email: MODA_CLUB_ADMIN_EMAIL,
+    firstName: 'Melis',
+    lastName: 'Çevik',
+  },
+  marmara: {
+    email: MARMARA_CLUB_ADMIN_EMAIL,
+    firstName: 'Onur',
+    lastName: 'Demirtaş',
+  },
+} as const;
