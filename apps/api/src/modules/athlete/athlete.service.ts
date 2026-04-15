@@ -4,13 +4,14 @@ import { Brackets, Repository } from 'typeorm';
 import { Athlete } from '../../database/entities/athlete.entity';
 import { ClubGroup } from '../../database/entities/club-group.entity';
 import { SportBranch } from '../../database/entities/sport-branch.entity';
-import { AthleteStatus } from '../../database/enums';
+import { AthleteStatus, FamilyReadinessStatus } from '../../database/enums';
 import { CreateAthleteDto } from './dto/create-athlete.dto';
 import { UpdateAthleteDto } from './dto/update-athlete.dto';
 import { ListAthletesQueryDto } from './dto/list-athletes-query.dto';
 import { AthleteGuardian } from '../../database/entities/athlete-guardian.entity';
 import { AthleteTeamMembership } from '../../database/entities/athlete-team-membership.entity';
 import { Team } from '../../database/entities/team.entity';
+import { FamilyActionService } from '../family-action/family-action.service';
 
 @Injectable()
 export class AthleteService {
@@ -27,6 +28,7 @@ export class AthleteService {
     private readonly athleteGuardians: Repository<AthleteGuardian>,
     @InjectRepository(AthleteTeamMembership)
     private readonly teamMemberships: Repository<AthleteTeamMembership>,
+    private readonly familyActions: FamilyActionService,
   ) {}
 
   private async assertBranch(tenantId: string, sportBranchId: string): Promise<void> {
@@ -101,6 +103,32 @@ export class AthleteService {
             .orWhere('LOWER(a.preferredName) LIKE :term', { term });
         }),
       );
+    }
+
+    let readinessIds: string[] | null = null;
+    if (query.familyReadinessStatus) {
+      const readinessMap = await this.familyActions.getReadinessMap(tenantId);
+      readinessIds = Array.from(readinessMap.values())
+        .filter((item) => item.status === query.familyReadinessStatus)
+        .map((item) => item.athleteId);
+
+      if (readinessIds.length === 0) {
+        return { items: [], total: 0 };
+      }
+
+      qb.andWhere('a.id IN (:...readinessIds)', { readinessIds });
+    }
+    if (query.needsFamilyFollowUp) {
+      const readinessMap = await this.familyActions.getReadinessMap(tenantId);
+      const followUpIds = Array.from(readinessMap.values())
+        .filter((item) => item.status !== FamilyReadinessStatus.COMPLETE)
+        .map((item) => item.athleteId);
+
+      if (followUpIds.length === 0) {
+        return { items: [], total: 0 };
+      }
+
+      qb.andWhere('a.id IN (:...followUpIds)', { followUpIds });
     }
 
     const total = await qb.clone().getCount();

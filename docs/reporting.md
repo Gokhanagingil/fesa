@@ -1,58 +1,44 @@
 # Reporting and command center
 
-## What this wave adds
+## What Wave 5 adds
 
-Wave 4 keeps reporting on the same operational command-center surface while closing product drift and exposing cleaner club-lifecycle signals:
+Wave 5 keeps reporting on the same operational command-center surface while extending it for family-facing readiness and controlled workflow closure:
 
-- `/api/reporting/definitions` now returns live report cards with i18n keys for collections, scheduling, and athlete balance monitoring.
-- `/api/reporting/command-center` returns tenant-aware operational + finance visibility for the reports page.
-- `/api/finance/dashboard-summary` powers the dashboard command center with:
-  - athlete / session counts
-  - active coach count
-  - private lessons scheduled this week
-  - attendance distribution
-  - upcoming sessions by group
-  - outstanding / overdue / collected totals
-  - recent payment activity
-  - top outstanding athletes
-- Reporting surfaces now also expose:
-  - upcoming private lessons with coach + billing visibility
-  - communication-readiness counts for audience assembly
-  - report cards for private lessons and communication operations
+- `/api/reporting/definitions` continues to return live report cards with i18n keys instead of introducing a separate reporting registry.
+- `/api/reporting/command-center` now combines:
+  - finance command-center data,
+  - private-lesson follow-up visibility,
+  - communication-readiness counts,
+  - family workflow counts and recent family-action items.
+- `/api/communications/audiences` now supports family-readiness and follow-up filters in addition to group/team/training/finance targeting.
 
-## Stabilization notes in this wave
+## Family workflow visibility
 
-This wave also closes a few product-quality gaps that affected reporting-adjacent trust:
+The command center now exposes a pragmatic family-operations layer:
 
-- dashboard and finance labels now resolve through the intended i18n keys instead of leaking raw keys or drifting into fallback English
-- command-center communication readiness is now populated from the live communication audience service instead of returning empty placeholder counts
-- groups and teams list contracts are aligned with strict API validation, which keeps linked reporting/filter surfaces from failing on shared query parameters
+- athletes with **incomplete family readiness**
+- athletes **awaiting family action**
+- athletes **awaiting staff review**
+- recent family action requests so staff can see what changed without opening each athlete profile first
 
-## Scheduling and bulk operations
+This is intentionally not a generic workflow inbox. The goal is to make the most important club-follow-up queues visible where managers already work.
 
-The product now includes pragmatic bulk tooling inside the existing training surface:
+## Communication follow-through
 
-- recurring session generation backed by `training_session_series`
-- bulk cancellation for selected sessions
-- bulk day-shift rescheduling for planned sessions only
-- free-text note append during bulk actions so staff can leave a clear audit trail in session notes
+Communication reporting now uses the same workflow/readiness model as athlete and guardian detail:
 
-This intentionally stays short of a full queue/worker bulk engine. The workflow is synchronous, tenant-scoped, and designed for day-to-day club operations rather than abstract infrastructure.
+- audience counts can reflect incomplete family readiness
+- follow-up audiences can be filtered to “needs follow-up”
+- reporting surfaces can quantify athletes waiting on family response vs staff review
 
-## Collections operations in the current command center
-
-Collections reporting remains intentionally pragmatic:
-
-- manual charge assignment and payment allocation stay unchanged
-- bulk charge assignment remains available for one-off roster work
-- periodic generation now adds a lightweight billing-period key/label so monthly or period-based dues can be generated safely without duplicating the same athlete/item/period combination
-- command-center finance summaries continue to derive paid / partial / overdue state from payment allocations instead of introducing a second accounting model
+That keeps reporting, athlete detail, and communications aligned on one operational truth instead of parallel status systems.
 
 ## Current conventions
 
 - **Report keys** remain stable identifiers with `titleKey` resolved in the frontend.
-- **Saved filters** now back communication-audience presets conceptually, but remain intentionally lean and surface-specific.
+- **Saved filters** still back communication-audience presets conceptually, but remain intentionally lean and surface-specific.
 - **Bulk actions** remain synchronous route-level actions inside the current modules rather than a generic async command bus.
+- **Family workflows** use a lean status model and event history, not a BPM engine.
 
 ## Intentionally still deferred
 
@@ -60,3 +46,4 @@ Collections reporting remains intentionally pragmatic:
 - scheduled report delivery
 - saved report presets beyond communication-targeting use cases
 - background bulk job orchestration and audit dashboards
+- public guardian authentication / external family portal delivery

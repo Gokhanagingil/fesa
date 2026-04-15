@@ -5,11 +5,15 @@ import { GuardianService } from './guardian.service';
 import { CreateGuardianDto } from './dto/create-guardian.dto';
 import { UpdateGuardianDto } from './dto/update-guardian.dto';
 import { ListGuardiansQueryDto } from './dto/list-guardians-query.dto';
+import { FamilyActionService } from '../family-action/family-action.service';
 
 @Controller('guardians')
 @UseGuards(TenantGuard)
 export class GuardianController {
-  constructor(private readonly guardians: GuardianService) {}
+  constructor(
+    private readonly guardians: GuardianService,
+    private readonly familyActions: FamilyActionService,
+  ) {}
 
   @Get()
   list(@Req() req: Request, @Query() query: ListGuardiansQueryDto) {
@@ -29,6 +33,11 @@ export class GuardianController {
   @Get(':id/athletes')
   listAthletes(@Req() req: Request, @Param('id') id: string) {
     return this.guardians.listAthletesForGuardian(req.tenantId!, id);
+  }
+
+  @Get(':id/family-readiness')
+  getFamilyReadiness(@Req() req: Request, @Param('id') id: string) {
+    return this.familyActions.getGuardianReadiness(req.tenantId!, id);
   }
 
   @Patch(':id')

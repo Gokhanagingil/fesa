@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
-import { AthleteStatus } from '../../../database/enums';
+import { AthleteStatus, FamilyReadinessStatus } from '../../../database/enums';
 
 export class ListAthletesQueryDto {
   @IsOptional()
@@ -23,6 +23,11 @@ export class ListAthletesQueryDto {
   @IsOptional()
   @IsUUID()
   teamId?: string;
+
+  @IsOptional()
+  @IsEnum(FamilyReadinessStatus)
+  @Type(() => String)
+  familyReadinessStatus?: FamilyReadinessStatus;
 
   @IsOptional()
   @Type(() => Number)

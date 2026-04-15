@@ -6,13 +6,13 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { apiGet } from '../lib/api';
 import { getLessonStatusLabel, getPersonName } from '../lib/display';
-import type { Coach, DashboardSummary, Payment, PrivateLesson } from '../lib/domain-types';
+import type { Coach, CommandCenterResponse, Payment, PrivateLesson } from '../lib/domain-types';
 import { useTenant } from '../lib/tenant-hooks';
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const { tenantId, loading: tenantLoading } = useTenant();
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [summary, setSummary] = useState<CommandCenterResponse | null>(null);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [privateLessons, setPrivateLessons] = useState<PrivateLesson[]>([]);
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ export function DashboardPage() {
     setError(null);
     try {
       const [dashboard, guardians, coachRes, privateLessonRes] = await Promise.all([
-        apiGet<DashboardSummary>('/api/finance/dashboard-summary'),
+        apiGet<CommandCenterResponse>('/api/reporting/command-center'),
         apiGet<{ total: number }>('/api/guardians?limit=1'),
         apiGet<{ items: Coach[] }>('/api/coaches?limit=50&isActive=true'),
         apiGet<{ items: PrivateLesson[] }>('/api/private-lessons?limit=5'),
@@ -84,6 +84,12 @@ export function DashboardPage() {
       value: summary?.stats.overdueTotal ?? '0.00',
       href: '/app/finance/athlete-charges?status=pending',
     },
+    {
+      key: 'follow-up',
+      label: t('pages.dashboard.stats.familyFollowUp'),
+      value: summary?.familyWorkflow?.pendingFamilyAction ?? 0,
+      href: '/app/communications?needsFollowUp=true',
+    },
   ];
 
   function renderPayment(payment: Payment) {
@@ -119,7 +125,7 @@ export function DashboardPage() {
       />
       {!tenantId && !tenantLoading ? <InlineAlert tone="info">{t('app.errors.needTenant')}</InlineAlert> : null}
       {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {statCards.map((card) => (
           <Link
             key={card.key}
@@ -129,7 +135,7 @@ export function DashboardPage() {
             <StatCard
               label={card.label}
               value={loading && !summary ? '…' : card.value}
-              tone={card.key === 'overdue' ? 'danger' : 'default'}
+              tone={card.key === 'overdue' || card.key === 'follow-up' ? 'danger' : 'default'}
             />
           </Link>
         ))}
@@ -185,6 +191,43 @@ export function DashboardPage() {
                   </li>
                 ))}
               </ul>
+            </div>
+          </div>
+          <div className="mt-4 rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+                  {t('pages.dashboard.familyWorkflowTitle')}
+                </p>
+                <p className="mt-1 text-sm text-amateur-muted">{t('pages.dashboard.familyWorkflowHint')}</p>
+              </div>
+              <Link to="/app/communications?needsFollowUp=true" className="text-sm font-semibold text-amateur-accent hover:underline">
+                {t('pages.communications.openBuilder')}
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+              <StatCard
+                label={t('pages.dashboard.familyWorkflowPending')}
+                value={summary?.familyWorkflow?.pendingFamilyAction ?? 0}
+                compact
+                tone={(summary?.familyWorkflow?.pendingFamilyAction ?? 0) > 0 ? 'danger' : 'default'}
+              />
+              <StatCard
+                label={t('pages.dashboard.familyWorkflowReview')}
+                value={summary?.familyWorkflow?.awaitingStaffReview ?? 0}
+                compact
+                tone={(summary?.familyWorkflow?.awaitingStaffReview ?? 0) > 0 ? 'danger' : 'default'}
+              />
+              <StatCard
+                label={t('pages.dashboard.familyWorkflowIncomplete')}
+                value={summary?.familyWorkflow?.incompleteAthletes ?? 0}
+                compact
+              />
+              <StatCard
+                label={t('pages.dashboard.familyWorkflowCompleted')}
+                value={summary?.familyWorkflow?.completed ?? 0}
+                compact
+              />
             </div>
           </div>
         </section>

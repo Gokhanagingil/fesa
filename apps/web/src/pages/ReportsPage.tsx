@@ -7,7 +7,7 @@ import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { apiGet } from '../lib/api';
-import { formatDateTime, getMoneyAmount, getPersonName } from '../lib/display';
+import { formatDateTime, getFamilyActionStatusLabel, getMoneyAmount, getPersonName } from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
 import type {
   AthleteCharge,
@@ -76,6 +76,34 @@ export function ReportsPage() {
                 label={t('pages.reports.commandCenter.collected')}
                 value={report.stats.collectedTotal}
                 helper={t('pages.reports.commandCenter.collectedHint')}
+              />
+            </section>
+
+            <section className="grid gap-4 md:grid-cols-4">
+              <StatCard
+                label={t('pages.reports.familyWorkflow.pendingFamily')}
+                value={report.familyWorkflow?.pendingFamilyAction ?? 0}
+                compact
+                tone={(report.familyWorkflow?.pendingFamilyAction ?? 0) > 0 ? 'danger' : 'default'}
+              />
+              <StatCard
+                label={t('pages.reports.familyWorkflow.awaitingReview')}
+                value={report.familyWorkflow?.awaitingStaffReview ?? 0}
+                compact
+                tone={(report.familyWorkflow?.awaitingStaffReview ?? 0) > 0 ? 'danger' : 'default'}
+              />
+              <StatCard
+                label={t('pages.reports.familyWorkflow.incompleteAthletes')}
+                value={report.familyWorkflow?.incompleteAthletes ?? 0}
+                compact
+              />
+              <StatCard
+                label={t('pages.reports.familyWorkflow.needingFollowUp')}
+                value={
+                  (report.communicationReadiness?.athletesNeedingFollowUp ?? 0) ||
+                  ((report.familyWorkflow?.pendingFamilyAction ?? 0) + (report.familyWorkflow?.awaitingStaffReview ?? 0))
+                }
+                compact
               />
             </section>
 
@@ -321,6 +349,74 @@ export function ReportsPage() {
                     tone="danger"
                   />
                 </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <StatCard
+                    label={t('pages.communications.summaryIncomplete')}
+                    value={report.communicationReadiness?.incompleteAthletes ?? 0}
+                    compact
+                  />
+                  <StatCard
+                    label={t('pages.communications.summaryAwaitingGuardian')}
+                    value={report.communicationReadiness?.athletesAwaitingGuardianAction ?? 0}
+                    compact
+                  />
+                  <StatCard
+                    label={t('pages.communications.summaryAwaitingReview')}
+                    value={report.communicationReadiness?.athletesAwaitingStaffReview ?? 0}
+                    compact
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                    {t('pages.reports.familyWorkflow.title')}
+                  </h2>
+                  <p className="mt-1 text-sm text-amateur-muted">
+                    {t('pages.reports.familyWorkflow.hint')}
+                  </p>
+                </div>
+                <Link
+                  to="/app/communications?needsFollowUp=true"
+                  className="text-sm font-medium text-amateur-accent hover:underline"
+                >
+                  {t('pages.communications.openBuilder')} →
+                </Link>
+              </div>
+              <div className="mt-4 space-y-3">
+                {(report.familyWorkflow?.items ?? []).length === 0 ? (
+                  <EmptyState
+                    title={t('pages.reports.familyWorkflow.empty')}
+                    hint={t('pages.reports.familyWorkflow.emptyHint')}
+                  />
+                ) : (
+                  report.familyWorkflow?.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-amateur-ink">{item.title}</p>
+                          <p className="mt-1 text-xs text-amateur-muted">
+                            {[item.athleteName, item.guardianName, getFamilyActionStatusLabel(t, item.status)]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        </div>
+                        <Link
+                          to={`/app/athletes/${item.athleteId}#family-actions`}
+                          className="text-sm font-medium text-amateur-accent hover:underline"
+                        >
+                          {t('pages.athletes.detailTitle')}
+                        </Link>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </section>
           </div>

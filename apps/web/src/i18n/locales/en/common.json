@@ -95,6 +95,29 @@
         "training_session": "Training session",
         "coach_assignment": "Coach assignment",
         "manual_selection": "Manual selection"
+      },
+      "familyReadinessStatus": {
+        "complete": "Complete",
+        "incomplete": "Incomplete",
+        "awaiting_guardian_action": "Awaiting family action",
+        "awaiting_staff_review": "Awaiting staff review"
+      },
+      "familyActionType": {
+        "guardian_profile_update": "Guardian profile update",
+        "contact_details_completion": "Contact details completion",
+        "consent_acknowledgement": "Consent acknowledgement",
+        "enrollment_readiness": "Enrollment readiness",
+        "profile_correction": "Profile correction"
+      },
+      "familyActionStatus": {
+        "open": "Open",
+        "pending_family_action": "Pending family action",
+        "submitted": "Submitted",
+        "under_review": "Under review",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "completed": "Completed",
+        "closed": "Closed"
       }
     }
   },
@@ -119,7 +142,8 @@
         "cancelledSessions": "Cancelled sessions",
         "collectedTotal": "Collections recorded",
         "outstandingTotal": "Outstanding balance",
-        "overdueTotal": "Overdue balance"
+        "overdueTotal": "Overdue balance",
+        "familyFollowUp": "Family follow-up"
       },
       "needTenant": "Choose a club to load the command center.",
       "financeTitle": "Collections at a glance",
@@ -147,7 +171,13 @@
       "coachesTitle": "Coach coverage",
       "coachesHint": "See which active coaches are available for groups, teams, and upcoming work.",
       "privateLessonsTitle": "Private lesson visibility",
-      "privateLessonsHint": "Watch the next 1-to-1 workload and billing exposure in the same command center."
+      "privateLessonsHint": "Watch the next 1-to-1 workload and billing exposure in the same command center.",
+      "familyWorkflowTitle": "Family workflow",
+      "familyWorkflowHint": "See which family-facing loops are still open before they drift into manual follow-up.",
+      "familyWorkflowPending": "Pending family action",
+      "familyWorkflowReview": "Awaiting review",
+      "familyWorkflowIncomplete": "Incomplete athletes",
+      "familyWorkflowCompleted": "Closed this cycle"
     },
     "athletes": {
       "title": "Athletes",
@@ -228,7 +258,43 @@
       "readinessFinanceReady": "No open balance blocks the current follow-up loop.",
       "nextActionsTitle": "Next actions",
       "nextActionsClear": "This athlete is ready for normal day-to-day follow-up.",
-      "teamHistory": "Ended team memberships"
+      "teamHistory": "Ended team memberships",
+      "familyActions": {
+        "title": "Family action queue",
+        "hint": "Create controlled follow-up requests, track responses, and keep approval steps visible without letting submissions overwrite club records instantly.",
+        "readinessLabel": "Family self-service loop is under control",
+        "readinessOpen": "{{pendingFamilyActions}} pending family actions · {{awaitingStaffReview}} awaiting review",
+        "readinessClear": "No open family-facing workflow blocks this athlete right now.",
+        "jumpToQueue": "Open action queue",
+        "readinessHeadline": "Family readiness: {{status}}",
+        "issueSummary_one": "{{count}} readiness issue is still visible.",
+        "issueSummary_other": "{{count}} readiness issues are still visible.",
+        "pendingFamily": "Pending family",
+        "awaitingReview": "Awaiting review",
+        "closed": "Closed",
+        "newRequest": "Create request",
+        "requestType": "Request type",
+        "requestGuardian": "Guardian",
+        "anyLinkedGuardian": "Any linked guardian",
+        "requestTitle": "Title",
+        "requestDueDate": "Due date",
+        "requestDescription": "What needs to be completed or confirmed?",
+        "create": "Create request",
+        "created": "Family request created.",
+        "updated": "Family request updated.",
+        "queueTitle": "Open requests",
+        "latestResponse": "Latest response",
+        "markSubmitted": "Mark submitted",
+        "startReview": "Start review",
+        "approve": "Approve",
+        "reject": "Reject",
+        "complete": "Complete",
+        "empty": "No family action requests yet.",
+        "openFollowUp": "Open follow-up audience",
+        "readinessFilter": "Readiness",
+        "readinessFilterAll": "All readiness states",
+        "followUpFilter": "Needs follow-up only"
+      }
     },
     "guardians": {
       "title": "Guardians",
@@ -251,7 +317,18 @@
       "open": "Open guardian",
       "unlink": "Unlink",
       "linkSuccess": "Guardian linked.",
-      "unlinkSuccess": "Guardian unlinked."
+      "unlinkSuccess": "Guardian unlinked.",
+      "familyReadiness": {
+        "title": "Family readiness",
+        "subtitle": "See whether this guardian still owes information, has athlete actions pending, or needs staff review.",
+        "statusLine": "Current status: {{status}}",
+        "linkedAthletes": "Linked athletes",
+        "primaryRelationships": "Primary relationships",
+        "awaitingGuardian": "Athletes awaiting family action",
+        "awaitingReview": "Athletes awaiting staff review",
+        "openActions": "Open requests",
+        "openAthlete": "Open athlete"
+      }
     },
     "groups": {
       "title": "Groups",
@@ -448,7 +525,16 @@
       "followUpSignals": "Follow-up signals",
       "signalOutstanding": "{{amount}} outstanding balance",
       "signalLessons": "{{count}} private lessons in view",
-      "financeHint": "Use the audience builder to turn overdue or outstanding balances into a clean family contact list."
+      "financeHint": "Use the audience builder to turn overdue or outstanding balances into a clean family contact list.",
+      "familyReadiness": "Family readiness",
+      "anyFamilyReadiness": "Any family readiness",
+      "followUpOnly": "Needs follow-up",
+      "summaryIncomplete": "Incomplete athletes",
+      "summaryAwaitingGuardian": "Awaiting family action",
+      "summaryAwaitingReview": "Awaiting staff review",
+      "reasonPendingFamily": "Pending family action",
+      "reasonAwaitingReview": "Awaiting staff review",
+      "reasonFamilyReadiness": "Family readiness: {{status}}"
     },
     "finance": {
       "title": "Finance",
@@ -674,7 +760,17 @@
       "privateLessonsTitle": "Private lesson visibility",
       "privateLessonsHint": "Watch the next 1-to-1 workload and billing exposure in the same command center.",
       "communicationsTitle": "Communication readiness",
-      "communicationsHint": "Turn operations and finance signals into a clear target audience for family outreach."
+      "communicationsHint": "Turn operations and finance signals into a clear target audience for family outreach.",
+      "familyWorkflow": {
+        "title": "Family workflow",
+        "hint": "Use the same command center to track pending family responses, staff review queues, and recently active requests.",
+        "pendingFamily": "Pending family action",
+        "awaitingReview": "Awaiting review",
+        "incompleteAthletes": "Incomplete athletes",
+        "needingFollowUp": "Needs follow-up",
+        "empty": "No family workflow items need attention.",
+        "emptyHint": "When staff creates or reviews family requests, the queue will appear here."
+      }
     },
     "settings": {
       "title": "Settings",

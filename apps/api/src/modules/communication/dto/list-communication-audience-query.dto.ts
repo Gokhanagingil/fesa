@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
-import { TrainingSessionStatus } from '../../../database/enums';
+import { FamilyReadinessStatus, TrainingSessionStatus } from '../../../database/enums';
 
 export class ListCommunicationAudienceQueryDto {
   @IsOptional()
@@ -38,6 +38,15 @@ export class ListCommunicationAudienceQueryDto {
   @IsOptional()
   @IsEnum({ overdue: 'overdue', outstanding: 'outstanding' })
   financialState?: 'overdue' | 'outstanding';
+
+  @IsOptional()
+  @IsEnum(FamilyReadinessStatus)
+  familyReadiness?: FamilyReadinessStatus;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  needsFollowUp?: boolean;
 
   @IsOptional()
   @IsString()

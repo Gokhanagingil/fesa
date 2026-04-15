@@ -29,7 +29,8 @@
       "open": "Aç",
       "cancel": "Vazgeç",
       "manage": "Yönet",
-      "refresh": "Yenile"
+      "refresh": "Yenile",
+      "clear": "Temizle"
     },
     "count": {
       "rows_one": "{{count}} kayıt",
@@ -74,6 +75,29 @@
         "training_session": "Antrenman oturumu",
         "coach_assignment": "Antrenör ataması",
         "manual_selection": "Manuel seçim"
+      },
+      "familyReadinessStatus": {
+        "complete": "Tamam",
+        "incomplete": "Eksik",
+        "awaiting_guardian_action": "Aile aksiyonu bekleniyor",
+        "awaiting_staff_review": "Personel incelemesi bekleniyor"
+      },
+      "familyActionType": {
+        "guardian_profile_update": "Veli profil güncellemesi",
+        "contact_details_completion": "İletişim bilgisi tamamlama",
+        "consent_acknowledgement": "Onay / rıza teyidi",
+        "enrollment_readiness": "Kayıt hazırlığı",
+        "profile_correction": "Profil düzeltmesi"
+      },
+      "familyActionStatus": {
+        "open": "Açık",
+        "pending_family_action": "Aile aksiyonu bekleniyor",
+        "submitted": "Gönderildi",
+        "under_review": "İncelemede",
+        "approved": "Onaylandı",
+        "rejected": "Reddedildi",
+        "completed": "Tamamlandı",
+        "closed": "Kapatıldı"
       }
     },
     "states": {
@@ -117,7 +141,8 @@
         "collected": "Tahsilatlar",
         "collectedTotal": "Tahsilatlar",
         "outstandingTotal": "Açık bakiye",
-        "overdueTotal": "Gecikmiş bakiye"
+        "overdueTotal": "Gecikmiş bakiye",
+        "familyFollowUp": "Aile takibi"
       },
       "sections": {
         "today": "Bugünün operasyon özeti",
@@ -141,7 +166,13 @@
       "coachesTitle": "Antrenör görünürlüğü",
       "coachesHint": "Aktif antrenörlerin grup, takım ve yaklaşan iş yükü üzerindeki dağılımını görün.",
       "privateLessonsTitle": "Özel ders görünürlüğü",
-      "privateLessonsHint": "Yaklaşan 1’e 1 iş yükünü ve ücret riskini aynı komuta yüzeyinde izleyin."
+      "privateLessonsHint": "Yaklaşan 1’e 1 iş yükünü ve ücret riskini aynı komuta yüzeyinde izleyin.",
+      "familyWorkflowTitle": "Aile iş akışı",
+      "familyWorkflowHint": "Aileye dönük döngülerin hangilerinin açık kaldığını görün ve manuel takibe kalmadan kapatın.",
+      "familyWorkflowPending": "Aile aksiyonu bekleyen",
+      "familyWorkflowReview": "İnceleme bekleyen",
+      "familyWorkflowIncomplete": "Eksik sporcular",
+      "familyWorkflowCompleted": "Bu döngüde kapanan"
     },
     "athletes": {
       "title": "Sporcular",
@@ -224,7 +255,43 @@
       "relationship": "Yakınlık",
       "primaryContact": "Birincil iletişim",
       "phone": "Telefon",
-      "email": "E-posta"
+      "email": "E-posta",
+      "familyActions": {
+        "title": "Aile aksiyon kuyruğu",
+        "hint": "Kontrollü takip talepleri oluşturun, yanıtları izleyin ve kulüp kayıtlarını anında ezmeden onay adımlarını görünür tutun.",
+        "readinessLabel": "Aile self-servis döngüsü kontrol altında",
+        "readinessOpen": "{{pendingFamilyActions}} aile aksiyonu bekliyor · {{awaitingStaffReview}} inceleme bekliyor",
+        "readinessClear": "Bu sporcu için açık aile iş akışı engeli görünmüyor.",
+        "jumpToQueue": "Aksiyon kuyruğunu aç",
+        "readinessHeadline": "Aile hazırlığı: {{status}}",
+        "issueSummary_one": "{{count}} hazırlık konusu hâlâ açık.",
+        "issueSummary_other": "{{count}} hazırlık konusu hâlâ açık.",
+        "pendingFamily": "Aile bekleniyor",
+        "awaitingReview": "İnceleme bekleniyor",
+        "closed": "Kapanan",
+        "newRequest": "Talep oluştur",
+        "requestType": "Talep tipi",
+        "requestGuardian": "Veli",
+        "anyLinkedGuardian": "Bağlı tüm veliler",
+        "requestTitle": "Başlık",
+        "requestDueDate": "Son tarih",
+        "requestDescription": "Ailenin neyi tamamlaması veya teyit etmesi gerekiyor?",
+        "create": "Talep oluştur",
+        "created": "Aile talebi oluşturuldu.",
+        "updated": "Aile talebi güncellendi.",
+        "queueTitle": "Açık talepler",
+        "latestResponse": "Son yanıt",
+        "markSubmitted": "Gönderildi işaretle",
+        "startReview": "İncelemeye al",
+        "approve": "Onayla",
+        "reject": "Reddet",
+        "complete": "Tamamla",
+        "empty": "Henüz aile aksiyon talebi yok.",
+        "openFollowUp": "Takip kitlesini aç",
+        "readinessFilter": "Hazırlık durumu",
+        "readinessFilterAll": "Tüm hazırlık durumları",
+        "followUpFilter": "Yalnız takip gerekenler"
+      }
     },
     "coaches": {
       "title": "Antrenörler",
@@ -273,7 +340,18 @@
       "open": "Veliyi aç",
       "unlink": "Bağı kaldır",
       "linkSuccess": "Veli sporcuyla ilişkilendirildi.",
-      "unlinkSuccess": "Veli ilişkisi kaldırıldı."
+      "unlinkSuccess": "Veli ilişkisi kaldırıldı.",
+      "familyReadiness": {
+        "title": "Aile hazırlığı",
+        "subtitle": "Bu velinin eksik bilgi, bekleyen sporcu aksiyonu veya personel incelemesi gerektirip gerektirmediğini görün.",
+        "statusLine": "Güncel durum: {{status}}",
+        "linkedAthletes": "Bağlı sporcular",
+        "primaryRelationships": "Birincil ilişkiler",
+        "awaitingGuardian": "Aile aksiyonu bekleyen sporcular",
+        "awaitingReview": "İnceleme bekleyen sporcular",
+        "openActions": "Açık talepler",
+        "openAthlete": "Sporcuyu aç"
+      }
     },
     "groups": {
       "title": "Gruplar",
@@ -374,8 +452,7 @@
         "6": "Cmt",
         "7": "Paz"
       },
-      "emptyWeek": "Bu hafta için filtrelere uyan seans yok."
-      ,
+      "emptyWeek": "Bu hafta için filtrelere uyan seans yok.",
       "chooseBranch": "Branş seçin"
     },
     "privateLessons": {
@@ -630,6 +707,16 @@
         "upcoming": "Yaklaşan antrenman yükü",
         "collections": "Tahsilat aktivitesi",
         "balances": "Açık bakiye önceliği"
+      },
+      "familyWorkflow": {
+        "title": "Aile iş akışı",
+        "hint": "Bekleyen aile yanıtlarını, personel inceleme kuyruğunu ve yakın zamanda hareket gören talepleri aynı komuta merkezinde izleyin.",
+        "pendingFamily": "Aile aksiyonu bekleyen",
+        "awaitingReview": "İnceleme bekleyen",
+        "incompleteAthletes": "Eksik sporcular",
+        "needingFollowUp": "Takip gerekenler",
+        "empty": "Dikkat isteyen aile iş akışı kaydı yok.",
+        "emptyHint": "Personel aile talebi oluşturduğunda veya incelediğinde kuyruk burada görünür."
       }
     },
     "communications": {
@@ -677,7 +764,16 @@
       "noPrimaryContacts": "Bu sporcuda birincil iletişim işaretlenmemiş.",
       "followUpSignals": "Takip sinyalleri",
       "signalOutstanding": "Açık bakiye: {{amount}}",
-      "signalLessons": "{{count}} özel ders kaydı"
+      "signalLessons": "{{count}} özel ders kaydı",
+      "familyReadiness": "Aile hazırlığı",
+      "anyFamilyReadiness": "Herhangi bir hazırlık durumu",
+      "followUpOnly": "Takip gerekenler",
+      "summaryIncomplete": "Eksik sporcular",
+      "summaryAwaitingGuardian": "Aile aksiyonu bekleyen",
+      "summaryAwaitingReview": "İnceleme bekleyen",
+      "reasonPendingFamily": "Aile aksiyonu bekleniyor",
+      "reasonAwaitingReview": "İnceleme bekleniyor",
+      "reasonFamilyReadiness": "Aile hazırlığı: {{status}}"
     },
     "settings": {
       "title": "Ayarlar",
