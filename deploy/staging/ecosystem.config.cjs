@@ -25,6 +25,9 @@ module.exports = {
       // Nest loads apps/api/.env from cwd
       env: {
         NODE_ENV: process.env.NODE_ENV || 'staging',
+        FESA_REPO_ROOT: repoRoot,
+        FESA_GIT_SHA: process.env.FESA_GIT_SHA || 'unknown',
+        FESA_BUILD_TIME_UTC: process.env.FESA_BUILD_TIME_UTC || '',
       },
     },
   ],

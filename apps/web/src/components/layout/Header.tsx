@@ -222,7 +222,7 @@ export function Header() {
             <div className="hidden rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm md:block">
               <p className="font-medium text-amateur-ink">{user.displayName}</p>
               <p className="text-xs text-amateur-muted">
-                {t(`auth.roles.${user.platformRole}`)}
+                {t(`app.enums.staffPlatformRole.${user.platformRole}`)}
                 {tenantName && !canAccessCrossTenant ? ` · ${tenantName}` : ''}
               </p>
             </div>
@@ -250,7 +250,7 @@ export function Header() {
             <Button variant="ghost">{t('app.nav.settings')}</Button>
           </Link>
           <Button type="button" variant="ghost" onClick={() => void logout()}>
-            {t('auth.logout')}
+            {t('app.auth.logout')}
           </Button>
           <LanguageSwitch />
         </div>

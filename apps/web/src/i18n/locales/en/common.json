@@ -53,6 +53,9 @@
       "needTenant": "Select a club in the header.",
       "noBranches": "Add a sport branch in the database first."
     },
+    "auth": {
+      "logout": "Sign out"
+    },
     "notifications": {
       "title": "Notifications",
       "subtitle": "Operational follow-up that needs attention now.",

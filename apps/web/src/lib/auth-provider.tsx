@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       staffUser: session?.user ?? null,
-      memberships: session?.availableTenants ?? [],
+      memberships: session?.memberships ?? [],
       loading,
       isAuthenticated: Boolean(session),
       authenticated: Boolean(session),

@@ -157,6 +157,12 @@ main() {
   mkdir -p "$root"
   run_stage "Git sync" sync_repo "$root"
 
+  export FESA_GIT_SHA
+  FESA_GIT_SHA="$(git -C "$root" rev-parse HEAD)"
+  export FESA_BUILD_TIME_UTC
+  FESA_BUILD_TIME_UTC="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  log "Runtime build stamp: commit=${FESA_GIT_SHA} built_at=${FESA_BUILD_TIME_UTC}"
+
   local api_dir="$root/apps/api"
   local web_dir="$root/apps/web"
   [[ -f "$root/package.json" ]] || die "Invalid repo: missing package.json"

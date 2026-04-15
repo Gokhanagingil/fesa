@@ -6,6 +6,7 @@ MODE="${1:-full}"
 API_PORT="${API_PORT:-3000}"
 PM2_APP_NAME="${PM2_APP_NAME:-fesa-api-staging}"
 PM2_HOME_DIR="${PM2_HOME:-${HOME}/.pm2}"
+WEB_BASE_URL="${WEB_BASE_URL:-http://127.0.0.1}"
 
 resolve_api_port() {
   if [[ -n "${FESA_REPO_ROOT:-}" && -f "${FESA_REPO_ROOT}/apps/api/.env" ]]; then
@@ -155,6 +156,8 @@ main() {
   if [[ "${MODE}" == "full" ]]; then
     print_http_context "${base_url}/api/health/live" "Live health"
     print_http_context "${base_url}/api/health" "Full health"
+    print_http_context "${base_url}/api/health/version" "API runtime version"
+    print_http_context "${WEB_BASE_URL}/build-info.json" "Frontend build info"
   fi
 
   print_pm2_diagnostics

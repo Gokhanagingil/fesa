@@ -46,17 +46,17 @@ export function StaffLoginPage() {
             <Link to="/" className="font-display text-xl font-semibold text-amateur-accent">
               {t('app.name')}
             </Link>
-            <p className="text-sm text-amateur-muted">{t('auth.staffLogin.subtitle')}</p>
+            <p className="text-sm text-amateur-muted">{t('pages.staffLogin.subtitle')}</p>
           </div>
           <LanguageSwitch />
         </header>
 
         <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
-          <p className="text-sm font-semibold text-amateur-accent">{t('auth.staffLogin.badge')}</p>
+          <p className="text-sm font-semibold text-amateur-accent">{t('pages.staffLogin.badge')}</p>
           <h1 className="mt-2 font-display text-2xl font-semibold text-amateur-ink">
-            {t('auth.staffLogin.title')}
+            {t('pages.staffLogin.title')}
           </h1>
-          <p className="mt-2 text-sm text-amateur-muted">{t('auth.staffLogin.hint')}</p>
+          <p className="mt-2 text-sm text-amateur-muted">{t('pages.staffLogin.hint')}</p>
 
           {error ? (
             <InlineAlert tone="error" className="mt-4">
@@ -66,7 +66,7 @@ export function StaffLoginPage() {
 
           <form onSubmit={submit} className="mt-5 space-y-4">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium">{t('auth.staffLogin.email')}</span>
+              <span className="font-medium">{t('pages.staffLogin.email')}</span>
               <input
                 type="email"
                 value={email}
@@ -77,7 +77,7 @@ export function StaffLoginPage() {
             </label>
 
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium">{t('auth.staffLogin.password')}</span>
+              <span className="font-medium">{t('pages.staffLogin.password')}</span>
               <input
                 type="password"
                 value={password}
@@ -88,13 +88,13 @@ export function StaffLoginPage() {
             </label>
 
             <Button type="submit" className="w-full" disabled={!email || !password || saving}>
-              {saving ? t('auth.staffLogin.submitting') : t('auth.staffLogin.submit')}
+              {saving ? t('pages.staffLogin.submitting') : t('pages.staffLogin.submit')}
             </Button>
           </form>
 
           <div className="mt-6 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-xs text-amateur-muted">
-            <p className="font-medium text-amateur-ink">{t('auth.staffLogin.demoTitle')}</p>
-            <p className="mt-1">{t('auth.staffLogin.demoHint')}</p>
+            <p className="font-medium text-amateur-ink">{t('pages.staffLogin.helperTitle')}</p>
+            <p className="mt-1">{t('pages.staffLogin.helperBody')}</p>
           </div>
         </section>
       </div>
