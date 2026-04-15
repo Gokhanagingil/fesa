@@ -62,6 +62,11 @@ export class GuardianPortalController {
     return this.portal.getActivationStatus(token);
   }
 
+  @Get('tenants')
+  loginTenants() {
+    return this.portal.listTenants();
+  }
+
   @Post('activate/:token')
   async activate(
     @Param('token') token: string,

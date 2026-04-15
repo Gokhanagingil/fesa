@@ -5,7 +5,7 @@ The amateur platform ships a **single, repeatable demo seed** for local developm
 ## What it does
 
 - **Creates or updates** one demo tenant (`kadikoy-genc-spor`) with a **fixed UUID** so runs are repeatable.
-- Inserts **sport branches**, **age groups**, **groups (cohorts)**, **teams**, **coaches**, **athletes**, **guardians**, **links**, **team memberships**, **training sessions**, **private lessons**, **attendance**, **charge items**, and **athlete charges**.
+- Inserts **sport branches**, **age groups**, **groups (cohorts)**, **teams**, **coaches**, **athletes**, **guardians**, **links**, **team memberships**, **training sessions**, **private lessons**, **attendance**, **charge items**, **athlete charges**, **staff users**, **tenant memberships**, and **staff sessions**.
 - Is **idempotent**: safe to run multiple times. Rows are keyed by deterministic UUIDs; `save()` upserts by primary key.
 
 ## What it does *not* do
@@ -49,6 +49,17 @@ The script loads `DATABASE_URL` from `apps/api/.env` (or `.env` in the current w
 
 Set `DEV_TENANT_ID` in `apps/api/.env` to that UUID so API calls without `X-Tenant-Id` resolve to the demo tenant. The web app prefers this tenant by **slug** when no valid `localStorage` tenant is stored.
 
+## Seeded staff login fixtures
+
+The demo seed now also creates internal staff/admin fixtures so the authenticated app shell can be exercised end to end:
+
+| Account | Email | Password | Access |
+|---------|-------|----------|--------|
+| Global admin | `platform.admin@example.com` | `Amateur123!` | Platform-wide administration + cross-tenant switching |
+| Club admin | `club.admin@example.com` | `Amateur123!` | Demo tenant only (`kadikoy-genc-spor`) |
+
+Use these at `http://localhost:5173/login` after running `npm run seed:demo`.
+
 ## Data highlights (UX)
 
 - **Group-only athlete**: cohort training, no open `athlete_team_memberships` (e.g. Deniz in U12 basketball).
@@ -57,6 +68,7 @@ Set `DEV_TENANT_ID` in `apps/api/.env` to that UUID so API calls without `X-Tena
 - **Coaching**: branch-scoped coaches are seeded and assigned to groups, teams, standard sessions, and private lessons.
 - **Private lessons**: includes 1-to-1 lessons with coach, schedule, status, and linked finance examples.
 - **Finance**: catalog items (dues, camp, merchandise, tournament) and athlete charges with **mixed statuses** (pending, partially paid, paid, cancelled).
+- **Identity/admin**: includes one global admin and one tenant-bound club admin so role-aware landing, tenant switching, and settings/admin surfaces can be validated.
 
 ## Staging
 

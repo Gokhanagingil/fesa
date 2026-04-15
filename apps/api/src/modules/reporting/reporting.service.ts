@@ -9,6 +9,12 @@ import { CommunicationService } from '../communication/communication.service';
 import { ActionCenterService } from '../action-center/action-center.service';
 import { FamilyActionService } from '../family-action/family-action.service';
 import { FinanceService } from '../finance/finance.service';
+import { isMissingRelationError } from '../core/database-error.util';
+
+type FinanceSummary = Awaited<ReturnType<FinanceService['listAthleteFinanceSummaries']>>;
+type CommunicationAudience = Awaited<ReturnType<CommunicationService['listAudience']>>;
+type WorkflowSummary = Awaited<ReturnType<FamilyActionService['getWorkflowSummary']>>;
+type ActionSummary = Awaited<ReturnType<ActionCenterService['listItems']>>;
 
 @Injectable()
 export class ReportingService {
@@ -54,7 +60,14 @@ export class ReportingService {
       },
     ];
 
-    const presetCount = await this.savedFilterPresets.count({ where: { tenantId } });
+    let presetCount = 0;
+    try {
+      presetCount = await this.savedFilterPresets.count({ where: { tenantId } });
+    } catch (error) {
+      if (!isMissingRelationError(error)) {
+        throw error;
+      }
+    }
 
     return {
       items,
@@ -79,19 +92,27 @@ export class ReportingService {
       .orderBy('lesson.scheduledStart', 'ASC')
       .take(20);
 
-    const [dashboard, financeSummary, lessons, communicationAudience, workflowSummary, actionSummary] = await Promise.all([
-      this.finance.getDashboardSummary(tenantId),
-      this.finance.listAthleteFinanceSummaries(tenantId, {}),
-      lessonsQuery.getMany(),
-      this.communications.listAudience(tenantId, {}),
-      this.familyActions.getWorkflowSummary(tenantId),
-      this.actionCenter.listItems(tenantId, { limit: 6, includeRead: true }),
-    ]);
+    const [dashboard, financeSummary, lessons, communicationAudience, workflowSummary, actionSummary] =
+      await Promise.all([
+        this.finance.getDashboardSummary(tenantId),
+        this.finance.listAthleteFinanceSummaries(tenantId, {}),
+        lessonsQuery.getMany(),
+        this.communications.listAudienceSafe(tenantId, {}),
+        this.familyActions.getWorkflowSummarySafe(tenantId),
+        this.actionCenter.listItemsSafe(tenantId, { limit: 6, includeRead: true }),
+      ]) as [
+        Awaited<ReturnType<FinanceService['getDashboardSummary']>>,
+        FinanceSummary,
+        PrivateLesson[],
+        CommunicationAudience,
+        WorkflowSummary,
+        ActionSummary,
+      ];
 
     const today = new Date();
-    const upcomingLessons = lessons.filter((lesson) => lesson.scheduledStart >= today);
+    const upcomingLessons = lessons.filter((lesson: PrivateLesson) => lesson.scheduledStart >= today);
     const followUpLessons = lessons.filter(
-      (lesson) => lesson.status === 'cancelled' || lesson.attendanceStatus === 'absent',
+      (lesson: PrivateLesson) => lesson.status === 'cancelled' || lesson.attendanceStatus === 'absent',
     );
 
     return {
@@ -101,12 +122,16 @@ export class ReportingService {
       groupDistribution: dashboard.groupDistribution,
       recentPayments: dashboard.recentPayments,
       topOutstandingAthletes: dashboard.topOutstandingAthletes,
-      overdueCharges: financeSummary.charges.filter((charge) => charge.isOverdue).slice(0, 10),
+      overdueCharges: financeSummary.charges
+        .filter((charge: AthleteCharge & { isOverdue?: boolean }) => charge.isOverdue)
+        .slice(0, 10),
       upcomingPrivateLessons: upcomingLessons.slice(0, 8),
       privateLessonStats: {
         upcoming: upcomingLessons.length,
         followUp: followUpLessons.length,
-        billed: lessons.filter((lesson) => financeSummary.charges.some((charge) => charge.privateLessonId === lesson.id)).length,
+        billed: lessons.filter((lesson: PrivateLesson) =>
+          financeSummary.charges.some((charge: AthleteCharge) => charge.privateLessonId === lesson.id),
+        ).length,
       },
       communicationReadiness: {
         audienceAthletes: communicationAudience.counts.athletes,

@@ -474,10 +474,11 @@ export function TrainingSessionsPage() {
           disabled: !tenantId || tenantLoading,
           placeholder: t('pages.training.searchSessions'),
         }}
+        toolbarLabel={t('pages.training.filtersTitle')}
         toolbar={
           <>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.athletes.primaryGroup')}</span>
+            <label className="flex min-w-[10.5rem] flex-col gap-1 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+              <span className="text-xs font-medium uppercase tracking-wide">{t('pages.athletes.primaryGroup')}</span>
               <select
                 value={groupId}
                 onChange={(e) => {
@@ -494,8 +495,8 @@ export function TrainingSessionsPage() {
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.teams.title')}</span>
+            <label className="flex min-w-[10.5rem] flex-col gap-1 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+              <span className="text-xs font-medium uppercase tracking-wide">{t('pages.teams.title')}</span>
               <select
                 value={teamId}
                 onChange={(e) => setTeamId(e.target.value)}
@@ -509,8 +510,8 @@ export function TrainingSessionsPage() {
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.training.status')}</span>
+            <label className="flex min-w-[9rem] flex-col gap-1 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+              <span className="text-xs font-medium uppercase tracking-wide">{t('pages.training.status')}</span>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
@@ -524,8 +525,8 @@ export function TrainingSessionsPage() {
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.training.from')}</span>
+            <label className="flex min-w-[9rem] flex-col gap-1 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+              <span className="text-xs font-medium uppercase tracking-wide">{t('pages.training.from')}</span>
               <input
                 type="date"
                 value={from}
@@ -533,8 +534,8 @@ export function TrainingSessionsPage() {
                 className="bg-transparent text-amateur-ink outline-none"
               />
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.training.to')}</span>
+            <label className="flex min-w-[9rem] flex-col gap-1 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+              <span className="text-xs font-medium uppercase tracking-wide">{t('pages.training.to')}</span>
               <input
                 type="date"
                 value={to}

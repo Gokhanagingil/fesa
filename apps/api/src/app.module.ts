@@ -22,6 +22,7 @@ import { CommunicationModule } from './modules/communication/communication.modul
 import { FamilyActionModule } from './modules/family-action/family-action.module';
 import { ActionCenterModule } from './modules/action-center/action-center.module';
 import { GuardianPortalModule } from './modules/guardian-portal/guardian-portal.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { GuardianPortalModule } from './modules/guardian-portal/guardian-portal.
       }),
     }),
     CoreModule,
+    AuthModule,
     HealthModule,
     TenantModule,
     AthleteModule,

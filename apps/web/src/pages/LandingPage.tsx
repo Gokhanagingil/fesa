@@ -27,10 +27,16 @@ export function LandingPage() {
             <p className="mt-4 max-w-xl text-lg text-amateur-muted">{t('landing.sub')}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                to="/app/dashboard"
+                to="/login"
                 className="inline-flex items-center justify-center rounded-xl bg-amateur-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amateur-highlight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amateur-accent"
               >
                 {t('landing.ctaPrimary')}
+              </Link>
+              <Link
+                to="/portal/login"
+                className="inline-flex items-center justify-center rounded-xl border border-amateur-border bg-amateur-surface px-4 py-2 text-sm font-semibold text-amateur-ink transition-colors hover:bg-amateur-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amateur-accent"
+              >
+                {t('landing.ctaPortal')}
               </Link>
               <a
                 href="#about"

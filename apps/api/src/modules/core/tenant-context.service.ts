@@ -1,6 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TenantService } from '../tenant/tenant.service';
+import type { AuthSessionProfile } from '../auth/auth.service';
+import { StaffPlatformRole } from '../../database/enums';
 
 /**
  * Resolves which tenant a request operates on.
@@ -36,5 +43,51 @@ export class TenantContextService {
       );
     }
     return all[0].id;
+  }
+
+  async resolveTenantIdForProfile(
+    headerTenantId: string | undefined,
+    profile: AuthSessionProfile,
+  ): Promise<string> {
+    const trimmed = headerTenantId?.trim();
+    const accessibleTenantIds = new Set(profile.accessibleTenants.map((tenant) => tenant.id));
+
+    if (profile.user.platformRole === StaffPlatformRole.GLOBAL_ADMIN) {
+      if (trimmed) {
+        const tenant = await this.tenants.findById(trimmed);
+        if (!tenant) {
+          throw new NotFoundException(`Unknown tenant id: ${trimmed}`);
+        }
+        return tenant.id;
+      }
+
+      if (profile.defaultTenantId) {
+        return profile.defaultTenantId;
+      }
+
+      if (profile.accessibleTenants[0]) {
+        return profile.accessibleTenants[0].id;
+      }
+
+      const all = await this.tenants.findAll();
+      if (all.length === 0) {
+        throw new BadRequestException('No tenants are available for platform administration.');
+      }
+
+      return all[0].id;
+    }
+
+    if (accessibleTenantIds.size === 0) {
+      throw new ForbiddenException('No tenant membership is assigned to this account.');
+    }
+
+    if (trimmed) {
+      if (!accessibleTenantIds.has(trimmed)) {
+        throw new ForbiddenException('This tenant is outside the current account scope.');
+      }
+      return trimmed;
+    }
+
+    return profile.defaultTenantId ?? profile.accessibleTenants[0].id;
   }
 }
