@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActionCenterItemState } from '../../database/entities/action-center-item-state.entity';
+import { Attendance } from '../../database/entities/attendance.entity';
 import { Athlete } from '../../database/entities/athlete.entity';
 import { AthleteGuardian } from '../../database/entities/athlete-guardian.entity';
 import { FamilyActionEvent } from '../../database/entities/family-action-event.entity';
@@ -23,6 +24,7 @@ import { ActionCenterService } from './action-center.service';
     TrainingModule,
     TypeOrmModule.forFeature([
       ActionCenterItemState,
+      Attendance,
       Athlete,
       AthleteGuardian,
       FamilyActionRequest,
