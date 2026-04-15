@@ -5,6 +5,7 @@ import { AthleteCharge } from '../../database/entities/athlete-charge.entity';
 import { AthleteGuardian } from '../../database/entities/athlete-guardian.entity';
 import { AthleteTeamMembership } from '../../database/entities/athlete-team-membership.entity';
 import { Guardian } from '../../database/entities/guardian.entity';
+import { GuardianPortalAccess } from '../../database/entities/guardian-portal-access.entity';
 import { ClubGroup } from '../../database/entities/club-group.entity';
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.entity';
@@ -22,6 +23,7 @@ import { CommunicationService } from './communication.service';
     TypeOrmModule.forFeature([
       Athlete,
       Guardian,
+      GuardianPortalAccess,
       AthleteGuardian,
       AthleteTeamMembership,
       ClubGroup,
