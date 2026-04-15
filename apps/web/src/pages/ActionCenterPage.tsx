@@ -32,7 +32,7 @@ const urgencies: Array<ActionCenterItemUrgency | ''> = ['', 'overdue', 'today', 
 const bulkActions: ActionCenterItemMutation[] = ['mark_read', 'dismiss', 'complete'];
 
 export function ActionCenterPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { tenantId, loading: tenantLoading } = useTenant();
   const [searchParams, setSearchParams] = useSearchParams();
   const [category, setCategory] = useState<ActionCenterItemCategory | ''>(
@@ -87,7 +87,7 @@ export function ActionCenterPage() {
     return () => clearTimeout(id);
   }, [load]);
 
-  const visibleItems = response?.items ?? [];
+  const visibleItems = useMemo(() => response?.items ?? [], [response]);
   const selectedItems = useMemo(
     () => visibleItems.filter((item) => selectedKeys.includes(item.itemKey)),
     [selectedKeys, visibleItems],

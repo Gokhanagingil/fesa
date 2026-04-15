@@ -12,11 +12,11 @@ export class ActionCenterController {
 
   @Get('items')
   list(@Req() req: Request, @Query() query: ListActionCenterItemsQueryDto) {
-    return this.actionCenter.list(req.tenantId!, query);
+    return this.actionCenter.listItems(req.tenantId!, query);
   }
 
   @Patch('items')
   update(@Req() req: Request, @Body() dto: UpdateActionCenterItemsDto) {
-    return this.actionCenter.updateState(req.tenantId!, dto);
+    return this.actionCenter.updateItems(req.tenantId!, dto);
   }
 }

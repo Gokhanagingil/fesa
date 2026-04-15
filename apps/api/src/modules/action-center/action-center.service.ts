@@ -49,6 +49,13 @@ type ActionCenterItem = {
 
 type GeneratedActionCenterItem = Omit<ActionCenterItem, 'read' | 'snoozedUntil'>;
 
+type TrainingAttendanceRow = {
+  id: string;
+  title: string;
+  scheduledEnd: Date;
+  updatedAt: Date;
+};
+
 type ActionCenterCounts = {
   total: number;
   unread: number;
@@ -359,7 +366,7 @@ export class ActionCenterService {
       athletes.forEach((athlete) => athleteNameMap.set(athlete.id, this.getPersonName(athlete)));
     }
 
-    return readinessValues.flatMap((item) => {
+    return readinessValues.flatMap<GeneratedActionCenterItem>((item) => {
       const subjectName = item.actions[0]?.athleteName ?? athleteNameMap.get(item.athleteId) ?? item.athleteId;
 
       if (item.status === FamilyReadinessStatus.AWAITING_STAFF_REVIEW) {
@@ -603,7 +610,7 @@ export class ActionCenterService {
       .having('COUNT(attendance.id) = 0')
       .orderBy('session.scheduledEnd', 'DESC')
       .limit(40)
-      .getRawMany<Array<{ id: string; title: string; scheduledEnd: Date; updatedAt: Date }>>();
+      .getRawMany<TrainingAttendanceRow>();
 
     return rows.map((row) => ({
       itemKey: `training-attendance:${row.id}`,
