@@ -136,6 +136,15 @@
         "invited": "Davet edildi",
         "active": "Aktif",
         "disabled": "Devre dışı"
+      },
+      "staffPlatformRole": {
+        "global_admin": "Global yönetici",
+        "standard": "Personel"
+      },
+      "tenantMembershipRole": {
+        "club_admin": "Kulüp yöneticisi",
+        "staff": "Personel",
+        "coach": "Antrenör"
       }
     },
     "states": {
@@ -1000,6 +1009,49 @@
     "settings": {
       "title": "Ayarlar",
       "subtitle": "Kulüp profili ve tercihler.",
+      "summary": {
+        "memberships": "Üyelikler",
+        "platformWide": "Platform geneli",
+        "activeClub": "Aktif kulüp",
+        "noClub": "Kulüp seçilmedi",
+        "role": "Güncel rol",
+        "noRole": "Rol atanmadı"
+      },
+      "roles": {
+        "globalAdmin": "Global yönetici",
+        "club_admin": "Kulüp yöneticisi",
+        "staff": "Personel",
+        "coach": "Antrenör"
+      },
+      "platformAdminTitle": "Platform yönetimi",
+      "platformAdminHint": "Girişten hemen sonra seed edilen kulüpleri tarayın, çalışma bağlamını değiştirin ve ürünün gerçekten çok tenantlı hissettirdiğini doğrulayın.",
+      "clubAdminTitle": "Kulüp yönetimi",
+      "clubAdminHint": "Kulüp yöneticileri yalnız kendi kulüplerinde kalır; yine de bağlam ve erişim rolü burada net görünür.",
+      "platformOverviewTitle": "Platform kulüp görünümü",
+      "platformOverviewHint": "Aşağıdaki seed edilmiş tenantlar, tenant geçişini ve kulüpler arası görünürlüğü hızlıca doğrulamanın en kısa yoludur.",
+      "platformOverviewTotal": "Seed edilen kulüpler",
+      "platformOverviewActive": "Aktif kulüp",
+      "platformOverviewSwitch": "Bağlamı değiştir",
+      "platformOverviewCounts": {
+        "athletes": "Sporcular",
+        "guardians": "Veliler",
+        "coaches": "Antrenörler",
+        "groups": "Gruplar",
+        "teams": "Takımlar"
+      },
+      "currentClub": "Geçerli kulüp",
+      "accessTitle": "Erişim haritası",
+      "platformAccessTitle": "Platform geneli erişim",
+      "platformAccessBody": "Bu hesap seed edilen tüm kulüpleri açabilir ve üstteki kulüp seçiciyle her tenantı yerinde inceleyebilir.",
+      "defaultMembership": "Varsayılan kulüp üyeliği",
+      "secondaryMembership": "Ek kulüp üyeliği",
+      "noMemberships": "Henüz kulüp üyeliği atanmadı.",
+      "nextTitle": "Sıradaki doğrulamalar",
+      "nextPlatformTenants": "Overview kartlarından veya üst menüdeki kulüp seçiciden kulüp değiştirip tenant kataloğunu doğrulayın.",
+      "nextPlatformMemberships": "Aynı hesapla platform geneli görünürlüğü kontrol ederken kulüp yöneticilerinin tenant sınırında kaldığını teyit edin.",
+      "nextClubProfile": "Atandığınız kulüp içinde kalın ve shell'in ikinci bir tenant göstermediğini doğrulayın.",
+      "nextClubMembers": "Yalnız güncel kulübün sporcu, veli, finans ve aksiyon merkezi sinyallerini gözden geçirin.",
+      "nextSecurity": "Demo kullanıcılar arasında temiz geçiş için üstteki çıkış aksiyonunu kullanın; eski personel bağlamı taşınmasın.",
       "placeholder": "Kulüp profili, bildirimler ve yerel varsayılanlar kimlik doğrulama sonrası burada olacak.",
       "adminTitle": "Yönetim ve ayarlar",
       "adminSubtitle": "Platform ve kulüp yönetimini sakin, anlaşılır bir yüzeyde tutun.",
@@ -1044,6 +1096,9 @@
       "title": "Kulüp operasyonlarına giriş yapın",
       "subtitle": "Yöneticiler ve kulüp personeli için güvenli giriş.",
       "hint": "Giriş yaptığınızda yalnızca üyesi olduğunuz kulüpleri ve yetkili olduğunuz alanları görürsünüz.",
+      "demoTitle": "Seed edilmiş demo erişimi",
+      "demoHint": "Yerel ve staging benzeri ortamlarda bu hesaplar; çıkış, tenant geçişi ve role bağlı erişimi ek kurulum yapmadan doğrulamanızı sağlar.",
+      "demoSharedPassword": "Ortak demo şifresi: {{password}}",
       "email": "E-posta",
       "password": "Şifre",
       "submit": "Giriş yap",

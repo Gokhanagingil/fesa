@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, Res, UseGuards, Body } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { TenantGuard } from '../core/tenant.guard';
 import { AuthService } from './auth.service';
@@ -17,10 +17,10 @@ export class AuthController {
   }
 
   @Post('logout')
-  @UseGuards(StaffAuthGuard)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    if (req.staffSessionToken) {
-      await this.auth.logout(req.staffSessionToken);
+    const sessionToken = req.staffSessionToken ?? this.auth.readSessionToken(req);
+    if (sessionToken) {
+      await this.auth.logout(sessionToken);
     }
     this.auth.clearSessionCookie(res);
     return { ok: true };

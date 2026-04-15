@@ -47,6 +47,9 @@
       "label": "Club",
       "empty": "No clubs — seed the API"
     },
+    "auth": {
+      "logout": "Sign out"
+    },
     "errors": {
       "loadFailed": "Could not load data.",
       "saveFailed": "Could not save.",
@@ -935,6 +938,48 @@
     "settings": {
       "title": "Settings",
       "subtitle": "Administration, club context, and operating preferences.",
+      "summary": {
+        "memberships": "Memberships",
+        "platformWide": "Platform-wide",
+        "activeClub": "Active club",
+        "noClub": "No club selected",
+        "role": "Current role",
+        "noRole": "No role assigned"
+      },
+      "roles": {
+        "globalAdmin": "Global admin",
+        "club_admin": "Club admin",
+        "staff": "Staff",
+        "coach": "Coach"
+      },
+      "platformAdminTitle": "Platform administration",
+      "platformAdminHint": "Use this surface to scan the seeded clubs, switch working context quickly, and confirm the product feels multi-tenant immediately after sign-in.",
+      "clubAdminTitle": "Club administration",
+      "clubAdminHint": "Club admins stay scoped to their own club while still seeing the current context and access role clearly.",
+      "platformOverviewTitle": "Platform club overview",
+      "platformOverviewHint": "The seeded tenants below are the fastest way to verify tenant switching, cross-club visibility, and overall staging/demo quality.",
+      "platformOverviewTotal": "Seeded clubs",
+      "platformOverviewActive": "Active club",
+      "platformOverviewSwitch": "Switch context",
+      "platformOverviewCounts": {
+        "athletes": "Athletes",
+        "guardians": "Guardians",
+        "coaches": "Coaches",
+        "groups": "Groups",
+        "teams": "Teams"
+      },
+      "accessTitle": "Access map",
+      "platformAccessTitle": "Platform-wide access",
+      "platformAccessBody": "This account can open every seeded club and use the header switcher to inspect each tenant in place.",
+      "defaultMembership": "Default club membership",
+      "secondaryMembership": "Additional club membership",
+      "noMemberships": "No club memberships are assigned yet.",
+      "nextTitle": "What to verify next",
+      "nextPlatformTenants": "Switch clubs from the overview cards or the header picker to verify the seeded tenant catalog.",
+      "nextPlatformMemberships": "Use the same account to confirm platform-wide visibility while club admins remain tenant-bound.",
+      "nextClubProfile": "Stay inside your assigned club and confirm the shell never exposes a second tenant.",
+      "nextClubMembers": "Review athletes, guardians, finance, and action-center signals for the current club only.",
+      "nextSecurity": "Use the sign-out action in the header to switch demo users cleanly without carrying stale staff context.",
       "platformTitle": "Platform administration",
       "platformHint": "Global admins can see the clubs they can act in and switch context intentionally before entering club operations.",
       "platformRole": "Platform role",
@@ -966,6 +1011,9 @@
       "title": "Sign in to Amateur",
       "subtitle": "A calm workspace for club managers, staff, and platform admins.",
       "hint": "Use your staff account to enter the platform. Your memberships decide which club contexts you can open after signing in.",
+      "demoTitle": "Seeded demo access",
+      "demoHint": "In local and staging-style environments, these seeded staff accounts make it easy to validate logout, tenant switching, and role-scoped access without manual setup.",
+      "demoSharedPassword": "Shared demo password: {{password}}",
       "email": "Email",
       "password": "Password",
       "submit": "Sign in",
@@ -973,7 +1021,8 @@
       "sessionError": "Your session could not be restored.",
       "helperTitle": "Why this matters",
       "helperBody": "Staff access is now separated from the guardian portal and bound to real tenant memberships.",
-      "backHome": "Back to home"
+      "backHome": "Back to home",
+      "guardianCta": "Are you a guardian? Open the family portal"
     },
     "guardianPortal": {
       "backHome": "Back to portal home",

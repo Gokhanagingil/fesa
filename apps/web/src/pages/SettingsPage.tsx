@@ -1,22 +1,86 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
+import { Button } from '../components/ui/Button';
 import { useAuth } from '../lib/auth-context';
+import { apiGet } from '../lib/api';
 import { useTenant } from '../lib/tenant-hooks';
-import type { StaffSessionTenant } from '../lib/auth-types';
+
+type PlatformOverview = {
+  items: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    counts: {
+      athletes: number;
+      guardians: number;
+      coaches: number;
+      groups: number;
+      teams: number;
+    };
+  }>;
+  total: number;
+};
 
 export function SettingsPage() {
   const { t } = useTranslation();
   const { session, staffUser } = useAuth();
-  const { tenants, tenantId } = useTenant();
+  const { tenants, tenantId, setTenantId } = useTenant();
+  const [platformOverview, setPlatformOverview] = useState<PlatformOverview | null>(null);
+  const [platformLoading, setPlatformLoading] = useState(false);
+  const [platformError, setPlatformError] = useState<string | null>(null);
   const activeTenant = useMemo(
     () => tenants.find((tenant) => tenant.id === tenantId) ?? null,
     [tenantId, tenants],
   );
-  const memberships = session?.availableTenants ?? [];
+  const memberships = useMemo(() => session?.memberships ?? [], [session]);
   const platformAdmin = staffUser?.platformRole === 'global_admin';
+  const activeMembership = useMemo(
+    () =>
+      memberships.find((membership) => membership.tenantId === tenantId) ??
+      memberships.find((membership) => membership.isDefault) ??
+      memberships[0] ??
+      null,
+    [memberships, tenantId],
+  );
+
+  useEffect(() => {
+    if (!platformAdmin) {
+      setPlatformOverview(null);
+      setPlatformError(null);
+      setPlatformLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadPlatformOverview() {
+      setPlatformLoading(true);
+      setPlatformError(null);
+      try {
+        const next = await apiGet<PlatformOverview>('/api/auth/platform-overview');
+        if (!cancelled) {
+          setPlatformOverview(next);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPlatformError(error instanceof Error ? error.message : t('app.errors.loadFailed'));
+        }
+      } finally {
+        if (!cancelled) {
+          setPlatformLoading(false);
+        }
+      }
+    }
+
+    void loadPlatformOverview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [platformAdmin, t]);
 
   return (
     <div>
@@ -36,12 +100,67 @@ export function SettingsPage() {
             value={
               platformAdmin
                 ? t('pages.settings.roles.globalAdmin')
-                : memberships[0]
-                  ? t(`pages.settings.roles.${memberships[0].role}`)
+                : activeMembership
+                  ? t(`pages.settings.roles.${activeMembership.role}`)
                   : t('pages.settings.summary.noRole')
             }
           />
         </section>
+
+        {platformAdmin ? (
+          <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                  {t('pages.settings.platformOverviewTitle')}
+                </h2>
+                <p className="mt-1 max-w-3xl text-sm text-amateur-muted">
+                  {t('pages.settings.platformOverviewHint')}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm">
+                <p className="font-medium text-amateur-ink">{t('pages.settings.platformOverviewTotal')}</p>
+                <p className="mt-1 text-amateur-muted">{platformOverview?.total ?? tenants.length}</p>
+              </div>
+            </div>
+            {platformError ? <InlineAlert tone="error" className="mt-4">{platformError}</InlineAlert> : null}
+            {platformLoading && !platformOverview ? (
+              <div className="mt-4 rounded-xl border border-dashed border-amateur-border bg-amateur-canvas/60 px-4 py-5 text-sm text-amateur-muted">
+                {t('app.states.loading')}
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                {(platformOverview?.items ?? []).map((item) => {
+                  const isActive = tenantId === item.id;
+                  return (
+                    <div key={item.id} className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-display text-base font-semibold text-amateur-ink">{item.name}</h3>
+                          <p className="mt-1 text-sm text-amateur-muted">{item.slug}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant={isActive ? 'primary' : 'ghost'}
+                          onClick={() => setTenantId(item.id)}
+                        >
+                          {isActive ? t('pages.settings.platformOverviewActive') : t('pages.settings.platformOverviewSwitch')}
+                        </Button>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                        <StatCard label={t('pages.settings.platformOverviewCounts.athletes')} value={item.counts.athletes} compact />
+                        <StatCard label={t('pages.settings.platformOverviewCounts.guardians')} value={item.counts.guardians} compact />
+                        <StatCard label={t('pages.settings.platformOverviewCounts.coaches')} value={item.counts.coaches} compact />
+                        <StatCard label={t('pages.settings.platformOverviewCounts.groups')} value={item.counts.groups} compact />
+                        <StatCard label={t('pages.settings.platformOverviewCounts.teams')} value={item.counts.teams} compact />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        ) : null}
 
         <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -82,23 +201,23 @@ export function SettingsPage() {
                   </div>
                 ) : null}
                 {memberships.length > 0 ? (
-                  memberships.map((membership: StaffSessionTenant) => {
-                    const tenant = tenants.find((item) => item.id === membership.id);
+                  memberships.map((membership) => {
+                    const tenant = tenants.find((item) => item.id === membership.tenantId);
                     return (
                       <div
-                        key={`${membership.id}-${membership.role}`}
+                        key={`${membership.tenantId}-${membership.role}`}
                         className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3 text-sm"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="font-medium text-amateur-ink">
-                            {tenant?.name ?? membership.name}
+                            {tenant?.name ?? membership.tenantName}
                           </p>
                           <span className="rounded-full bg-amateur-accent-soft px-2.5 py-1 text-[11px] font-medium text-amateur-accent">
                             {t(`pages.settings.roles.${membership.role}`)}
                           </span>
                         </div>
                         <p className="mt-1 text-amateur-muted">
-                          {session?.activeTenantId === membership.id
+                          {session?.defaultTenantId === membership.tenantId
                             ? t('pages.settings.defaultMembership')
                             : t('pages.settings.secondaryMembership')}
                         </p>

@@ -33,8 +33,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       if (stored && list.some((t) => t.id === stored)) {
         setTenantIdState(stored);
       } else if (list.length > 0) {
-        const preferred = list.find((t) => t.slug === PREFERRED_DEMO_TENANT_SLUG);
-        const next = preferred?.id ?? list[0].id;
+        const sessionDefault = session?.defaultTenantId
+          ? list.find((tenant) => tenant.id === session.defaultTenantId)
+          : null;
+        const explicitDefault = list.find((tenant) => tenant.isDefault);
+        const preferred = list.find((tenant) => tenant.slug === PREFERRED_DEMO_TENANT_SLUG);
+        const next = sessionDefault?.id ?? explicitDefault?.id ?? preferred?.id ?? list[0].id;
         setStoredTenantId(next);
         setTenantIdState(next);
       } else {

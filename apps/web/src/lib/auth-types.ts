@@ -4,11 +4,21 @@ export type TenantMembershipRole = 'club_admin' | 'staff' | 'coach';
 
 export type StaffUserStatus = 'active' | 'disabled';
 
-export type StaffSessionTenant = {
+export type StaffTenantMembership = {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  role: TenantMembershipRole;
+  isDefault: boolean;
+};
+
+export type StaffAccessibleTenant = {
   id: string;
   name: string;
   slug: string;
-  role: TenantMembershipRole;
+  role: TenantMembershipRole | null;
+  isDefault: boolean;
 };
 
 export type StaffSessionUser = {
@@ -16,6 +26,7 @@ export type StaffSessionUser = {
   email: string;
   firstName: string;
   lastName: string;
+  preferredName: string | null;
   displayName: string;
   platformRole: StaffPlatformRole;
   status: StaffUserStatus;
@@ -23,8 +34,9 @@ export type StaffSessionUser = {
 
 export type StaffSession = {
   user: StaffSessionUser;
-  availableTenants: StaffSessionTenant[];
-  activeTenantId: string | null;
+  memberships: StaffTenantMembership[];
+  accessibleTenants: StaffAccessibleTenant[];
+  defaultTenantId: string | null;
 };
 
 export type StaffLoginRequest = {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitch } from '../components/ui/LanguageSwitch';
@@ -6,30 +6,80 @@ import { InlineAlert } from '../components/ui/InlineAlert';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../lib/auth-context';
 
+const DEMO_PASSWORD = 'Admin123!';
+const DEMO_ACCOUNTS = [
+  {
+    email: 'platform.admin@amateur.local',
+    tenantName: null,
+    roleKey: 'app.enums.staffPlatformRole.global_admin',
+  },
+  {
+    email: 'club.admin@amateur.local',
+    tenantName: 'Kadıköy Gençlik Spor Kulübü',
+    roleKey: 'app.enums.tenantMembershipRole.club_admin',
+  },
+  {
+    email: 'admin@fesabasketbol.local',
+    tenantName: 'Fesa Basketbol',
+    roleKey: 'app.enums.tenantMembershipRole.club_admin',
+  },
+  {
+    email: 'admin@modavoleybol.local',
+    tenantName: 'Moda Voleybol Akademi',
+    roleKey: 'app.enums.tenantMembershipRole.club_admin',
+  },
+  {
+    email: 'admin@marmarafutbol.local',
+    tenantName: 'Marmara Futbol Okulu',
+    roleKey: 'app.enums.tenantMembershipRole.club_admin',
+  },
+] as const;
+
 export function StaffLoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, session } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const redirectTarget = new URLSearchParams(location.search).get('redirect');
+  const host = typeof window === 'undefined' ? '' : window.location.hostname.toLowerCase();
+  const showDemoAccounts =
+    import.meta.env.DEV ||
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '0.0.0.0' ||
+    host.endsWith('.local') ||
+    host.includes('staging') ||
+    host.includes('demo');
+
+  const getPostLoginTarget = useCallback(
+    (platformRole: 'global_admin' | 'standard' | undefined) => {
+      if (redirectTarget) {
+        return redirectTarget;
+      }
+
+      return platformRole === 'global_admin' ? '/app/settings?section=platform' : '/app/dashboard';
+    },
+    [redirectTarget],
+  );
 
   useEffect(() => {
-    if (isAuthenticated) {
-      const next = (location.state as { from?: string } | null)?.from ?? '/app';
+    if (isAuthenticated && session) {
+      const next = getPostLoginTarget(session.user.platformRole);
       navigate(next, { replace: true });
     }
-  }, [isAuthenticated, location.state, navigate]);
+  }, [getPostLoginTarget, isAuthenticated, navigate, session]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
     setError(null);
     try {
-      await login({ email, password });
-      const next = (location.state as { from?: string } | null)?.from ?? '/app';
+      const nextSession = await login({ email, password });
+      const next = getPostLoginTarget(nextSession.user.platformRole);
       navigate(next, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('app.errors.saveFailed'));
@@ -46,17 +96,17 @@ export function StaffLoginPage() {
             <Link to="/" className="font-display text-xl font-semibold text-amateur-accent">
               {t('app.name')}
             </Link>
-            <p className="text-sm text-amateur-muted">{t('auth.staffLogin.subtitle')}</p>
+            <p className="text-sm text-amateur-muted">{t('pages.staffLogin.subtitle')}</p>
           </div>
           <LanguageSwitch />
         </header>
 
         <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
-          <p className="text-sm font-semibold text-amateur-accent">{t('auth.staffLogin.badge')}</p>
+          <p className="text-sm font-semibold text-amateur-accent">{t('pages.staffLogin.badge')}</p>
           <h1 className="mt-2 font-display text-2xl font-semibold text-amateur-ink">
-            {t('auth.staffLogin.title')}
+            {t('pages.staffLogin.title')}
           </h1>
-          <p className="mt-2 text-sm text-amateur-muted">{t('auth.staffLogin.hint')}</p>
+          <p className="mt-2 text-sm text-amateur-muted">{t('pages.staffLogin.hint')}</p>
 
           {error ? (
             <InlineAlert tone="error" className="mt-4">
@@ -66,7 +116,7 @@ export function StaffLoginPage() {
 
           <form onSubmit={submit} className="mt-5 space-y-4">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium">{t('auth.staffLogin.email')}</span>
+              <span className="font-medium">{t('pages.staffLogin.email')}</span>
               <input
                 type="email"
                 value={email}
@@ -77,7 +127,7 @@ export function StaffLoginPage() {
             </label>
 
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium">{t('auth.staffLogin.password')}</span>
+              <span className="font-medium">{t('pages.staffLogin.password')}</span>
               <input
                 type="password"
                 value={password}
@@ -88,13 +138,39 @@ export function StaffLoginPage() {
             </label>
 
             <Button type="submit" className="w-full" disabled={!email || !password || saving}>
-              {saving ? t('auth.staffLogin.submitting') : t('auth.staffLogin.submit')}
+              {saving ? t('pages.staffLogin.submitting') : t('pages.staffLogin.submit')}
             </Button>
           </form>
 
-          <div className="mt-6 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-xs text-amateur-muted">
-            <p className="font-medium text-amateur-ink">{t('auth.staffLogin.demoTitle')}</p>
-            <p className="mt-1">{t('auth.staffLogin.demoHint')}</p>
+          <div className="mt-6 space-y-4 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-xs text-amateur-muted">
+            <div>
+              <p className="font-medium text-amateur-ink">{t('pages.staffLogin.demoTitle')}</p>
+              <p className="mt-1">{t('pages.staffLogin.demoHint')}</p>
+            </div>
+            {showDemoAccounts ? (
+              <div className="space-y-3 border-t border-amateur-border pt-3">
+                <p className="font-medium text-amateur-ink">
+                  {t('pages.staffLogin.demoSharedPassword', { password: DEMO_PASSWORD })}
+                </p>
+                <ul className="space-y-2">
+                  {DEMO_ACCOUNTS.map((account) => (
+                    <li key={account.email} className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2">
+                      <p className="font-medium text-amateur-ink">{account.email}</p>
+                      <p className="mt-1">
+                        {t(account.roleKey)}
+                        {account.tenantName ? ` · ${account.tenantName}` : ''}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-4 text-center text-sm">
+            <Link to="/portal/login" className="font-medium text-amateur-accent hover:underline">
+              {t('pages.staffLogin.guardianCta')}
+            </Link>
           </div>
         </section>
       </div>

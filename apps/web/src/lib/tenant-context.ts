@@ -1,6 +1,13 @@
 import { createContext } from 'react';
+import type { TenantMembershipRole } from './auth-types';
 
-export type TenantRow = { id: string; name: string; slug: string };
+export type TenantRow = {
+  id: string;
+  name: string;
+  slug: string;
+  role?: TenantMembershipRole | null;
+  isDefault?: boolean;
+};
 
 export type TenantContextValue = {
   tenants: TenantRow[];

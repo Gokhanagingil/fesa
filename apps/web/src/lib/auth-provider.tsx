@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { apiGet, apiPost } from './api';
+import { apiGet, apiPost, clearStoredTenantId } from './api';
 import { AuthContext } from './auth-context';
 import type { StaffAuthSummary, StaffLoginRequest } from './auth-types';
 
@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiPost('/api/auth/logout', {});
     } finally {
+      clearStoredTenantId();
       setSession(null);
     }
   }, []);
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       staffUser: session?.user ?? null,
-      memberships: session?.availableTenants ?? [],
+      memberships: session?.memberships ?? [],
       loading,
       isAuthenticated: Boolean(session),
       authenticated: Boolean(session),

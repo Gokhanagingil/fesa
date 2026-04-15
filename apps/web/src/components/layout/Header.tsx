@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { apiGet, apiPatch } from '../../lib/api';
 import {
@@ -20,6 +20,7 @@ export function Header() {
   const { t } = useTranslation();
   const { user, logout, canAccessCrossTenant } = useAuth();
   const { tenants, tenantId, setTenantId, loading } = useTenant();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<ActionCenterResponse | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
@@ -97,6 +98,11 @@ export function Header() {
     () => tenants.find((tenant) => tenant.id === tenantId)?.name ?? null,
     [tenantId, tenants],
   );
+
+  async function handleLogout() {
+    await logout();
+    navigate('/login', { replace: true });
+  }
 
   return (
     <header className="sticky top-0 z-10 border-b border-amateur-border bg-amateur-surface/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-10">
@@ -222,7 +228,7 @@ export function Header() {
             <div className="hidden rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm md:block">
               <p className="font-medium text-amateur-ink">{user.displayName}</p>
               <p className="text-xs text-amateur-muted">
-                {t(`auth.roles.${user.platformRole}`)}
+                {t(`app.enums.staffPlatformRole.${user.platformRole}`)}
                 {tenantName && !canAccessCrossTenant ? ` · ${tenantName}` : ''}
               </p>
             </div>
@@ -249,8 +255,8 @@ export function Header() {
           <Link to={canAccessCrossTenant ? '/app/settings?section=platform' : '/app/settings?section=club'}>
             <Button variant="ghost">{t('app.nav.settings')}</Button>
           </Link>
-          <Button type="button" variant="ghost" onClick={() => void logout()}>
-            {t('auth.logout')}
+          <Button type="button" variant="ghost" onClick={() => void handleLogout()}>
+            {t('app.auth.logout')}
           </Button>
           <LanguageSwitch />
         </div>
