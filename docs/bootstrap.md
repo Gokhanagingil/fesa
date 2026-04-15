@@ -6,7 +6,7 @@ The amateur platform ships a **single, repeatable demo seed** for local developm
 
 - **Creates or updates** one demo tenant (`kadikoy-genc-spor`) with a **fixed UUID** so runs are repeatable.
 - Inserts **sport branches**, **age groups**, **groups (cohorts)**, **teams**, **coaches**, **athletes**, **guardians**, **links**, **team memberships**, **training sessions**, **private lessons**, **attendance**, **charge items**, **athlete charges**, **staff users**, **tenant memberships**, and **staff sessions**.
-- Is **idempotent**: safe to run multiple times. Rows are keyed by deterministic UUIDs; `save()` upserts by primary key.
+- Is **idempotent**: safe to run multiple times. Rows are keyed by deterministic UUIDs, and the demo tenant/admin identities also reconcile on their natural unique keys (`tenants.slug`, `staff_users.email`) so repeat runs do not fail on those collisions.
 
 ## What it does *not* do
 
@@ -55,8 +55,8 @@ The demo seed now also creates internal staff/admin fixtures so the authenticate
 
 | Account | Email | Password | Access |
 |---------|-------|----------|--------|
-| Global admin | `platform.admin@example.com` | `Amateur123!` | Platform-wide administration + cross-tenant switching |
-| Club admin | `club.admin@example.com` | `Amateur123!` | Demo tenant only (`kadikoy-genc-spor`) |
+| Global admin | `platform.admin@amateur.local` | `Admin123!` | Platform-wide administration + cross-tenant switching |
+| Club admin | `club.admin@amateur.local` | `Admin123!` | Demo tenant only (`kadikoy-genc-spor`) |
 
 Use these at `http://localhost:5173/login` after running `npm run seed:demo`.
 
@@ -73,6 +73,14 @@ Use these at `http://localhost:5173/login` after running `npm run seed:demo`.
 ## Staging
 
 Use the same command in a staging job after migrations. Keep `DATABASE_URL` scoped to the staging database. The seed is not tied to `NODE_ENV`; avoid running it against production unless you explicitly want this demo tenant there.
+
+CI also validates repeatability with:
+
+```bash
+npm run seed:demo:verify
+```
+
+That command runs the demo seed twice against the same database and confirms the demo tenant/admin identities still resolve to exactly one row each.
 
 ## Extending
 

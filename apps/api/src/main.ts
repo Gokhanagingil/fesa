@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DataSource } from 'typeorm';
@@ -35,4 +35,9 @@ async function bootstrap() {
   await app.listen(port);
 }
 
-bootstrap();
+void bootstrap().catch((error: unknown) => {
+  const logger = new Logger('Bootstrap');
+  const details = error instanceof Error ? error.stack ?? error.message : String(error);
+  logger.error('API failed to start', details);
+  process.exit(1);
+});

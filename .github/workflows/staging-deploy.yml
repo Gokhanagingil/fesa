@@ -69,6 +69,14 @@ jobs:
       - name: Checkout (records exact workflow revision; deploy runs from server git)
         uses: actions/checkout@v4
 
+      - name: Advisory for non-main deploy refs
+        run: |
+          set -euo pipefail
+          ref="${{ inputs.git_ref }}"
+          if [[ "${ref}" != "main" && ! "${ref}" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+            echo "::warning::Deploying ${ref} directly to staging. Prefer main or a merged commit SHA for release validation; use branch deploys only for debugging."
+          fi
+
       - name: Install SSH key (ssh-agent)
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -114,7 +122,7 @@ jobs:
             exit 1
           fi
 
-      - name: Run remote deploy script
+      - name: Run remote deploy stages
         run: |
           set -euo pipefail
           ssh_opts=(
@@ -163,62 +171,7 @@ jobs:
           fi
           ssh "${ssh_opts[@]}" \
             "${STAGING_USER}@${STAGING_HOST}" \
-            "export FESA_REPO_ROOT='${STAGING_APP_DIR}'; bash -s" <<'EOF'
-          set -euo pipefail
-          API_PORT="${API_PORT:-3000}"
-          if [[ -n "${FESA_REPO_ROOT:-}" && -f "${FESA_REPO_ROOT}/apps/api/.env" ]]; then
-            line="$(grep -E '^[[:space:]]*(export[[:space:]]+)?API_PORT=' "${FESA_REPO_ROOT}/apps/api/.env" | tail -1 || true)"
-            if [[ -n "$line" ]]; then
-              val="${line#*=}"
-              val="${val#\"}"
-              val="${val%\"}"
-              val="${val#\'}"
-              val="${val%\'}"
-              [[ -n "$val" ]] && API_PORT="$val"
-            fi
-          fi
-          echo "==> Failure diagnostics"
-          echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          echo "Repo root: ${FESA_REPO_ROOT:-unknown}"
-          echo "API port: ${API_PORT}"
-          echo ""
-          if command -v pm2 >/dev/null 2>&1; then
-            echo "==> pm2 describe fesa-api-staging"
-            pm2 describe fesa-api-staging --no-color || pm2 list || true
-            pm2_env="$(pm2 jlist 2>/dev/null | node -e "
-              let data=''; process.stdin.on('data', (c) => data += c);
-              process.stdin.on('end', () => {
-                try {
-                  const items = JSON.parse(data);
-                  const row = items.find((item) => item.name === 'fesa-api-staging');
-                  if (!row || !row.pm2_env) return;
-                  const out = row.pm2_env.pm_out_log_path || '';
-                  const err = row.pm2_env.pm_err_log_path || '';
-                  process.stdout.write(`${out}\n${err}`);
-                } catch (error) {
-                  process.exit(0);
-                }
-              });
-            " || true)"
-            pm2_out_log="$(printf '%s\n' "$pm2_env" | sed -n '1p')"
-            pm2_err_log="$(printf '%s\n' "$pm2_env" | sed -n '2p')"
-            if [[ -n "${pm2_err_log:-}" && -f "${pm2_err_log}" ]]; then
-              echo ""
-              echo "==> Last 100 lines of PM2 error log"
-              tail -n 100 "${pm2_err_log}" || true
-            fi
-            if [[ -n "${pm2_out_log:-}" && -f "${pm2_out_log}" ]]; then
-              echo ""
-              echo "==> Last 100 lines of PM2 out log"
-              tail -n 100 "${pm2_out_log}" || true
-            fi
-          else
-            echo "(pm2 not in PATH — skipped)"
-          fi
-          echo ""
-          echo "==> Direct curl context"
-          curl -sv "http://127.0.0.1:${API_PORT}/api/health/live" >/dev/null || true
-          EOF
+            "export FESA_REPO_ROOT='${STAGING_APP_DIR}'; if [ -f '${STAGING_APP_DIR}/deploy/staging/diagnostics.sh' ]; then bash '${STAGING_APP_DIR}/deploy/staging/diagnostics.sh' full; else echo 'Diagnostics script unavailable on server checkout yet.'; fi"
 
       - name: Deployment summary
         if: success()

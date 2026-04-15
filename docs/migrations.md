@@ -37,6 +37,6 @@ Requires `DATABASE_URL` to point at a reachable PostgreSQL instance.
 3. Run `migration:run` against local DB.
 4. Set `DB_SYNCHRONIZE=false` in shared environments once the team agrees; keep `true` locally only if you accept drift risk.
 
-## Next concrete step (if not done yet)
+## CI safeguard
 
-- Add a CI job that runs `npm run migration:run -w @amateur/api` against a disposable Postgres container to verify migrations apply cleanly.
+The reusable CI workflow now runs `npm run migration:run -w @amateur/api` against a disposable PostgreSQL service before staging deploys. That catches entity/schema drift and broken migration SQL before the staging server sees the change.

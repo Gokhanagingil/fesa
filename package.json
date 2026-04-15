@@ -10,10 +10,13 @@
     "build": "npm run build -w @amateur/shared-types -w @amateur/shared-config && npm run build -w @amateur/api -w @amateur/web",
     "repo:guard": "node scripts/repo-guard.mjs",
     "i18n:check": "node scripts/check-i18n-parity.mjs",
+    "api:boot:smoke": "node scripts/api-boot-smoke.mjs",
     "lint": "eslint apps/api/src packages/*/src apps/web/src --max-warnings 0",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
-    "seed:demo": "npm run seed:demo -w @amateur/api"
+    "migration:check": "npm run migration:run -w @amateur/api",
+    "seed:demo": "npm run seed:demo -w @amateur/api",
+    "seed:demo:verify": "node apps/api/dist/database/seed/verify-demo-seed-repeatability.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",

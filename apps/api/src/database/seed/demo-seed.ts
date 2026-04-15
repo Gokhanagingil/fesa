@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
   Tenant,
   SportBranch,
@@ -92,6 +92,42 @@ function hashPassword(password: string, salt: string): string {
   return pbkdf2Sync(password, salt, 120_000, 64, 'sha512').toString('hex');
 }
 
+type SeedStaffUser = Pick<
+  StaffUser,
+  'id' | 'email' | 'firstName' | 'lastName' | 'preferredName' | 'passwordSalt' | 'passwordHash' | 'platformRole' | 'status' | 'lastLoginAt'
+>;
+
+async function ensureDemoTenant(tenants: Repository<Tenant>): Promise<Tenant> {
+  const existing = await tenants.findOne({
+    where: [{ id: DEMO_TENANT_ID }, { slug: DEMO_TENANT_SLUG }],
+  });
+
+  const row = existing ?? tenants.create({ id: DEMO_TENANT_ID });
+  row.name = DEMO_TENANT_NAME;
+  row.slug = DEMO_TENANT_SLUG;
+
+  return tenants.save(row);
+}
+
+async function ensureStaffUser(staffUsers: Repository<StaffUser>, seed: SeedStaffUser): Promise<StaffUser> {
+  const existing = await staffUsers.findOne({
+    where: [{ id: seed.id }, { email: seed.email }],
+  });
+
+  const row = existing ?? staffUsers.create({ id: seed.id });
+  row.email = seed.email;
+  row.firstName = seed.firstName;
+  row.lastName = seed.lastName;
+  row.preferredName = seed.preferredName;
+  row.passwordSalt = seed.passwordSalt;
+  row.passwordHash = seed.passwordHash;
+  row.platformRole = seed.platformRole;
+  row.status = seed.status;
+  row.lastLoginAt = seed.lastLoginAt;
+
+  return staffUsers.save(row);
+}
+
 /**
  * Idempotent demo dataset for local dev and staging: one amateur club tenant,
  * branches, cohorts, teams, athletes (group-only vs group+team), training + attendance, finance rows.
@@ -116,43 +152,40 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     const staffUsers = manager.getRepository(StaffUser);
     const membershipsRepo = manager.getRepository(TenantMembership);
 
-    await tenants.save({
-      id: DEMO_TENANT_ID,
-      name: DEMO_TENANT_NAME,
-      slug: DEMO_TENANT_SLUG,
-    });
+    const demoTenant = await ensureDemoTenant(tenants);
+    const tenantId = demoTenant.id;
 
     const globalAdminSalt = 'wave8-global-admin-salt';
     const clubAdminSalt = 'wave8-club-admin-salt';
-    await staffUsers.save([
-      {
-        id: STAFF_GLOBAL_ADMIN_ID,
-        email: 'platform.admin@amateur.local',
-        firstName: 'Platform',
-        lastName: 'Admin',
-        passwordSalt: globalAdminSalt,
-        passwordHash: hashPassword('Admin123!', globalAdminSalt),
-        platformRole: StaffPlatformRole.GLOBAL_ADMIN,
-        status: StaffUserStatus.ACTIVE,
-        lastLoginAt: null,
-      },
-      {
-        id: STAFF_CLUB_ADMIN_ID,
-        email: 'club.admin@amateur.local',
-        firstName: 'Club',
-        lastName: 'Admin',
-        passwordSalt: clubAdminSalt,
-        passwordHash: hashPassword('Admin123!', clubAdminSalt),
-        platformRole: StaffPlatformRole.STANDARD,
-        status: StaffUserStatus.ACTIVE,
-        lastLoginAt: null,
-      },
-    ]);
+    await ensureStaffUser(staffUsers, {
+      id: STAFF_GLOBAL_ADMIN_ID,
+      email: 'platform.admin@amateur.local',
+      firstName: 'Platform',
+      lastName: 'Admin',
+      preferredName: null,
+      passwordSalt: globalAdminSalt,
+      passwordHash: hashPassword('Admin123!', globalAdminSalt),
+      platformRole: StaffPlatformRole.GLOBAL_ADMIN,
+      status: StaffUserStatus.ACTIVE,
+      lastLoginAt: null,
+    });
+    const clubAdmin = await ensureStaffUser(staffUsers, {
+      id: STAFF_CLUB_ADMIN_ID,
+      email: 'club.admin@amateur.local',
+      firstName: 'Club',
+      lastName: 'Admin',
+      preferredName: null,
+      passwordSalt: clubAdminSalt,
+      passwordHash: hashPassword('Admin123!', clubAdminSalt),
+      platformRole: StaffPlatformRole.STANDARD,
+      status: StaffUserStatus.ACTIVE,
+      lastLoginAt: null,
+    });
 
     await membershipsRepo.upsert(
       {
-        tenantId: DEMO_TENANT_ID,
-        staffUserId: STAFF_CLUB_ADMIN_ID,
+        tenantId,
+        staffUserId: clubAdmin.id,
         role: TenantMembershipRole.CLUB_ADMIN,
         isDefault: true,
       },
@@ -162,19 +195,19 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     await branches.save([
       {
         id: BRANCH_BASKETBALL_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         code: 'BASKETBALL',
         name: 'Basketball',
       },
       {
         id: BRANCH_VOLLEYBALL_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         code: 'VOLLEYBALL',
         name: 'Volleyball',
       },
       {
         id: BRANCH_FOOTBALL_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         code: 'FOOTBALL',
         name: 'Football',
       },
@@ -183,21 +216,21 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     await ageGroups.save([
       {
         id: AGE_U12_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         label: 'U12',
         birthYearFrom: 2013,
         birthYearTo: 2014,
       },
       {
         id: AGE_U14_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         label: 'U14',
         birthYearFrom: 2011,
         birthYearTo: 2012,
       },
       {
         id: AGE_U16_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         label: 'U16',
         birthYearFrom: 2009,
         birthYearTo: 2010,
@@ -207,7 +240,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     await coaches.save([
       {
         id: COACH_MERVE_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         sportBranchId: BRANCH_BASKETBALL_ID,
         firstName: 'Merve',
         lastName: 'Kılıç',
@@ -220,7 +253,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: COACH_KEREM_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         sportBranchId: BRANCH_VOLLEYBALL_ID,
         firstName: 'Kerem',
         lastName: 'Yalçın',
@@ -233,7 +266,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: COACH_ONUR_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         sportBranchId: BRANCH_FOOTBALL_ID,
         firstName: 'Onur',
         lastName: 'Ateş',
@@ -249,7 +282,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     await groups.save([
       {
         id: GROUP_BB_U12_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         sportBranchId: BRANCH_BASKETBALL_ID,
         ageGroupId: AGE_U12_ID,
         name: 'Basketball · U12 cohort',
@@ -257,7 +290,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: GROUP_BB_U14_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         sportBranchId: BRANCH_BASKETBALL_ID,
         ageGroupId: AGE_U14_ID,
         name: 'Basketball · U14 cohort',
@@ -265,7 +298,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: GROUP_VB_U14_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         sportBranchId: BRANCH_VOLLEYBALL_ID,
         ageGroupId: AGE_U14_ID,
         name: 'Volleyball · U14 cohort',
@@ -273,7 +306,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: GROUP_FB_U16_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         sportBranchId: BRANCH_FOOTBALL_ID,
         ageGroupId: AGE_U16_ID,
         name: 'Football · U16 cohort',
@@ -284,7 +317,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     await teams.save([
       {
         id: TEAM_BB_U12_A_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         sportBranchId: BRANCH_BASKETBALL_ID,
         groupId: GROUP_BB_U12_ID,
         name: 'U12 A (Mini)',
@@ -293,7 +326,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: TEAM_BB_U14_A_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         sportBranchId: BRANCH_BASKETBALL_ID,
         groupId: GROUP_BB_U14_ID,
         name: 'U14 A',
@@ -305,7 +338,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     await guardians.save([
       {
         id: GUARDIAN_AYSE_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         firstName: 'Ayşe',
         lastName: 'Yılmaz',
         phone: '+90 532 111 2233',
@@ -314,7 +347,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: GUARDIAN_MURAT_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         firstName: 'Murat',
         lastName: 'Kaya',
         phone: '+90 533 444 5566',
@@ -323,7 +356,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: GUARDIAN_ELIF_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         firstName: 'Elif',
         lastName: 'Demir',
         phone: '+90 534 777 8899',
@@ -335,7 +368,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     await athletes.save([
       {
         id: ATHLETE_EFE_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         firstName: 'Efe',
         lastName: 'Arslan',
         preferredName: null,
@@ -349,7 +382,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: ATHLETE_DENIZ_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         firstName: 'Deniz',
         lastName: 'Öztürk',
         preferredName: null,
@@ -363,7 +396,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: ATHLETE_ZEYNEP_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         firstName: 'Zeynep',
         lastName: 'Çelik',
         preferredName: null,
@@ -377,7 +410,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: ATHLETE_CEM_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         firstName: 'Cem',
         lastName: 'Şahin',
         preferredName: null,
@@ -391,7 +424,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: ATHLETE_SELIN_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         firstName: 'Selin',
         lastName: 'Aydın',
         preferredName: null,
@@ -405,7 +438,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: ATHLETE_DEFNE_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         firstName: 'Defne',
         lastName: 'Koç',
         preferredName: null,
@@ -419,7 +452,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: ATHLETE_KEREM_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         firstName: 'Kerem',
         lastName: 'Yıldız',
         preferredName: null,
@@ -433,7 +466,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: ATHLETE_BURAK_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         firstName: 'Burak',
         lastName: 'Erdoğan',
         preferredName: null,
@@ -449,7 +482,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
 
     const link = async (athleteId: string, guardianId: string, relationshipType: string, isPrimary: boolean) => {
       const existing = await athleteGuardians.findOne({ where: { athleteId, guardianId } });
-      const row = existing ?? athleteGuardians.create({ tenantId: DEMO_TENANT_ID, athleteId, guardianId });
+      const row = existing ?? athleteGuardians.create({ tenantId, athleteId, guardianId });
       row.relationshipType = relationshipType;
       row.isPrimaryContact = isPrimary;
       row.notes = null;
@@ -467,11 +500,11 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
 
     const ensureMembership = async (athleteId: string, teamId: string) => {
       let m = await memberships.findOne({
-        where: { tenantId: DEMO_TENANT_ID, athleteId, teamId },
+        where: { tenantId, athleteId, teamId },
       });
       if (!m) {
         m = memberships.create({
-          tenantId: DEMO_TENANT_ID,
+          tenantId,
           athleteId,
           teamId,
           startedAt: new Date('2025-09-01T00:00:00.000Z'),
@@ -504,7 +537,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     await sessions.save([
       {
         id: SESSION_BB_U12_GROUP_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         title: 'U12 — Skills & fundamentals',
         sportBranchId: BRANCH_BASKETBALL_ID,
         groupId: GROUP_BB_U12_ID,
@@ -518,7 +551,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: SESSION_BB_U12_TEAM_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         title: 'U12 A — Team practice',
         sportBranchId: BRANCH_BASKETBALL_ID,
         groupId: GROUP_BB_U12_ID,
@@ -532,7 +565,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: SESSION_BB_U14_GROUP_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         title: 'U14 — Shooting clinic',
         sportBranchId: BRANCH_BASKETBALL_ID,
         groupId: GROUP_BB_U14_ID,
@@ -546,7 +579,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: SESSION_VB_U14_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         title: 'U14 Volleyball — Reception block',
         sportBranchId: BRANCH_VOLLEYBALL_ID,
         groupId: GROUP_VB_U14_ID,
@@ -560,7 +593,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: SESSION_FB_U16_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         title: 'U16 Football — Small-sided games',
         sportBranchId: BRANCH_FOOTBALL_ID,
         groupId: GROUP_FB_U16_ID,
@@ -574,7 +607,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: SESSION_BB_U12_PLANNED_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         title: 'U12 — Weekend scrimmage (planned)',
         sportBranchId: BRANCH_BASKETBALL_ID,
         groupId: GROUP_BB_U12_ID,
@@ -591,7 +624,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     await chargeItems.save([
       {
         id: CHARGE_DUES_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         name: 'Monthly membership dues',
         category: 'dues',
         defaultAmount: '850.00',
@@ -600,7 +633,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: CHARGE_CAMP_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         name: 'Winter skills camp',
         category: 'camp',
         defaultAmount: '3500.00',
@@ -609,7 +642,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: CHARGE_SWEATSHIRT_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         name: 'Club sweatshirt',
         category: 'merchandise',
         defaultAmount: '1200.00',
@@ -618,7 +651,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: CHARGE_TOURNAMENT_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         name: 'Regional tournament entry',
         category: 'tournament',
         defaultAmount: '1800.00',
@@ -627,7 +660,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: CHARGE_PRIVATE_LESSON_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         name: 'Private lesson',
         category: 'private_lesson',
         defaultAmount: '1500.00',
@@ -639,7 +672,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     await privateLessons.save([
       {
         id: PRIVATE_LESSON_EFE_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         athleteId: ATHLETE_EFE_ID,
         coachId: COACH_MERVE_ID,
         sportBranchId: BRANCH_BASKETBALL_ID,
@@ -653,7 +686,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: PRIVATE_LESSON_SELIN_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         athleteId: ATHLETE_SELIN_ID,
         coachId: COACH_KEREM_ID,
         sportBranchId: BRANCH_VOLLEYBALL_ID,
@@ -670,7 +703,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     await athleteCharges.save([
       {
         id: AC_EFE_DUES_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         athleteId: ATHLETE_EFE_ID,
         chargeItemId: CHARGE_DUES_ID,
         amount: '850.00',
@@ -680,7 +713,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: AC_EFE_CAMP_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         athleteId: ATHLETE_EFE_ID,
         chargeItemId: CHARGE_CAMP_ID,
         amount: '3500.00',
@@ -690,7 +723,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: AC_DENIZ_DUES_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         athleteId: ATHLETE_DENIZ_ID,
         chargeItemId: CHARGE_DUES_ID,
         amount: '850.00',
@@ -700,7 +733,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: AC_DENIZ_SHIRT_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         athleteId: ATHLETE_DENIZ_ID,
         chargeItemId: CHARGE_SWEATSHIRT_ID,
         amount: '1200.00',
@@ -710,7 +743,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: AC_ZEYNEP_TOUR_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         athleteId: ATHLETE_ZEYNEP_ID,
         chargeItemId: CHARGE_TOURNAMENT_ID,
         amount: '1800.00',
@@ -720,7 +753,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: AC_SELIN_DUES_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         athleteId: ATHLETE_SELIN_ID,
         chargeItemId: CHARGE_DUES_ID,
         amount: '850.00',
@@ -730,7 +763,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: AC_KEREM_CAMP_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         athleteId: ATHLETE_KEREM_ID,
         chargeItemId: CHARGE_CAMP_ID,
         amount: '3500.00',
@@ -740,7 +773,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: AC_BURAK_DUES_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         athleteId: ATHLETE_BURAK_ID,
         chargeItemId: CHARGE_DUES_ID,
         amount: '850.00',
@@ -750,7 +783,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       },
       {
         id: AC_EFE_PRIVATE_LESSON_ID,
-        tenantId: DEMO_TENANT_ID,
+        tenantId,
         athleteId: ATHLETE_EFE_ID,
         chargeItemId: CHARGE_PRIVATE_LESSON_ID,
         privateLessonId: PRIVATE_LESSON_EFE_ID,
@@ -770,7 +803,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       let row = await attendances.findOne({ where: { trainingSessionId, athleteId } });
       if (!row) {
         row = attendances.create({
-          tenantId: DEMO_TENANT_ID,
+          tenantId,
           trainingSessionId,
           athleteId,
           status,

@@ -2,6 +2,13 @@
 
 This wave delivers a **transparent, manual-trigger** path from GitHub Actions to a single staging server: **SSH → git sync → install → build → migrations → demo seed → PM2 reload → health check**. Docker, SSL automation, and blue/green deploys are intentionally out of scope.
 
+This repo now also treats staging deploys as the end of a validation chain, not the first time runtime safety is exercised:
+
+- CI validates **lint**, **build**, **i18n parity**, **migration execution**, **repeatable demo seed**, and an **API boot smoke** against disposable Postgres.
+- The server deploy script logs each major stage separately so failures are easier to localize.
+- Shared diagnostics distinguish **process missing/crashing**, **app listening but health failing**, and **DB-backed health failures**.
+- Branch hygiene matters: deploying a non-`main` ref is acceptable for investigation, but it is **not evidence that `main` is safe**.
+
 ## Overview
 
 | Piece | Role |
@@ -166,6 +173,27 @@ The deploy workflow does **not** write database passwords into the repo; it assu
 
 Failure messages are split by step: validation, SSH preflight, remote script errors, or health check.
 
+### Pre-deploy gates (expected before staging)
+
+Before treating a ref as staging-ready, the following should be green:
+
+```bash
+npm run lint
+npm run build
+npm run i18n:check
+npm run migration:check
+npm run seed:demo:verify
+npm run api:boot:smoke
+```
+
+These map directly to the failure classes that previously slipped into deploys:
+
+- `lint` / `build`: syntax, typing, and bundling failures
+- `i18n:check`: locale drift reaching staging
+- `migration:check`: entity/schema parity or broken migrations
+- `seed:demo:verify`: non-idempotent demo seed behavior
+- `api:boot:smoke`: Nest runtime wiring/config/database boot regressions that compile successfully
+
 ## Deploy flow (exact order)
 
 1. Validate GitHub env vars + `STAGING_SSH_KEY` (and sanity-check path/port)
@@ -176,11 +204,72 @@ Failure messages are split by step: validation, SSH preflight, remote script err
 6. On server: ensure repo exists → fetch/checkout ref → `npm ci` → `npm run build` (root) → `migration:run` → `seed:demo` → `pm2 startOrReload` API
 7. SSH: run `health-check.sh` (`/api/health/live`, `/api/health`, PM2 describe). Health check reads `API_PORT` from `apps/api/.env` when `FESA_REPO_ROOT` is set.
 
+The deploy script now prints stage banners in this order:
+
+1. `sync-repo`
+2. `ensure-api-env`
+3. `install-dependencies`
+4. `build-monorepo`
+5. `run-migrations`
+6. `run-demo-seed`
+7. `reload-pm2`
+
+That staging output should let you answer quickly whether the failure was:
+
+- **build failure**
+- **migration failure**
+- **seed failure**
+- **process start / PM2 failure**
+- **liveness failure**
+- **DB-backed health failure**
+
 ## Rollback / recovery
 
 - **Redeploy an older ref:** Run the workflow again with a previous **commit SHA** or branch name.
 - **Broken deploy:** Prefer **Run workflow** again with a known-good **git ref** (SHA or branch). If you must fix from SSH: `cd $STAGING_APP_DIR`, `git fetch`, `git checkout <sha>`, then run `DEPLOY_GIT_REF=<sha> bash deploy/staging/deploy.sh` (or check out `staging-deploy` branch after reset — simplest remains the Actions re-run).
 - **Database:** Migrations are forward-only in this pack; use DB backups for destructive mistakes (not automated here).
+
+## Failure triage flow
+
+Use the first failing stage as the primary signal:
+
+| Failure point | What it usually means | What to inspect first |
+|---------------|------------------------|------------------------|
+| CI `build` | code or bundling regression | PR diff, build logs |
+| CI `migration:check` | migration chain or schema mismatch | latest migration file, entity changes, `docs/migrations.md` |
+| CI `seed:demo:verify` | non-idempotent seed behavior | `apps/api/src/database/seed/demo-seed.ts` |
+| CI `api:boot:smoke` | Nest provider wiring, config validation, DB connection, runtime boot path | boot smoke logs, `apps/api/src/main.ts`, module/provider changes |
+| Deploy `run-migrations` | server DB/env mismatch or broken migration | `apps/api/.env`, DB connectivity, migration output |
+| Deploy `run-demo-seed` | staging DB already conflicts with expected demo natural keys or seed logic regressed | seed logs, demo tenant/admin rows |
+| Health `live` fails | process missing, crash loop, wrong port, PM2 issue | PM2 status + PM2 error log |
+| Health `live` passes but `/api/health` fails | app is up but DB-backed health is failing | `DATABASE_URL`, DB reachability, latest migration state |
+
+Both the workflow and `health-check.sh` now use the same diagnostics helper (`deploy/staging/diagnostics.sh`) so PM2 log discovery stays consistent.
+
+## Branch / hotfix discipline
+
+Staging confusion often comes from proving a fix on a branch without proving it landed on `main`.
+
+Rules for follow-up deploy fixes:
+
+1. **Always branch from `origin/main`** for a new fix or hotfix.
+2. **Never reuse a merged branch** for additional changes.
+3. **Always create a fresh PR** for follow-up fixes.
+4. Treat a deploy from a non-`main` ref as a **debugging deploy**, not release proof.
+5. Before saying “main is fixed,” verify the exact commit is on `origin/main`.
+
+Practical verification:
+
+```bash
+git fetch origin main
+git log --oneline origin/main..HEAD
+git branch -r --contains <fix-sha>
+```
+
+- If `git log origin/main..HEAD` prints commits, your branch still contains work not on `main`.
+- `git branch -r --contains <fix-sha>` should include `origin/main` before you rely on that fix as landed.
+
+For a full release/hotfix checklist, see [release-operations.md](./release-operations.md).
 
 ## Repo vs server responsibilities
 
