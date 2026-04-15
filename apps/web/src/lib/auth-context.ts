@@ -5,7 +5,7 @@ export type AuthContextValue = {
   session: StaffAuthSummary | null;
   user: StaffAuthSummary['user'] | null;
   staffUser: StaffAuthSummary['user'] | null;
-  memberships: StaffAuthSummary['availableTenants'];
+  memberships: StaffAuthSummary['memberships'];
   loading: boolean;
   isAuthenticated: boolean;
   authenticated: boolean;

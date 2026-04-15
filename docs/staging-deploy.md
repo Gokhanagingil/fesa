@@ -16,12 +16,12 @@ This repo now also treats staging deploys as the end of a validation chain, not 
 | [`.github/workflows/staging-deploy.yml`](../.github/workflows/staging-deploy.yml) | `workflow_dispatch` job using the **staging** GitHub Environment |
 | [`.github/workflows/staging-ssh-check.yml`](../.github/workflows/staging-ssh-check.yml) | Optional **SSH-only** check (no deploy) — use when debugging auth |
 | [`deploy/staging/deploy.sh`](../deploy/staging/deploy.sh) | Server-side sequence (run via SSH by CI or manually) |
-| [`deploy/staging/health-check.sh`](../deploy/staging/health-check.sh) | Local HTTP + PM2 checks after deploy |
+| [`deploy/staging/health-check.sh`](../deploy/staging/health-check.sh) | Local HTTP + PM2 checks after deploy, including runtime commit / DB alignment |
 | [`deploy/staging/server-validate.sh`](../deploy/staging/server-validate.sh) | **Run on the server** — manual validation checklist (read-only) |
 | [`deploy/staging/ecosystem.config.cjs`](../deploy/staging/ecosystem.config.cjs) | PM2 config for the Nest API |
 | [`deploy/staging/nginx/fesa-staging.conf.template`](../deploy/staging/nginx/fesa-staging.conf.template) | Example Nginx: static `apps/web/dist` + `/api` → Node |
 
-**Process model:** PM2 runs **only the API**. The browser-facing site is **static files** from `apps/web/dist` served by Nginx (recommended). Same-origin `/api` avoids CORS configuration for typical staging.
+**Process model:** PM2 runs **only the API**. The browser-facing site is **static files** from `apps/web/dist` served by Nginx (recommended). Same-origin `/api` avoids CORS configuration for typical staging. The web build now emits **`/build-info.json`** so staging can prove which frontend bundle Nginx is serving.
 
 ## GitHub: required secrets and variables
 
@@ -202,7 +202,7 @@ These map directly to the failure classes that previously slipped into deploys:
 4. **Preflight:** one SSH command to confirm auth (fails fast with a clear error)
 5. SSH: run `deploy/staging/deploy.sh` with `FESA_REPO_ROOT` + `DEPLOY_GIT_REF`
 6. On server: ensure repo exists → fetch/checkout ref → `npm ci` → `npm run build` (root) → `migration:run` → `seed:demo` → `pm2 startOrReload` API
-7. SSH: run `health-check.sh` (`/api/health/live`, `/api/health`, PM2 describe). Health check reads `API_PORT` from `apps/api/.env` when `FESA_REPO_ROOT` is set.
+7. SSH: run `health-check.sh` (`/api/health/live`, `/api/health`, `/api/health/version`, `/build-info.json`, PM2 describe). Health check reads `API_PORT` from `apps/api/.env` when `FESA_REPO_ROOT` is set and verifies frontend/backend commit parity plus runtime DB name alignment.
 
 The deploy script now prints stage banners in this order:
 
@@ -244,7 +244,24 @@ Use the first failing stage as the primary signal:
 | Health `live` fails | process missing, crash loop, wrong port, PM2 issue | PM2 status + PM2 error log |
 | Health `live` passes but `/api/health` fails | app is up but DB-backed health is failing | `DATABASE_URL`, DB reachability, latest migration state |
 
-Both the workflow and `health-check.sh` now use the same diagnostics helper (`deploy/staging/diagnostics.sh`) so PM2 log discovery stays consistent.
+Both the workflow and `health-check.sh` now use the same diagnostics helper (`deploy/staging/diagnostics.sh`) so PM2 log discovery stays consistent. Diagnostics also include `/api/health/version` and `/build-info.json` to make frontend-vs-backend mismatch visible.
+
+## Post-deploy verification (exact runtime identity)
+
+After a successful deploy, these checks prove staging is serving the expected artifacts:
+
+```bash
+curl -fsS http://127.0.0.1:3000/api/health/version
+curl -fsS http://127.0.0.1/build-info.json
+```
+
+What to verify:
+
+- `commit` in `/api/health/version` matches `commit` in `/build-info.json`
+- `database.currentName` matches `database.expectedName`
+- the short SHA shown in the browser runtime badge matches the merged commit you expected to deploy
+
+If `/build-info.json` is missing or has a different commit than `/api/health/version`, Nginx is not serving the freshly built `apps/web/dist` directory.
 
 ## Branch / hotfix discipline
 

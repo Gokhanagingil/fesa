@@ -136,6 +136,10 @@
         "invited": "Davet edildi",
         "active": "Aktif",
         "disabled": "Devre dışı"
+      },
+      "staffPlatformRole": {
+        "global_admin": "Global yönetici",
+        "standard": "Personel"
       }
     },
     "states": {
@@ -1048,6 +1052,8 @@
       "password": "Şifre",
       "submit": "Giriş yap",
       "submitting": "Giriş yapılıyor…",
+      "helperTitle": "Bu neden önemli",
+      "helperBody": "Personel erişimi artık aile portalından ayrı tutulur ve gerçek kulüp üyeliklerine bağlanır.",
       "platformNoticeTitle": "Platform sahibi görünümü",
       "platformNoticeBody": "Global yöneticiler kulüpler arasında bilinçli bağlam değiştirir; kulüp yöneticileri yalnızca kendi kulüplerini görür.",
       "guardianCta": "Veli misiniz? Aile portalına gidin"

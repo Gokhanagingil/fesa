@@ -29,48 +29,52 @@ import { GuardianPortalHomePage } from './pages/GuardianPortalHomePage';
 import { GuardianPortalActionPage } from './pages/GuardianPortalActionPage';
 import { StaffLoginPage } from './pages/StaffLoginPage';
 import { RequireStaffAuth } from './components/auth/RequireStaffAuth';
+import { RuntimeBuildBadge } from './components/ui/RuntimeBuildBadge';
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<StaffLoginPage />} />
-      <Route path="/portal/login" element={<GuardianPortalLoginPage />} />
-      <Route path="/portal/activate" element={<GuardianPortalActivationPage />} />
-      <Route element={<PortalShell />}>
-        <Route path="/portal" element={<Navigate to="/portal/home" replace />} />
-        <Route path="/portal/home" element={<GuardianPortalHomePage />} />
-        <Route path="/portal/actions/:id" element={<GuardianPortalActionPage />} />
-      </Route>
-      <Route element={<RequireStaffAuth />}>
-        <Route element={<AppShell />}>
-          <Route path="/app" element={<Navigate to="/app/dashboard" replace />} />
-          <Route path="/app/dashboard" element={<DashboardPage />} />
-          <Route path="/app/athletes/new" element={<AthleteFormPage />} />
-          <Route path="/app/athletes/:id/edit" element={<AthleteFormPage />} />
-          <Route path="/app/athletes/:id" element={<AthleteDetailPage />} />
-          <Route path="/app/athletes" element={<AthletesPage />} />
-          <Route path="/app/guardians/:id/edit" element={<GuardianFormPage />} />
-          <Route path="/app/guardians/:id" element={<GuardianDetailPage />} />
-          <Route path="/app/guardians/new" element={<GuardianFormPage />} />
-          <Route path="/app/guardians" element={<GuardiansPage />} />
-          <Route path="/app/groups" element={<GroupsPage />} />
-          <Route path="/app/teams" element={<TeamsPage />} />
-          <Route path="/app/coaches" element={<CoachesPage />} />
-          <Route path="/app/training/new" element={<TrainingSessionFormPage />} />
-          <Route path="/app/training/:id" element={<TrainingSessionDetailPage />} />
-          <Route path="/app/training" element={<TrainingSessionsPage />} />
-          <Route path="/app/private-lessons" element={<PrivateLessonsPage />} />
-          <Route path="/app/communications" element={<CommunicationsPage />} />
-          <Route path="/app/action-center" element={<ActionCenterPage />} />
-          <Route path="/app/finance/charge-items" element={<ChargeItemsPage />} />
-          <Route path="/app/finance/athlete-charges" element={<AthleteChargesPage />} />
-          <Route path="/app/finance" element={<FinanceHubPage />} />
-          <Route path="/app/reports" element={<ReportsPage />} />
-          <Route path="/app/settings" element={<SettingsPage />} />
+    <>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<StaffLoginPage />} />
+        <Route path="/portal/login" element={<GuardianPortalLoginPage />} />
+        <Route path="/portal/activate" element={<GuardianPortalActivationPage />} />
+        <Route element={<PortalShell />}>
+          <Route path="/portal" element={<Navigate to="/portal/home" replace />} />
+          <Route path="/portal/home" element={<GuardianPortalHomePage />} />
+          <Route path="/portal/actions/:id" element={<GuardianPortalActionPage />} />
         </Route>
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route element={<RequireStaffAuth />}>
+          <Route element={<AppShell />}>
+            <Route path="/app" element={<Navigate to="/app/dashboard" replace />} />
+            <Route path="/app/dashboard" element={<DashboardPage />} />
+            <Route path="/app/athletes/new" element={<AthleteFormPage />} />
+            <Route path="/app/athletes/:id/edit" element={<AthleteFormPage />} />
+            <Route path="/app/athletes/:id" element={<AthleteDetailPage />} />
+            <Route path="/app/athletes" element={<AthletesPage />} />
+            <Route path="/app/guardians/:id/edit" element={<GuardianFormPage />} />
+            <Route path="/app/guardians/:id" element={<GuardianDetailPage />} />
+            <Route path="/app/guardians/new" element={<GuardianFormPage />} />
+            <Route path="/app/guardians" element={<GuardiansPage />} />
+            <Route path="/app/groups" element={<GroupsPage />} />
+            <Route path="/app/teams" element={<TeamsPage />} />
+            <Route path="/app/coaches" element={<CoachesPage />} />
+            <Route path="/app/training/new" element={<TrainingSessionFormPage />} />
+            <Route path="/app/training/:id" element={<TrainingSessionDetailPage />} />
+            <Route path="/app/training" element={<TrainingSessionsPage />} />
+            <Route path="/app/private-lessons" element={<PrivateLessonsPage />} />
+            <Route path="/app/communications" element={<CommunicationsPage />} />
+            <Route path="/app/action-center" element={<ActionCenterPage />} />
+            <Route path="/app/finance/charge-items" element={<ChargeItemsPage />} />
+            <Route path="/app/finance/athlete-charges" element={<AthleteChargesPage />} />
+            <Route path="/app/finance" element={<FinanceHubPage />} />
+            <Route path="/app/reports" element={<ReportsPage />} />
+            <Route path="/app/settings" element={<SettingsPage />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <RuntimeBuildBadge />
+    </>
   );
 }

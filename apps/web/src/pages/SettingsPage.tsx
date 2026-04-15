@@ -5,7 +5,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { useAuth } from '../lib/auth-context';
 import { useTenant } from '../lib/tenant-hooks';
-import type { StaffSessionTenant } from '../lib/auth-types';
+import type { StaffSessionMembership } from '../lib/auth-types';
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -15,7 +15,7 @@ export function SettingsPage() {
     () => tenants.find((tenant) => tenant.id === tenantId) ?? null,
     [tenantId, tenants],
   );
-  const memberships = session?.availableTenants ?? [];
+  const memberships = session?.memberships ?? [];
   const platformAdmin = staffUser?.platformRole === 'global_admin';
 
   return (
@@ -82,23 +82,23 @@ export function SettingsPage() {
                   </div>
                 ) : null}
                 {memberships.length > 0 ? (
-                  memberships.map((membership: StaffSessionTenant) => {
-                    const tenant = tenants.find((item) => item.id === membership.id);
+                  memberships.map((membership: StaffSessionMembership) => {
+                    const tenant = tenants.find((item) => item.id === membership.tenantId);
                     return (
                       <div
-                        key={`${membership.id}-${membership.role}`}
+                        key={`${membership.tenantId}-${membership.role}`}
                         className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3 text-sm"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="font-medium text-amateur-ink">
-                            {tenant?.name ?? membership.name}
+                            {tenant?.name ?? membership.tenantName}
                           </p>
                           <span className="rounded-full bg-amateur-accent-soft px-2.5 py-1 text-[11px] font-medium text-amateur-accent">
                             {t(`pages.settings.roles.${membership.role}`)}
                           </span>
                         </div>
                         <p className="mt-1 text-amateur-muted">
-                          {session?.activeTenantId === membership.id
+                          {session?.defaultTenantId === membership.tenantId
                             ? t('pages.settings.defaultMembership')
                             : t('pages.settings.secondaryMembership')}
                         </p>
