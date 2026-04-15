@@ -35,6 +35,8 @@ export function CommunicationsPage() {
   const [financialState, setFinancialState] = useState(searchParams.get('financialState') ?? '');
   const [privateLessonStatus, setPrivateLessonStatus] = useState(searchParams.get('privateLessonStatus') ?? '');
   const [trainingSessionId, setTrainingSessionId] = useState(searchParams.get('trainingSessionId') ?? '');
+  const [portalEnabledOnly, setPortalEnabledOnly] = useState(searchParams.get('portalEnabledOnly') === 'true');
+  const [portalPendingOnly, setPortalPendingOnly] = useState(searchParams.get('portalPendingOnly') === 'true');
   const [familyReadiness, setFamilyReadiness] = useState<FamilyReadinessStatus | ''>(
     (searchParams.get('familyReadiness') as FamilyReadinessStatus | null) ?? '',
   );
@@ -61,6 +63,8 @@ export function CommunicationsPage() {
     setFinancialState(searchParams.get('financialState') ?? '');
     setPrivateLessonStatus(searchParams.get('privateLessonStatus') ?? '');
     setTrainingSessionId(searchParams.get('trainingSessionId') ?? '');
+    setPortalEnabledOnly(searchParams.get('portalEnabledOnly') === 'true');
+    setPortalPendingOnly(searchParams.get('portalPendingOnly') === 'true');
     setFamilyReadiness((searchParams.get('familyReadiness') as FamilyReadinessStatus | null) ?? '');
     setNeedsFollowUp(searchParams.get('needsFollowUp') === 'true');
     setPrimaryContactsOnly(searchParams.get('primaryContactsOnly') === 'true');
@@ -76,6 +80,8 @@ export function CommunicationsPage() {
     if (financialState) next.set('financialState', financialState);
     if (privateLessonStatus) next.set('privateLessonStatus', privateLessonStatus);
     if (trainingSessionId) next.set('trainingSessionId', trainingSessionId);
+    if (portalEnabledOnly) next.set('portalEnabledOnly', 'true');
+    if (portalPendingOnly) next.set('portalPendingOnly', 'true');
     if (familyReadiness) next.set('familyReadiness', familyReadiness);
     if (needsFollowUp) next.set('needsFollowUp', 'true');
     if (primaryContactsOnly) next.set('primaryContactsOnly', 'true');
@@ -88,6 +94,8 @@ export function CommunicationsPage() {
     financialState,
     groupId,
     needsFollowUp,
+    portalEnabledOnly,
+    portalPendingOnly,
     primaryContactsOnly,
     privateLessonStatus,
     query,
@@ -132,6 +140,8 @@ export function CommunicationsPage() {
       if (financialState) params.set('financialState', financialState);
       if (privateLessonStatus) params.set('privateLessonStatus', privateLessonStatus);
       if (trainingSessionId) params.set('trainingSessionId', trainingSessionId);
+      if (portalEnabledOnly) params.set('portalEnabledOnly', 'true');
+      if (portalPendingOnly) params.set('portalPendingOnly', 'true');
       if (familyReadiness) params.set('familyReadiness', familyReadiness);
       if (needsFollowUp) params.set('needsFollowUp', 'true');
       if (primaryContactsOnly) params.set('primaryContactsOnly', 'true');
@@ -159,6 +169,8 @@ export function CommunicationsPage() {
     financialState,
     groupId,
     needsFollowUp,
+    portalEnabledOnly,
+    portalPendingOnly,
     primaryContactsOnly,
     privateLessonStatus,
     query,
@@ -278,6 +290,22 @@ export function CommunicationsPage() {
               </select>
             </label>
             <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+              <input
+                type="checkbox"
+                checked={portalEnabledOnly}
+                onChange={(e) => setPortalEnabledOnly(e.target.checked)}
+              />
+              <span>{t('pages.communications.portalEnabledOnly')}</span>
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+              <input
+                type="checkbox"
+                checked={portalPendingOnly}
+                onChange={(e) => setPortalPendingOnly(e.target.checked)}
+              />
+              <span>{t('pages.communications.portalPendingOnly')}</span>
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
               <span>{t('pages.communications.familyReadiness')}</span>
               <select
                 value={familyReadiness}
@@ -386,6 +414,8 @@ export function CommunicationsPage() {
                       setFinancialState('');
                       setPrivateLessonStatus('');
                       setTrainingSessionId('');
+                      setPortalEnabledOnly(false);
+                      setPortalPendingOnly(false);
                       setFamilyReadiness('');
                       setNeedsFollowUp(false);
                       setPrimaryContactsOnly(false);

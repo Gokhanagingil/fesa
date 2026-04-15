@@ -20,7 +20,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 - **What**: operations beyond CRUD — schedules, attendance, fixtures, finance, reporting — introduced in later waves.
 - **Wave one (done)**: scaffolding, health/config, minimal domain model, UX shell, i18n, conventions.
 - **Wave two (done)**: athlete/guardian/training/attendance/finance primitives plus recurring scheduling, collections tracking, and command-center reporting.
-- **Wave six (current)**: notification center, reminder-style follow-up assistance, and an actionable staff work queue built on the existing command-center, finance, family workflow, training, and private-lesson foundations.
+- **Wave seven (current)**: Guardian Portal MVP with controlled guardian access, linked-athlete visibility, family-action completion, and staff review/apply controls inside the same operational system.
 
 ## Repository map
 
@@ -44,7 +44,7 @@ Manual staging deploy (SSH, PM2, Nginx template): [staging-deploy.md](./staging-
 
 ## Deferred (intentionally)
 
-- Full authentication and RBAC
+- Full internal staff RBAC beyond the new guardian portal access boundary
 - Tournament engine, statistics ingestion, inventory
 - Payment capture, recommendations
 - Advanced reporting execution and exports

@@ -8,6 +8,8 @@ import { ReportDefinition } from './report-definition.entity';
 import { SavedFilterPreset } from './saved-filter-preset.entity';
 import { Athlete } from './athlete.entity';
 import { Guardian } from './guardian.entity';
+import { GuardianPortalAccess } from './guardian-portal-access.entity';
+import { GuardianPortalSession } from './guardian-portal-session.entity';
 import { AthleteGuardian } from './athlete-guardian.entity';
 import { AthleteTeamMembership } from './athlete-team-membership.entity';
 import { TrainingSessionSeries } from './training-session-series.entity';
@@ -33,6 +35,8 @@ export const domainEntities = [
   SavedFilterPreset,
   Athlete,
   Guardian,
+  GuardianPortalAccess,
+  GuardianPortalSession,
   AthleteGuardian,
   AthleteTeamMembership,
   TrainingSessionSeries,
@@ -59,6 +63,8 @@ export {
   SavedFilterPreset,
   Athlete,
   Guardian,
+  GuardianPortalAccess,
+  GuardianPortalSession,
   AthleteGuardian,
   AthleteTeamMembership,
   TrainingSessionSeries,

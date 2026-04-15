@@ -63,4 +63,14 @@ export class ListCommunicationAudienceQueryDto {
   @Type(() => Boolean)
   @IsBoolean()
   primaryContactsOnly?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  portalEnabledOnly?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  portalPendingOnly?: boolean;
 }

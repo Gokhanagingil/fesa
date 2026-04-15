@@ -17,6 +17,7 @@ import type {
   AttendanceStatus,
   Coach,
   Guardian,
+  GuardianPortalAccessStatus,
   PrivateLesson,
   TrainingSessionStatus,
 } from './domain-types';
@@ -164,6 +165,24 @@ export function getGuardianRelationshipSummary(t: TFunction, link: AthleteGuardi
     parts.push(t('pages.athletes.primaryContact'));
   }
   return parts.join(' · ');
+}
+
+export function getGuardianPortalAccessStatusLabel(t: TFunction, status: GuardianPortalAccessStatus): string {
+  return t(`app.enums.guardianPortalAccessStatus.${status}`);
+}
+
+export function getGuardianPortalAccessTone(
+  status: GuardianPortalAccessStatus,
+): 'warning' | 'success' | 'default' {
+  switch (status) {
+    case 'active':
+      return 'success';
+    case 'invited':
+      return 'warning';
+    case 'disabled':
+    default:
+      return 'default';
+  }
 }
 
 export function getChargeCurrencyAmount(charge: AthleteCharge): string {

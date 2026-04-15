@@ -67,6 +67,18 @@ type AthleteFamilyReadiness = {
   actions: FamilyActionSummary[];
 };
 
+type PortalSubmissionPayload = {
+  source: 'guardian_portal';
+  guardianId: string;
+  submittedAt: string;
+  responseText: string | null;
+  suggestedUpdates: {
+    phone?: string;
+    email?: string;
+    notes?: string;
+  };
+};
+
 const PENDING_FAMILY_STATUSES = [
   FamilyActionRequestStatus.OPEN,
   FamilyActionRequestStatus.PENDING_FAMILY_ACTION,
@@ -76,7 +88,6 @@ const PENDING_FAMILY_STATUSES = [
 const AWAITING_STAFF_STATUSES = [
   FamilyActionRequestStatus.SUBMITTED,
   FamilyActionRequestStatus.UNDER_REVIEW,
-  FamilyActionRequestStatus.APPROVED,
 ] as const;
 
 const CLOSED_STATUSES = [FamilyActionRequestStatus.COMPLETED, FamilyActionRequestStatus.CLOSED] as const;
@@ -110,6 +121,55 @@ export class FamilyActionService {
 
   private isClosedStatus(status: FamilyActionRequestStatus): boolean {
     return (CLOSED_STATUSES as readonly FamilyActionRequestStatus[]).includes(status);
+  }
+
+  private normalizePortalSuggestion(value?: string | null): string | undefined {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : undefined;
+  }
+
+  private getPortalSubmission(payload: Record<string, unknown> | null | undefined): PortalSubmissionPayload | null {
+    const submission = payload?.portalSubmission;
+    if (!submission || typeof submission !== 'object') {
+      return null;
+    }
+
+    const typed = submission as Record<string, unknown>;
+    const suggestedUpdates =
+      typed.suggestedUpdates && typeof typed.suggestedUpdates === 'object'
+        ? (typed.suggestedUpdates as Record<string, unknown>)
+        : {};
+
+    if (typeof typed.guardianId !== 'string' || typeof typed.submittedAt !== 'string') {
+      return null;
+    }
+
+    return {
+      source: 'guardian_portal',
+      guardianId: typed.guardianId,
+      submittedAt: typed.submittedAt,
+      responseText: typeof typed.responseText === 'string' ? typed.responseText : null,
+      suggestedUpdates: {
+        phone: typeof suggestedUpdates.phone === 'string' ? suggestedUpdates.phone : undefined,
+        email: typeof suggestedUpdates.email === 'string' ? suggestedUpdates.email : undefined,
+        notes: typeof suggestedUpdates.notes === 'string' ? suggestedUpdates.notes : undefined,
+      },
+    };
+  }
+
+  private normalizeGuardianPayload(
+    payload: Record<string, unknown> | null | undefined,
+  ): { phone: string | null; email: string | null; notes: string | null } | null {
+    const submission = this.getPortalSubmission(payload);
+    if (!submission) {
+      return null;
+    }
+
+    return {
+      phone: this.normalizePortalSuggestion(submission.suggestedUpdates.phone) ?? null,
+      email: this.normalizePortalSuggestion(submission.suggestedUpdates.email) ?? null,
+      notes: this.normalizePortalSuggestion(submission.suggestedUpdates.notes) ?? null,
+    };
   }
 
   private getAllowedTransitions(status: FamilyActionRequestStatus): FamilyActionRequestStatus[] {
@@ -183,6 +243,23 @@ export class FamilyActionService {
     }
 
     return guardian;
+  }
+
+  private async assertGuardianCanAccessRequest(
+    tenantId: string,
+    guardianId: string,
+    request: FamilyActionRequest,
+  ): Promise<void> {
+    if (request.guardianId && request.guardianId !== guardianId) {
+      throw new NotFoundException('Family action request not found');
+    }
+
+    const link = await this.athleteGuardians.findOne({
+      where: { tenantId, athleteId: request.athleteId, guardianId },
+    });
+    if (!link) {
+      throw new NotFoundException('Family action request not found');
+    }
   }
 
   private async findRequestEntity(tenantId: string, id: string): Promise<FamilyActionRequest> {
@@ -397,6 +474,13 @@ export class FamilyActionService {
     return this.mapRequest(request, eventsByRequestId);
   }
 
+  async findOneForGuardian(tenantId: string, guardianId: string, id: string) {
+    const request = await this.findRequestEntity(tenantId, id);
+    await this.assertGuardianCanAccessRequest(tenantId, guardianId, request);
+    const eventsByRequestId = await this.getEventsByRequestIds(tenantId, [id]);
+    return this.mapRequest(request, eventsByRequestId);
+  }
+
   async list(tenantId: string, query: ListFamilyActionRequestsQueryDto) {
     const qb = this.requests
       .createQueryBuilder('request')
@@ -515,6 +599,147 @@ export class FamilyActionService {
       decisionNote: request.decisionNote,
     });
     return this.findOne(tenantId, request.id);
+  }
+
+  async submitFromGuardian(
+    tenantId: string,
+    id: string,
+    guardianId: string,
+    payload: {
+      responseText?: string;
+      note?: string;
+      suggestedUpdates?: {
+        phone?: string;
+        email?: string;
+        notes?: string;
+      };
+      portalSessionId?: string | null;
+    },
+  ) {
+    const request = await this.findRequestEntity(tenantId, id);
+    await this.assertGuardianCanAccessRequest(tenantId, guardianId, request);
+
+    const allowed = new Set<FamilyActionRequestStatus>([
+      FamilyActionRequestStatus.OPEN,
+      FamilyActionRequestStatus.PENDING_FAMILY_ACTION,
+      FamilyActionRequestStatus.REJECTED,
+    ]);
+    if (!allowed.has(request.status)) {
+      throw new BadRequestException('This family action is not currently open for guardian completion');
+    }
+
+    const previousStatus = request.status;
+    const now = new Date();
+    request.status = FamilyActionRequestStatus.SUBMITTED;
+    request.submittedAt = now;
+    request.reviewedAt = null;
+    request.resolvedAt = null;
+    request.latestResponseText = payload.responseText?.trim() || null;
+    request.payload = {
+      ...(request.payload ?? {}),
+      portalSubmission: {
+        source: 'guardian_portal',
+        guardianId,
+        submittedAt: now.toISOString(),
+        responseText: request.latestResponseText,
+        suggestedUpdates: {
+          phone: this.normalizePortalSuggestion(payload.suggestedUpdates?.phone),
+          email: this.normalizePortalSuggestion(payload.suggestedUpdates?.email),
+          notes: this.normalizePortalSuggestion(payload.suggestedUpdates?.notes),
+        },
+      },
+    };
+
+    if (!request.guardianId) {
+      request.guardianId = guardianId;
+    }
+
+    await this.requests.save(request);
+    await this.recordEvent(
+      tenantId,
+      request.id,
+      FamilyActionActor.FAMILY,
+      'guardian_submitted',
+      previousStatus,
+      FamilyActionRequestStatus.SUBMITTED,
+      payload.note,
+      {
+        responseText: request.latestResponseText,
+        portalSessionId: payload.portalSessionId ?? null,
+        source: 'guardian_portal',
+        guardianId,
+      },
+    );
+    return this.findOne(tenantId, request.id);
+  }
+
+  async applyGuardianSubmission(
+    tenantId: string,
+    id: string,
+    payload: {
+      decision: 'approved' | 'rejected';
+      note?: string;
+    },
+  ) {
+    const targetStatus =
+      payload.decision === 'approved'
+        ? FamilyActionRequestStatus.APPROVED
+        : FamilyActionRequestStatus.REJECTED;
+    const request = await this.findRequestEntity(tenantId, id);
+    if (
+      ![FamilyActionRequestStatus.SUBMITTED, FamilyActionRequestStatus.UNDER_REVIEW].includes(request.status)
+    ) {
+      throw new BadRequestException('Only submitted family actions can be reviewed');
+    }
+
+    const previousStatus = request.status;
+    const now = new Date();
+    request.status = targetStatus;
+    request.reviewedAt = now;
+    request.decisionNote = payload.note?.trim() || null;
+    if (targetStatus === FamilyActionRequestStatus.REJECTED) {
+      request.resolvedAt = null;
+    }
+
+    if (
+      targetStatus === FamilyActionRequestStatus.APPROVED &&
+      [
+        FamilyActionRequestType.CONTACT_DETAILS_COMPLETION,
+        FamilyActionRequestType.GUARDIAN_PROFILE_UPDATE,
+      ].includes(request.type)
+    ) {
+      const normalized = this.normalizeGuardianPayload(request.payload);
+      request.status = FamilyActionRequestStatus.COMPLETED;
+      request.resolvedAt = now;
+
+      if (request.guardianId && normalized) {
+        const guardian = await this.guardians.findOne({
+          where: { id: request.guardianId, tenantId },
+        });
+        if (guardian) {
+          guardian.phone = normalized.phone;
+          guardian.email = normalized.email;
+          guardian.notes = normalized.notes;
+          await this.guardians.save(guardian);
+        }
+      }
+    }
+
+    await this.requests.save(request);
+    await this.recordEvent(
+      tenantId,
+      request.id,
+      FamilyActionActor.CLUB,
+      'review_decision',
+      previousStatus,
+      request.status,
+      payload.note,
+      {
+        decision: payload.decision,
+        source: 'staff_review',
+      },
+    );
+    return this.findOne(tenantId, id);
   }
 
   async getAthleteReadiness(tenantId: string, athleteId: string) {

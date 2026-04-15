@@ -113,9 +113,9 @@ That makes standard sessions excellent for cohort operations, but awkward for 1-
   - see linked athletes from the guardian side,
   - create a guardian directly from an athlete profile and link them in one flow.
 
-## Family portal readiness and controlled self-service
+## Guardian portal MVP and controlled self-service
 
-- The platform still does **not** expose a public family portal or guardian authentication layer in this wave.
+- The platform now exposes a controlled guardian portal MVP with tenant-scoped guardian invitation, activation, and session handling in this wave.
 - Instead, it now adds a tenant-scoped internal workflow foundation built for future portal usage without forcing immediate public exposure:
   - **`family_action_requests`** for staff-created family-facing requests,
   - **`family_action_events`** for audit-friendly workflow history.
@@ -167,7 +167,7 @@ This keeps the product in a practical club-operations lane rather than turning i
   - fixed internally,
   - requested from a guardian,
   - reviewed by staff before becoming authoritative.
-- The model prepares the platform for future guardian login/linkage later without requiring a rewrite of athlete, guardian, communication, or reporting surfaces.
+- The model now bridges internal operations and family completion directly, while still avoiding a broad consumer-IAM or full public platform rewrite.
 
 ## Finance
 

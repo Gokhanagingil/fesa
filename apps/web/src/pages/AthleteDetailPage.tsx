@@ -12,6 +12,7 @@ import {
   getFamilyActionTypeLabel,
   getFamilyReadinessStatusLabel,
   getFamilyReadinessTone,
+  getFamilyActionActorLabel,
   formatDate,
   formatDateTime,
   getChargeStatusLabel,
@@ -37,6 +38,7 @@ import type {
   GuardianRelationshipType,
   Team,
   TeamMembership,
+  GuardianPortalActionReviewRequest,
 } from '../lib/domain-types';
 
 export function AthleteDetailPage() {
@@ -215,6 +217,19 @@ export function AthleteDetailPage() {
     try {
       await apiPost(`/api/family-actions/${request.id}/transition`, { status });
       setMessage(t('pages.athletes.familyActions.updated'));
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
+    }
+  }
+
+  async function reviewPortalSubmission(
+    request: FamilyActionRequest,
+    decision: GuardianPortalActionReviewRequest['decision'],
+  ) {
+    try {
+      await apiPost(`/api/guardian-portal/staff/actions/${request.id}/review`, { decision });
+      setMessage(t(`pages.athletes.familyActions.${decision === 'approved' ? 'portalApproved' : 'portalRejected'}`));
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
@@ -645,6 +660,18 @@ export function AthleteDetailPage() {
               <div className="mt-3 space-y-3">
                 {familyReadiness.actions.map((request) => (
                   <article key={request.id} className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-4">
+                    {(() => {
+                      const portalEvent = request.events.find((event) => event.actor === 'family');
+                      const portalSubmission =
+                        request.payload?.portalSubmission && typeof request.payload.portalSubmission === 'object'
+                          ? (request.payload.portalSubmission as {
+                              source?: string;
+                              suggestedUpdates?: { phone?: string; email?: string; notes?: string };
+                            })
+                          : null;
+
+                      return (
+                        <>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="font-medium text-amateur-ink">{request.title}</p>
@@ -657,6 +684,13 @@ export function AthleteDetailPage() {
                             .filter(Boolean)
                             .join(' · ')}
                         </p>
+                        {portalEvent ? (
+                          <p className="mt-2 text-xs font-medium text-sky-700">
+                            {t('pages.athletes.familyActions.portalOriginLabel', {
+                              actor: getFamilyActionActorLabel(t, portalEvent.actor),
+                            })}
+                          </p>
+                        ) : null}
                       </div>
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
                         {getFamilyActionStatusLabel(t, request.status)}
@@ -669,6 +703,28 @@ export function AthleteDetailPage() {
                       <p className="mt-2 text-sm text-amateur-muted">
                         {t('pages.athletes.familyActions.latestResponse')}: {request.latestResponseText}
                       </p>
+                    ) : null}
+                    {portalSubmission?.source === 'guardian_portal' ? (
+                      <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-3 text-sm text-sky-900">
+                        <p className="font-medium">{t('pages.athletes.familyActions.portalSubmissionTitle')}</p>
+                        <ul className="mt-2 space-y-1 text-xs">
+                          {portalSubmission.suggestedUpdates?.phone ? (
+                            <li>
+                              {t('pages.athletes.phone')}: {portalSubmission.suggestedUpdates.phone}
+                            </li>
+                          ) : null}
+                          {portalSubmission.suggestedUpdates?.email ? (
+                            <li>
+                              {t('pages.athletes.email')}: {portalSubmission.suggestedUpdates.email}
+                            </li>
+                          ) : null}
+                          {portalSubmission.suggestedUpdates?.notes ? (
+                            <li>
+                              {t('pages.athletes.notes')}: {portalSubmission.suggestedUpdates.notes}
+                            </li>
+                          ) : null}
+                        </ul>
+                      </div>
                     ) : null}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {request.status === 'pending_family_action' || request.status === 'open' || request.status === 'rejected' ? (
@@ -683,12 +739,25 @@ export function AthleteDetailPage() {
                       ) : null}
                       {request.status === 'submitted' || request.status === 'under_review' ? (
                         <>
-                          <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'approved')}>
-                            {t('pages.athletes.familyActions.approve')}
-                          </Button>
-                          <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'rejected')}>
-                            {t('pages.athletes.familyActions.reject')}
-                          </Button>
+                          {portalEvent ? (
+                            <>
+                              <Button type="button" variant="ghost" onClick={() => void reviewPortalSubmission(request, 'approved')}>
+                                {t('pages.athletes.familyActions.applyPortalSubmission')}
+                              </Button>
+                              <Button type="button" variant="ghost" onClick={() => void reviewPortalSubmission(request, 'rejected')}>
+                                {t('pages.athletes.familyActions.returnToGuardian')}
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'approved')}>
+                                {t('pages.athletes.familyActions.approve')}
+                              </Button>
+                              <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'rejected')}>
+                                {t('pages.athletes.familyActions.reject')}
+                              </Button>
+                            </>
+                          )}
                         </>
                       ) : null}
                       {request.status === 'approved' ? (
@@ -697,6 +766,9 @@ export function AthleteDetailPage() {
                         </Button>
                       ) : null}
                     </div>
+                        </>
+                      );
+                    })()}
                   </article>
                 ))}
               </div>
