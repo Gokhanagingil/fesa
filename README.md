@@ -116,12 +116,13 @@ Turkish and English are wired via `i18next` in `apps/web`. Locale files live und
 
 ## Club operations core workflows
 
-This wave strengthens the daily operating loop instead of adding parallel modules:
+Wave 2 turns the existing operational core into a more complete command center without introducing parallel modules:
 
-- **Athletes + guardians:** full athlete list/detail/form flow plus reusable guardian records, guardian list/detail/edit routes, and in-context linking/unlinking from athlete profiles.
-- **Groups + teams:** group pages explain cohort vs squad separation, and both groups and teams deep-link into the filtered athlete workspace so staff can move from structure to action quickly.
-- **Training + attendance:** session planning keeps group-required / team-optional rules visible, and attendance supports roster search plus bulk status marking for fast repeated use.
-- **Charge items + athlete charges:** charge items are editable in place, athlete charges expose athlete names and status updates, and bulk charge assignment is available from the finance workspace.
+- **Athletes + guardians:** existing athlete and guardian flows remain in place, with finance and roster context now feeding more directly into day-to-day management.
+- **Groups + teams:** the group-first / optional-team model remains unchanged and continues to drive scheduling, rosters, and attendance safely.
+- **Training + attendance:** training now supports calendar-oriented filtering, recurring session generation, and safe bulk cancellation / rescheduling on top of the existing session and attendance routes.
+- **Collections + balances:** charge assignment still starts from reusable charge items, but clubs can now record payments with explicit allocations to athlete charges and see paid / partial / overdue / outstanding state clearly.
+- **Dashboard + reporting:** the dashboard and reports pages now surface live operational and collection summaries instead of placeholder counts and disabled report affordances.
 
 ## Domain: Group vs Team vs Athlete
 

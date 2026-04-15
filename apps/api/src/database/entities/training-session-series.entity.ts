@@ -12,14 +12,13 @@ import { Tenant } from './tenant.entity';
 import { SportBranch } from './sport-branch.entity';
 import { ClubGroup } from './club-group.entity';
 import { Team } from './team.entity';
-import { TrainingSessionSeries } from './training-session-series.entity';
 import { TrainingSessionStatus } from '../enums';
-@Entity('training_sessions')
-@Index(['tenantId', 'scheduledStart'])
+
+@Entity('training_session_series')
 @Index(['tenantId', 'groupId'])
 @Index(['tenantId', 'teamId'])
-@Index(['tenantId', 'seriesId'])
-export class TrainingSession {
+@Index(['tenantId', 'startsOn'])
+export class TrainingSessionSeries {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
@@ -54,18 +53,21 @@ export class TrainingSession {
   @JoinColumn({ name: 'teamId' })
   team!: Team | null;
 
-  @Column({ type: 'uuid', nullable: true })
-  seriesId!: string | null;
+  @Column({ type: 'date' })
+  startsOn!: string;
 
-  @ManyToOne(() => TrainingSessionSeries, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'seriesId' })
-  series!: TrainingSessionSeries | null;
+  @Column({ type: 'date' })
+  endsOn!: string;
 
-  @Column({ type: 'timestamptz' })
-  scheduledStart!: Date;
+  /** ISO weekdays, 1 = Monday ... 7 = Sunday. */
+  @Column({ type: 'int', array: true, default: () => "'{}'" })
+  weekdays!: number[];
 
-  @Column({ type: 'timestamptz' })
-  scheduledEnd!: Date;
+  @Column({ type: 'time' })
+  sessionStartTime!: string;
+
+  @Column({ type: 'time' })
+  sessionEndTime!: string;
 
   @Column({ type: 'varchar', length: 200, nullable: true })
   location!: string | null;

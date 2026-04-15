@@ -65,12 +65,29 @@ export type TeamMembership = {
   team: Team;
 };
 
+export type TrainingSessionSeries = {
+  id: string;
+  title: string;
+  sportBranchId: string;
+  groupId: string;
+  teamId: string | null;
+  startsOn: string;
+  endsOn: string;
+  weekdays: number[];
+  sessionStartTime: string;
+  sessionEndTime: string;
+  location: string | null;
+  status: TrainingSessionStatus;
+  notes?: string | null;
+};
+
 export type TrainingSession = {
   id: string;
   title: string;
   sportBranchId: string;
   groupId: string;
   teamId: string | null;
+  seriesId?: string | null;
   scheduledStart: string;
   scheduledEnd: string;
   location: string | null;
@@ -104,7 +121,78 @@ export type AthleteCharge = {
   amount: string;
   dueDate: string | null;
   status: AthleteChargeStatus;
+  derivedStatus?: AthleteChargeStatus;
+  allocatedAmount?: string;
+  remainingAmount?: string;
+  isOverdue?: boolean;
   chargeItem?: ChargeItem;
   athlete?: Athlete;
   notes?: string | null;
+};
+
+export type Payment = {
+  id: string;
+  athleteId: string;
+  amount: string;
+  currency: string;
+  paidAt: string;
+  method: string | null;
+  reference: string | null;
+  notes: string | null;
+  athlete?: Athlete;
+};
+
+export type AthleteFinanceAggregate = {
+  athlete: Athlete;
+  totalCharged: number;
+  totalCollected: number;
+  totalOutstanding: number;
+  totalOverdue: number;
+  unpaidCount: number;
+  partialCount: number;
+  overdueCount: number;
+};
+
+export type AthleteFinanceSummaryResponse = {
+  totals: {
+    totalCharged: string;
+    totalCollected: string;
+    totalOutstanding: string;
+    totalOverdue: string;
+  };
+  charges: AthleteCharge[];
+  recentPayments: Payment[];
+  athletes: AthleteFinanceAggregate[];
+};
+
+export type DashboardSummary = {
+  stats: {
+    athletes: number;
+    guardians?: number;
+    upcomingSessions: number;
+    totalSessions: number;
+    cancelledSessions: number;
+    outstandingTotal: string;
+    overdueTotal: string;
+    collectedTotal: string;
+  };
+  attendance: Partial<Record<AttendanceStatus, number>>;
+  groupDistribution: Array<{ name: string | null; count: number }>;
+  upcomingByGroup: Array<{ name: string; count: number }>;
+  recentPayments: Payment[];
+  topOutstandingAthletes: AthleteFinanceAggregate[];
+};
+
+export type ReportingDefinitionsResponse = {
+  items: Array<{
+    key: string;
+    titleKey: string;
+    domains: string[];
+  }>;
+  presetCount: number;
+  messageKey: string;
+};
+
+export type CommandCenterResponse = DashboardSummary & {
+  overdueCharges: AthleteCharge[];
 };

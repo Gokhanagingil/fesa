@@ -1,8 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsDateString, IsEnum, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import { IsDateString, IsEnum, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { TrainingSessionStatus } from '../../../database/enums';
 
 export class ListTrainingSessionsQueryDto {
+  @IsOptional()
+  @IsString()
+  q?: string;
+
   @IsOptional()
   @IsUUID()
   groupId?: string;

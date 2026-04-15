@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { TrainingSession } from '../../database/entities/training-session.entity';
+import { TrainingSessionSeries } from '../../database/entities/training-session-series.entity';
 import { SportBranch } from '../../database/entities/sport-branch.entity';
 import { ClubGroup } from '../../database/entities/club-group.entity';
 import { Team } from '../../database/entities/team.entity';
@@ -12,6 +13,11 @@ import { TrainingSessionStatus } from '../../database/enums';
 import { CreateTrainingSessionDto } from './dto/create-training-session.dto';
 import { UpdateTrainingSessionDto } from './dto/update-training-session.dto';
 import { ListTrainingSessionsQueryDto } from './dto/list-training-sessions-query.dto';
+import { CreateTrainingSessionSeriesDto } from './dto/create-training-session-series.dto';
+import {
+  BulkUpdateTrainingSessionsDto,
+  TrainingBulkAction,
+} from './dto/bulk-update-training-sessions.dto';
 import { BulkAttendanceDto } from './dto/bulk-attendance.dto';
 import { PatchAttendanceDto } from './dto/patch-attendance.dto';
 
@@ -20,6 +26,8 @@ export class TrainingService {
   constructor(
     @InjectRepository(TrainingSession)
     private readonly sessions: Repository<TrainingSession>,
+    @InjectRepository(TrainingSessionSeries)
+    private readonly sessionSeries: Repository<TrainingSessionSeries>,
     @InjectRepository(SportBranch)
     private readonly branches: Repository<SportBranch>,
     @InjectRepository(ClubGroup)
@@ -33,6 +41,52 @@ export class TrainingService {
     @InjectRepository(AthleteTeamMembership)
     private readonly teamMemberships: Repository<AthleteTeamMembership>,
   ) {}
+
+  private parseDateOnly(value: string): Date {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+      throw new BadRequestException('Invalid series date');
+    }
+    return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+  }
+
+  private parseClock(value: string): { hours: number; minutes: number; totalMinutes: number } {
+    const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
+    if (!match) {
+      throw new BadRequestException('Time fields must use HH:mm format');
+    }
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    return { hours, minutes, totalMinutes: hours * 60 + minutes };
+  }
+
+  private withClock(date: Date, time: string): Date {
+    const { hours, minutes } = this.parseClock(time);
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), hours, minutes, 0, 0));
+  }
+
+  private appendNote(existing: string | null, suffix?: string): string | null {
+    const trimmed = suffix?.trim();
+    if (!trimmed) return existing;
+    if (!existing?.trim()) return trimmed;
+    return `${existing}\n${trimmed}`;
+  }
+
+  private buildSessionFingerprint(
+    title: string,
+    groupId: string,
+    teamId: string | null,
+    scheduledStart: Date,
+    scheduledEnd: Date,
+  ): string {
+    return [
+      title.trim().toLowerCase(),
+      groupId,
+      teamId ?? '',
+      scheduledStart.toISOString(),
+      scheduledEnd.toISOString(),
+    ].join('::');
+  }
 
   private async loadSession(tenantId: string, id: string): Promise<TrainingSession> {
     const s = await this.sessions.findOne({ where: { id, tenantId } });
@@ -90,6 +144,93 @@ export class TrainingService {
     }
   }
 
+  private async setDerivedSessionStatus(session: TrainingSession): Promise<TrainingSession> {
+    return this.sessions.save(session);
+  }
+
+  private async createSessionsFromSeries(
+    tenantId: string,
+    dto: CreateTrainingSessionSeriesDto,
+    seriesId: string,
+  ): Promise<{ sessions: TrainingSession[]; skippedCount: number }> {
+    const startsOn = this.parseDateOnly(dto.startsOn);
+    const endsOn = this.parseDateOnly(dto.endsOn);
+    if (endsOn < startsOn) {
+      throw new BadRequestException('Series end date must be on or after the start date');
+    }
+
+    const startClock = this.parseClock(dto.sessionStartTime);
+    const endClock = this.parseClock(dto.sessionEndTime);
+    if (endClock.totalMinutes <= startClock.totalMinutes) {
+      throw new BadRequestException('sessionEndTime must be after sessionStartTime');
+    }
+
+    const weekdays = Array.from(new Set(dto.weekdays)).sort((a, b) => a - b);
+    const occurrences: Array<{ scheduledStart: Date; scheduledEnd: Date }> = [];
+    for (const cursor = new Date(startsOn); cursor <= endsOn; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+      const isoWeekday = cursor.getUTCDay() === 0 ? 7 : cursor.getUTCDay();
+      if (!weekdays.includes(isoWeekday)) continue;
+      const sessionDay = new Date(cursor);
+      occurrences.push({
+        scheduledStart: this.withClock(sessionDay, dto.sessionStartTime),
+        scheduledEnd: this.withClock(sessionDay, dto.sessionEndTime),
+      });
+    }
+
+    if (occurrences.length === 0) {
+      throw new BadRequestException('No sessions match the selected date range and weekdays');
+    }
+    if (occurrences.length > 180) {
+      throw new BadRequestException('Series generation is limited to 180 sessions at a time');
+    }
+
+    const firstStart = occurrences[0].scheduledStart;
+    const lastStart = occurrences[occurrences.length - 1].scheduledStart;
+    const existingRows = await this.sessions
+      .createQueryBuilder('s')
+      .where('s.tenantId = :tenantId', { tenantId })
+      .andWhere('s.groupId = :groupId', { groupId: dto.groupId })
+      .andWhere(dto.teamId ? 's.teamId = :teamId' : 's.teamId IS NULL', dto.teamId ? { teamId: dto.teamId } : {})
+      .andWhere('s.scheduledStart >= :from', { from: firstStart })
+      .andWhere('s.scheduledStart <= :to', { to: lastStart })
+      .getMany();
+
+    const existingFingerprints = new Set(
+      existingRows.map((row) =>
+        this.buildSessionFingerprint(row.title, row.groupId, row.teamId, row.scheduledStart, row.scheduledEnd),
+      ),
+    );
+
+    const newRows = occurrences
+      .filter(
+        ({ scheduledStart, scheduledEnd }) =>
+          !existingFingerprints.has(
+            this.buildSessionFingerprint(dto.title, dto.groupId, dto.teamId ?? null, scheduledStart, scheduledEnd),
+          ),
+      )
+      .map(({ scheduledStart, scheduledEnd }) =>
+        this.sessions.create({
+          tenantId,
+          seriesId,
+          title: dto.title,
+          sportBranchId: dto.sportBranchId,
+          groupId: dto.groupId,
+          teamId: dto.teamId ?? null,
+          scheduledStart,
+          scheduledEnd,
+          location: dto.location ?? null,
+          status: dto.status ?? TrainingSessionStatus.PLANNED,
+          notes: dto.notes ?? null,
+        }),
+      );
+
+    const sessions = newRows.length > 0 ? await this.sessions.save(newRows) : [];
+    return {
+      sessions,
+      skippedCount: occurrences.length - sessions.length,
+    };
+  }
+
   async create(tenantId: string, dto: CreateTrainingSessionDto): Promise<TrainingSession> {
     const start = new Date(dto.scheduledStart);
     const end = new Date(dto.scheduledEnd);
@@ -117,6 +258,16 @@ export class TrainingService {
     const limit = query.limit ?? 50;
     const offset = query.offset ?? 0;
     const qb = this.sessions.createQueryBuilder('s').where('s.tenantId = :tenantId', { tenantId });
+    if (query.q?.trim()) {
+      const term = `%${query.q.trim().toLowerCase()}%`;
+      qb.andWhere(
+        new Brackets((w) => {
+          w.where('LOWER(s.title) LIKE :term', { term })
+            .orWhere('LOWER(COALESCE(s.location, \'\')) LIKE :term', { term })
+            .orWhere('LOWER(COALESCE(s.notes, \'\')) LIKE :term', { term });
+        }),
+      );
+    }
     if (query.groupId) qb.andWhere('s.groupId = :groupId', { groupId: query.groupId });
     if (query.teamId) qb.andWhere('s.teamId = :teamId', { teamId: query.teamId });
     if (query.sportBranchId) qb.andWhere('s.sportBranchId = :sportBranchId', { sportBranchId: query.sportBranchId });
@@ -126,11 +277,55 @@ export class TrainingService {
 
     const total = await qb.clone().getCount();
     const items = await qb
-      .orderBy('s.scheduledStart', 'DESC')
+      .orderBy('s.scheduledStart', 'ASC')
       .skip(offset)
       .take(limit)
       .getMany();
     return { items, total };
+  }
+
+  async createSeries(tenantId: string, dto: CreateTrainingSessionSeriesDto) {
+    await this.validateSessionRefs(tenantId, dto.sportBranchId, dto.groupId, dto.teamId ?? null);
+
+    return this.sessions.manager.transaction(async (manager) => {
+      const seriesRepo = manager.getRepository(TrainingSessionSeries);
+      const series = await seriesRepo.save(
+        seriesRepo.create({
+          tenantId,
+          title: dto.title,
+          sportBranchId: dto.sportBranchId,
+          groupId: dto.groupId,
+          teamId: dto.teamId ?? null,
+          startsOn: dto.startsOn,
+          endsOn: dto.endsOn,
+          weekdays: Array.from(new Set(dto.weekdays)).sort((a, b) => a - b),
+          sessionStartTime: dto.sessionStartTime,
+          sessionEndTime: dto.sessionEndTime,
+          location: dto.location ?? null,
+          status: dto.status ?? TrainingSessionStatus.PLANNED,
+          notes: dto.notes ?? null,
+        }),
+      );
+
+      const scopedService = new TrainingService(
+        manager.getRepository(TrainingSession),
+        manager.getRepository(TrainingSessionSeries),
+        manager.getRepository(SportBranch),
+        manager.getRepository(ClubGroup),
+        manager.getRepository(Team),
+        manager.getRepository(Athlete),
+        manager.getRepository(Attendance),
+        manager.getRepository(AthleteTeamMembership),
+      );
+
+      const result = await scopedService.createSessionsFromSeries(tenantId, dto, series.id);
+      return {
+        series,
+        items: result.sessions,
+        generatedCount: result.sessions.length,
+        skippedCount: result.skippedCount,
+      };
+    });
   }
 
   async findOne(tenantId: string, id: string): Promise<TrainingSession> {
@@ -164,6 +359,40 @@ export class TrainingService {
   async remove(tenantId: string, id: string): Promise<void> {
     const res = await this.sessions.delete({ id, tenantId });
     if (!res.affected) throw new NotFoundException('Training session not found');
+  }
+
+  async bulkUpdate(tenantId: string, dto: BulkUpdateTrainingSessionsDto): Promise<TrainingSession[]> {
+    const uniqueIds = Array.from(new Set(dto.sessionIds));
+    const items = await this.sessions.find({
+      where: uniqueIds.map((id) => ({ id, tenantId })),
+      order: { scheduledStart: 'ASC' },
+    });
+    if (items.length !== uniqueIds.length) {
+      throw new NotFoundException('One or more training sessions were not found');
+    }
+
+    if (dto.action === TrainingBulkAction.SHIFT) {
+      if (!dto.shiftDays) {
+        throw new BadRequestException('shiftDays is required for bulk rescheduling');
+      }
+      const blocked = items.find((item) => item.status !== TrainingSessionStatus.PLANNED);
+      if (blocked) {
+        throw new BadRequestException('Only planned sessions can be bulk rescheduled');
+      }
+
+      for (const item of items) {
+        item.scheduledStart = new Date(item.scheduledStart.getTime() + dto.shiftDays * 24 * 60 * 60 * 1000);
+        item.scheduledEnd = new Date(item.scheduledEnd.getTime() + dto.shiftDays * 24 * 60 * 60 * 1000);
+        item.notes = this.appendNote(item.notes, dto.noteAppend);
+      }
+      return this.sessions.save(items);
+    }
+
+    for (const item of items) {
+      item.status = TrainingSessionStatus.CANCELLED;
+      item.notes = this.appendNote(item.notes, dto.noteAppend);
+    }
+    return this.sessions.save(items);
   }
 
   async listAttendance(tenantId: string, sessionId: string): Promise<Attendance[]> {
@@ -209,6 +438,10 @@ export class TrainingService {
   async patchAttendance(tenantId: string, attendanceId: string, dto: PatchAttendanceDto): Promise<Attendance> {
     const rec = await this.attendance.findOne({ where: { id: attendanceId, tenantId } });
     if (!rec) throw new NotFoundException('Attendance not found');
+    const session = await this.loadSession(tenantId, rec.trainingSessionId);
+    const athlete = await this.athletes.findOne({ where: { id: rec.athleteId, tenantId } });
+    if (!athlete) throw new NotFoundException('Athlete not found');
+    await this.assertAthleteEligibleForSession(session, athlete);
     if (dto.status !== undefined) rec.status = dto.status;
     if (dto.note !== undefined) rec.note = dto.note;
     rec.recordedAt = new Date();

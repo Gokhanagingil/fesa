@@ -20,9 +20,13 @@
       "bulk": "Toplu işlemler",
       "new": "Yeni",
       "update": "Güncelle",
+      "save": "Kaydet",
+      "apply": "Uygula",
+      "record": "Kaydet",
       "open": "Aç",
       "cancel": "Vazgeç",
-      "manage": "Yönet"
+      "manage": "Yönet",
+      "refresh": "Yenile"
     },
     "count": {
       "rows_one": "{{count}} kayıt",
@@ -77,13 +81,14 @@
       "loadFailed": "Veriler yüklenemedi.",
       "saveFailed": "Kaydedilemedi.",
       "needTenant": "Üstte kulüp seçin.",
-      "noBranches": "Önce veritabanına bir spor branşı ekleyin."
+      "noBranches": "Önce veritabanına bir spor branşı ekleyin.",
+      "validation": "Lütfen gerekli alanları kontrol edin."
     }
   },
   "pages": {
     "dashboard": {
       "title": "Panel",
-      "subtitle": "Kulübünüzün bugünkü özeti.",
+      "subtitle": "Kulübünüzün günlük operasyon komuta merkezi.",
       "cardOps": "Operasyon",
       "cardOpsBody": "Antrenman planlama, yoklama ve günlük takibi tek akışta yönetin.",
       "cardPeople": "İnsanlar",
@@ -92,10 +97,22 @@
       "cardFinanceBody": "Ücret kalemleri ve sporcu borçları net, güncel ve yönetilebilir kalır.",
       "stats": {
         "athletes": "Sporcular",
-        "guardians": "Veliler",
         "upcomingSessions": "Yaklaşan antrenmanlar",
-        "activeChargeItems": "Aktif ücret kalemleri"
-      }
+        "outstanding": "Açık bakiye",
+        "overdue": "Gecikmiş bakiye",
+        "collected": "Tahsilatlar"
+      },
+      "sections": {
+        "today": "Bugünün operasyon özeti",
+        "attendance": "Yoklama özeti",
+        "upcomingByGroup": "Grupta yaklaşan antrenmanlar",
+        "groupDistribution": "Sporcu dağılımı",
+        "recentPayments": "Son tahsilatlar",
+        "topOutstanding": "En yüksek açık bakiyeler"
+      },
+      "emptyPayments": "Henüz tahsilat kaydı yok.",
+      "emptyOutstanding": "Açık bakiye görünmüyor.",
+      "emptyGroups": "Henüz grup dağılımı görünmüyor."
     },
     "athletes": {
       "title": "Sporcular",
@@ -199,10 +216,11 @@
     },
     "training": {
       "title": "Antrenmanlar",
-      "subtitle": "Gruplar ve isteğe bağlı takımlar için planlanan çalışmalar.",
+      "subtitle": "Takvim görünümü, toplu işlemler ve tekrar eden planlama ile günlük antrenman komutası.",
       "empty": "Henüz antrenman yok.",
       "emptyHint": "Devam kaydı için bir oturum oluşturun.",
       "new": "Yeni oturum",
+      "newSeries": "Tekrarlı seri oluştur",
       "detailTitle": "Oturum",
       "sessionTitle": "Oturum başlığı",
       "scheduled": "Zaman",
@@ -227,21 +245,59 @@
       "unknownGroup": "Bilinmeyen grup",
       "unknownTeam": "Bilinmeyen takım",
       "sessionTypeGroup": "Grup oturumu",
-      "sessionTypeTeam": "Takım oturumu"
+      "sessionTypeTeam": "Takım oturumu",
+      "calendarTitle": "Haftalık program",
+      "calendarHint": "Hafta görünümü ile seansları günlere göre tarayın, ardından listeden ayrıntı ve toplu işlemleri yönetin.",
+      "listTitle": "Operasyon listesi",
+      "filtersTitle": "Filtreler",
+      "dateFrom": "Başlangıç tarihi",
+      "dateTo": "Bitiş tarihi",
+      "weekOf": "{{date}} haftası",
+      "previousWeek": "Önceki hafta",
+      "nextWeek": "Sonraki hafta",
+      "goToToday": "Bugüne dön",
+      "bulkTitle": "Toplu seans işlemleri",
+      "bulkHint": "Aynı hafta içindeki planlı seansları birlikte iptal edin veya güvenli şekilde kaydırın.",
+      "selectedCount_one": "{{count}} seans seçildi",
+      "selectedCount_other": "{{count}} seans seçildi",
+      "bulkCancel": "Seansları iptal et",
+      "bulkShift": "Seansları kaydır",
+      "shiftDays": "Kaydırma günü",
+      "bulkNote": "Not ekle",
+      "bulkSuccess": "Toplu işlem uygulandı.",
+      "seriesTitle": "Tekrarlı antrenman serisi",
+      "seriesHint": "Aynı grup veya takım için tekrar eden seansları tek formdan üretin.",
+      "startsOn": "Başlangıç günü",
+      "endsOn": "Bitiş günü",
+      "repeatOn": "Tekrar günleri",
+      "generatedSummary": "{{count}} seans oluşturuldu, {{skipped}} çakışan tarih atlandı.",
+      "days": {
+        "1": "Pzt",
+        "2": "Sal",
+        "3": "Çar",
+        "4": "Per",
+        "5": "Cum",
+        "6": "Cmt",
+        "7": "Paz"
+      },
+      "emptyWeek": "Bu hafta için filtrelere uyan seans yok."
     },
     "finance": {
       "title": "Finans",
-      "subtitle": "Kulübün ücret operasyonları için net ve güvenilir akışlar.",
+      "subtitle": "Atamadan tahsilata, bakiyeden önceliklendirmeye kadar kulübün tahsilat komuta yüzeyi.",
       "hubTitle": "Ücretler",
-      "hubBody": "Önce tekrar kullanılabilir ücret türlerini tanımlayın, ardından sporculara tekil veya toplu olarak atayın.",
+      "hubBody": "Önce tekrar kullanılabilir ücret türlerini tanımlayın, ardından sporculara ücret atayın, tahsilat kaydedin ve açık bakiyeyi takip edin.",
       "chargeItemsLink": "Ücret kalemleri",
       "athleteChargesLink": "Sporcu borçları",
+      "paymentsLink": "Tahsilatlar",
+      "summaryTitle": "Tahsilat görünürlüğü",
+      "summaryHint": "Açık, gecikmiş ve tahsil edilmiş toplamları tek bakışta görün.",
       "bulkAssignTitle": "Toplu ücret atama",
       "bulkAssignBody": "Bir grup veya takım seçin, ardından aynı ücreti uygun sporculara tek seferde atayın.",
       "hubChecklistTitle": "Güvenilir finans akışı",
       "hubChecklist1": "Tekrar kullanılabilir ücret kalemlerini tek yerde yönetin.",
       "hubChecklist2": "Sporcu borçlarını tekil veya toplu atayın.",
-      "hubChecklist3": "Durum güncellemelerini görünür ve açık tutun."
+      "hubChecklist3": "Tahsilatları borçlara bağlayarak kalan bakiyeyi otomatik izleyin."
     },
     "chargeItems": {
       "title": "Ücret kalemleri",
@@ -270,7 +326,7 @@
     },
     "athleteCharges": {
       "title": "Sporcu borçları",
-      "subtitle": "Bireysel atanmış ücretler.",
+      "subtitle": "Atanan ücretler, kalan bakiye ve tahsilat durumu.",
       "empty": "Henüz borç atanmadı.",
       "new": "Yeni borç",
       "athlete": "Sporcu",
@@ -296,11 +352,63 @@
       "created": "Ücret atandı.",
       "updated": "Ücret durumu güncellendi.",
       "bulkSuccess_one": "{{count}} sporcuya ücret atandı.",
-      "bulkSuccess_other": "{{count}} sporcuya ücret atandı."
+      "bulkSuccess_other": "{{count}} sporcuya ücret atandı.",
+      "derivedStatus": "Finans durumu",
+      "allocated": "Tahsil edilen",
+      "remaining": "Kalan",
+      "overdueOnly": "Yalnız gecikmişler",
+      "clearFilters": "Filtreleri temizle",
+      "recordPayment": "Tahsilat kaydet",
+      "paymentPanelTitle": "Borçtan tahsilata",
+      "paymentPanelHint": "Seçili sporcunun borçlarına tahsilat dağıtarak bakiyeyi güvenli şekilde kapatın.",
+      "chooseAthleteForPayment": "Tahsilat kaydı için bir sporcu seçin.",
+      "noOpenCharges": "Bu sporcunun tahsilat bekleyen borcu yok.",
+      "paymentAmount": "Tahsilat tutarı",
+      "paymentDate": "Tahsilat tarihi",
+      "paymentMethod": "Yöntem",
+      "paymentReference": "Referans",
+      "paymentNotes": "Tahsilat notu",
+      "allocationAmount": "Dağıtım tutarı",
+      "recordedPayment": "Tahsilat kaydedildi.",
+      "summaryTitle": "Sporcu finans özeti",
+      "summaryHint": "En yüksek açık bakiyeleri ve gecikmiş borçları önden görün.",
+      "emptySelection": "Borç seçimi için bir sporcu filtreleyin."
+    },
+    "payments": {
+      "title": "Tahsilatlar",
+      "subtitle": "Kaydedilen ödemeler ve son hareketler.",
+      "empty": "Henüz tahsilat kaydı yok.",
+      "amount": "Tutar",
+      "paidAt": "Ödeme zamanı",
+      "method": "Yöntem",
+      "reference": "Referans",
+      "recent": "Son tahsilatlar",
+      "noMethod": "Belirtilmedi"
     },
     "reports": {
       "title": "Raporlar",
-      "subtitle": "Tanımlar, kayıtlı filtreler ve dışa aktarım — temel hazır."
+      "subtitle": "Planlama, tahsilat ve açık bakiye görünürlüğü için operasyon rapor merkezi.",
+      "readyHint": "Rapor kartları mevcut komuta verilerine bağlıdır; kayıtlı filtre ve dışa aktarma sonraki dalgada genişletilebilir.",
+      "cards": {
+        "collections": {
+          "title": "Tahsilat görünümü",
+          "body": "Son tahsilatlar, gecikmiş borçlar ve kalan bakiyeleri aynı yerde görün."
+        },
+        "scheduling": {
+          "title": "Planlama görünümü",
+          "body": "Yaklaşan antrenman yoğunluğunu ve grup bazlı haftalık yükü izleyin."
+        },
+        "balances": {
+          "title": "Sporcu bakiyeleri",
+          "body": "En yüksek açık bakiyeleri ve kısmi ödemeleri hızla önceliklendirin."
+        }
+      },
+      "sections": {
+        "overdue": "Gecikmiş borçlar",
+        "upcoming": "Yaklaşan antrenman yükü",
+        "collections": "Tahsilat aktivitesi",
+        "balances": "Açık bakiye önceliği"
+      }
     },
     "settings": {
       "title": "Ayarlar",

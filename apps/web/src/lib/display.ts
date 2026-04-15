@@ -50,7 +50,7 @@ export function getAttendanceStatusLabel(t: TFunction, status: AttendanceStatus)
 }
 
 export function getChargeStatusLabel(t: TFunction, status: AthleteChargeStatus): string {
-  return t(`app.enums.chargeStatus.${status}`);
+  return t(`app.enums.athleteChargeStatus.${status}`);
 }
 
 export function getGuardianRelationshipLabel(t: TFunction, relationshipType: string): string {
@@ -67,6 +67,15 @@ export function getGuardianRelationshipSummary(t: TFunction, link: AthleteGuardi
 
 export function getChargeCurrencyAmount(charge: AthleteCharge): string {
   return `${charge.chargeItem?.currency ? `${charge.chargeItem.currency} ` : ''}${charge.amount}`;
+}
+
+export function getMoneyAmount(value: string | number, currency?: string | null): string {
+  const amount = typeof value === 'number' ? value.toFixed(2) : value;
+  return `${currency ? `${currency} ` : ''}${amount}`;
+}
+
+export function getChargeVisualStatus(charge: AthleteCharge): AthleteChargeStatus {
+  return charge.derivedStatus ?? charge.status;
 }
 
 export function formatEnumLabel(t: TFunction, key: string, fallback: string): string {

@@ -9,10 +9,13 @@ import { Athlete } from './athlete.entity';
 import { Guardian } from './guardian.entity';
 import { AthleteGuardian } from './athlete-guardian.entity';
 import { AthleteTeamMembership } from './athlete-team-membership.entity';
+import { TrainingSessionSeries } from './training-session-series.entity';
 import { TrainingSession } from './training-session.entity';
 import { Attendance } from './attendance.entity';
 import { ChargeItem } from './charge-item.entity';
 import { AthleteCharge } from './athlete-charge.entity';
+import { Payment } from './payment.entity';
+import { PaymentAllocation } from './payment-allocation.entity';
 
 export const domainEntities = [
   Tenant,
@@ -26,10 +29,13 @@ export const domainEntities = [
   Guardian,
   AthleteGuardian,
   AthleteTeamMembership,
+  TrainingSessionSeries,
   TrainingSession,
   Attendance,
   ChargeItem,
   AthleteCharge,
+  Payment,
+  PaymentAllocation,
 ];
 
 export {
@@ -44,8 +50,11 @@ export {
   Guardian,
   AthleteGuardian,
   AthleteTeamMembership,
+  TrainingSessionSeries,
   TrainingSession,
   Attendance,
   ChargeItem,
   AthleteCharge,
+  Payment,
+  PaymentAllocation,
 };
