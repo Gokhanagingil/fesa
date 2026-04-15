@@ -9,6 +9,7 @@ import { Team } from '../../database/entities/team.entity';
 import { Athlete } from '../../database/entities/athlete.entity';
 import { Attendance } from '../../database/entities/attendance.entity';
 import { AthleteTeamMembership } from '../../database/entities/athlete-team-membership.entity';
+import { Coach } from '../../database/entities/coach.entity';
 import { TrainingSessionStatus } from '../../database/enums';
 import { CreateTrainingSessionDto } from './dto/create-training-session.dto';
 import { UpdateTrainingSessionDto } from './dto/update-training-session.dto';
@@ -40,6 +41,8 @@ export class TrainingService {
     private readonly attendance: Repository<Attendance>,
     @InjectRepository(AthleteTeamMembership)
     private readonly teamMemberships: Repository<AthleteTeamMembership>,
+    @InjectRepository(Coach)
+    private readonly coaches: Repository<Coach>,
   ) {}
 
   private parseDateOnly(value: string): Date {
@@ -99,6 +102,7 @@ export class TrainingService {
     sportBranchId: string,
     groupId: string,
     teamId: string | null | undefined,
+    coachId?: string | null,
   ): Promise<void> {
     const branch = await this.branches.findOne({ where: { id: sportBranchId, tenantId } });
     if (!branch) throw new BadRequestException('sportBranchId invalid for tenant');
@@ -115,6 +119,13 @@ export class TrainingService {
       }
       if (team.groupId != null && team.groupId !== groupId) {
         throw new BadRequestException('team must be under the selected group (or ungrouped)');
+      }
+    }
+    if (coachId) {
+      const coach = await this.coaches.findOne({ where: { id: coachId, tenantId } });
+      if (!coach) throw new BadRequestException('coachId invalid for tenant');
+      if (coach.sportBranchId !== sportBranchId) {
+        throw new BadRequestException('coach must belong to the same sport branch');
       }
     }
   }
@@ -216,6 +227,7 @@ export class TrainingService {
           sportBranchId: dto.sportBranchId,
           groupId: dto.groupId,
           teamId: dto.teamId ?? null,
+          coachId: dto.coachId ?? null,
           scheduledStart,
           scheduledEnd,
           location: dto.location ?? null,
@@ -237,7 +249,7 @@ export class TrainingService {
     if (!(end > start)) {
       throw new BadRequestException('scheduledEnd must be after scheduledStart');
     }
-    await this.validateSessionRefs(tenantId, dto.sportBranchId, dto.groupId, dto.teamId ?? null);
+    await this.validateSessionRefs(tenantId, dto.sportBranchId, dto.groupId, dto.teamId ?? null, dto.coachId ?? null);
 
     const entity = this.sessions.create({
       tenantId,
@@ -245,6 +257,7 @@ export class TrainingService {
       sportBranchId: dto.sportBranchId,
       groupId: dto.groupId,
       teamId: dto.teamId ?? null,
+      coachId: dto.coachId ?? null,
       scheduledStart: start,
       scheduledEnd: end,
       location: dto.location ?? null,
@@ -285,7 +298,7 @@ export class TrainingService {
   }
 
   async createSeries(tenantId: string, dto: CreateTrainingSessionSeriesDto) {
-    await this.validateSessionRefs(tenantId, dto.sportBranchId, dto.groupId, dto.teamId ?? null);
+    await this.validateSessionRefs(tenantId, dto.sportBranchId, dto.groupId, dto.teamId ?? null, dto.coachId ?? null);
 
     return this.sessions.manager.transaction(async (manager) => {
       const seriesRepo = manager.getRepository(TrainingSessionSeries);
@@ -296,6 +309,7 @@ export class TrainingService {
           sportBranchId: dto.sportBranchId,
           groupId: dto.groupId,
           teamId: dto.teamId ?? null,
+          coachId: dto.coachId ?? null,
           startsOn: dto.startsOn,
           endsOn: dto.endsOn,
           weekdays: Array.from(new Set(dto.weekdays)).sort((a, b) => a - b),
@@ -316,6 +330,7 @@ export class TrainingService {
         manager.getRepository(Athlete),
         manager.getRepository(Attendance),
         manager.getRepository(AthleteTeamMembership),
+        manager.getRepository(Coach),
       );
 
       const result = await scopedService.createSessionsFromSeries(tenantId, dto, series.id);
@@ -337,7 +352,8 @@ export class TrainingService {
     const sportBranchId = dto.sportBranchId ?? existing.sportBranchId;
     const groupId = dto.groupId ?? existing.groupId;
     const teamId = dto.teamId !== undefined ? dto.teamId : existing.teamId;
-    await this.validateSessionRefs(tenantId, sportBranchId, groupId, teamId);
+    const coachId = dto.coachId !== undefined ? dto.coachId : existing.coachId;
+    await this.validateSessionRefs(tenantId, sportBranchId, groupId, teamId, coachId);
 
     const start = dto.scheduledStart ? new Date(dto.scheduledStart) : existing.scheduledStart;
     const end = dto.scheduledEnd ? new Date(dto.scheduledEnd) : existing.scheduledEnd;
@@ -348,6 +364,7 @@ export class TrainingService {
     Object.assign(existing, {
       ...dto,
       teamId: dto.teamId !== undefined ? dto.teamId : existing.teamId,
+      coachId: dto.coachId !== undefined ? dto.coachId ?? null : existing.coachId,
       location: dto.location !== undefined ? dto.location ?? null : existing.location,
       notes: dto.notes !== undefined ? dto.notes ?? null : existing.notes,
       scheduledStart: dto.scheduledStart ? new Date(dto.scheduledStart) : existing.scheduledStart,

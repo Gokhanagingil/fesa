@@ -9,7 +9,9 @@ import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
 import { useTenant } from '../lib/tenant-hooks';
 import {
   formatDate,
+  formatDateTime,
   getChargeStatusLabel,
+  getLessonStatusLabel,
   getGuardianRelationshipLabel,
   getPersonName,
   getAthleteStatusLabel,
@@ -22,6 +24,7 @@ import type {
   AthleteFinanceSummaryResponse,
   AthleteGuardianLink,
   ChargeItem,
+  PrivateLesson,
   Guardian,
   GuardianRelationshipType,
   Team,
@@ -40,6 +43,7 @@ export function AthleteDetailPage() {
   const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [chargeItems, setChargeItems] = useState<ChargeItem[]>([]);
   const [charges, setCharges] = useState<AthleteCharge[]>([]);
+  const [privateLessons, setPrivateLessons] = useState<PrivateLesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(searchParams.get('message'));
@@ -56,7 +60,7 @@ export function AthleteDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const [a, g, tm, ag, tr, ci, ac] = await Promise.all([
+      const [a, g, tm, ag, tr, ci, ac, lessons] = await Promise.all([
         apiGet<Athlete>(`/api/athletes/${id}`),
         apiGet<AthleteGuardianLink[]>(`/api/athletes/${id}/guardians`),
         apiGet<TeamMembership[]>(`/api/athletes/${id}/teams`),
@@ -64,6 +68,7 @@ export function AthleteDetailPage() {
         apiGet<{ items: Team[] }>('/api/teams?limit=200'),
         apiGet<{ items: ChargeItem[] }>('/api/charge-items?limit=200&isActive=true'),
         apiGet<AthleteFinanceSummaryResponse>(`/api/finance/athlete-summaries?athleteId=${id}`),
+        apiGet<{ items: PrivateLesson[] }>(`/api/private-lessons?athleteId=${id}&limit=20`),
       ]);
       setAthlete(a);
       setGuardians(g);
@@ -71,6 +76,7 @@ export function AthleteDetailPage() {
       setAllGuardians(ag.items);
       setChargeItems(ci.items);
       setCharges(ac.charges.slice(0, 20));
+      setPrivateLessons(lessons.items);
       const sameBranch = tr.items.filter((x) => x.sportBranchId === a.sportBranchId);
       setAllTeams(sameBranch);
     } catch (e) {
@@ -520,6 +526,110 @@ export function AthleteDetailPage() {
             </table>
           </div>
         )}
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-semibold">{t('pages.privateLessons.title')}</h3>
+            <p className="text-sm text-amateur-muted">{t('pages.privateLessons.profileHint')}</p>
+          </div>
+          <Link to={`/app/private-lessons?athleteId=${athlete.id}`}>
+            <Button variant="ghost">{t('pages.privateLessons.openBoard')}</Button>
+          </Link>
+        </div>
+        {privateLessons.length === 0 ? (
+          <div className="mt-4 rounded-xl border border-dashed border-amateur-border bg-amateur-canvas/60 px-4 py-6 text-sm text-amateur-muted">
+            {t('pages.privateLessons.empty')}
+          </div>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[620px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-amateur-border text-amateur-muted">
+                  <th className="pb-2 font-medium">{t('pages.training.scheduled')}</th>
+                  <th className="pb-2 font-medium">{t('pages.coaches.title')}</th>
+                  <th className="pb-2 font-medium">{t('pages.privateLessons.focus')}</th>
+                  <th className="pb-2 font-medium">{t('pages.privateLessons.status')}</th>
+                  <th className="pb-2 font-medium">{t('pages.athleteCharges.status')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {privateLessons.map((lesson) => (
+                  <tr key={lesson.id} className="border-b border-amateur-border/70 last:border-0">
+                    <td className="py-3 text-amateur-muted">
+                      {formatDateTime(lesson.scheduledStart, i18n.language)}
+                    </td>
+                    <td className="py-3 font-medium text-amateur-ink">
+                      {lesson.coach ? `${lesson.coach.preferredName || lesson.coach.firstName} ${lesson.coach.lastName}` : '—'}
+                    </td>
+                    <td className="py-3 text-amateur-muted">{lesson.focus || '—'}</td>
+                    <td className="py-3 text-amateur-muted">{getLessonStatusLabel(t, lesson.status)}</td>
+                    <td className="py-3 text-amateur-muted">
+                      {lesson.charge ? getChargeStatusLabel(t, lesson.charge.derivedStatus ?? lesson.charge.status) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-semibold">{t('pages.communications.quickTitle')}</h3>
+            <p className="text-sm text-amateur-muted">{t('pages.communications.quickHint')}</p>
+          </div>
+          <Link to={`/app/communications?athleteIds=${athlete.id}`}>
+            <Button variant="ghost">{t('pages.communications.openAudienceBuilder')}</Button>
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+              {t('pages.communications.primaryContacts')}
+            </p>
+            <ul className="mt-3 space-y-2 text-sm text-amateur-ink">
+              {guardians.filter((row) => row.isPrimaryContact).length > 0 ? (
+                guardians
+                  .filter((row) => row.isPrimaryContact)
+                  .map((row) => (
+                    <li key={row.id}>
+                      {getPersonName(row.guardian)}
+                      <span className="text-amateur-muted">
+                        {' '}
+                        · {[row.guardian.phone, row.guardian.email].filter(Boolean).join(' · ') || '—'}
+                      </span>
+                    </li>
+                  ))
+              ) : (
+                <li className="text-amateur-muted">{t('pages.communications.noPrimaryContacts')}</li>
+              )}
+            </ul>
+          </div>
+          <div className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+              {t('pages.communications.followUpSignals')}
+            </p>
+            <ul className="mt-3 space-y-2 text-sm text-amateur-muted">
+              <li>
+                {t('pages.communications.signalOutstanding', {
+                  amount: getMoneyAmount(
+                    charges.reduce((sum, charge) => sum + Number(charge.remainingAmount ?? 0), 0),
+                    charges.find((charge) => charge.chargeItem?.currency)?.chargeItem?.currency ?? 'TRY',
+                  ),
+                })}
+              </li>
+              <li>
+                {t('pages.communications.signalLessons', {
+                  count: privateLessons.filter((lesson) => lesson.status !== 'completed').length,
+                })}
+              </li>
+            </ul>
+          </div>
+        </div>
       </section>
     </div>
   );

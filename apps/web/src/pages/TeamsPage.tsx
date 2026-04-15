@@ -14,6 +14,7 @@ type TeamRow = {
   code: string | null;
   sportBranch?: { name: string };
   group?: { name: string } | null;
+  headCoach?: { id: string; firstName: string; lastName: string; preferredName?: string | null } | null;
 };
 
 export function TeamsPage() {
@@ -68,6 +69,7 @@ export function TeamsPage() {
                   <tr className="border-b border-amateur-border text-amateur-muted">
                     <th className="pb-2 font-medium">{t('pages.teams.title')}</th>
                     <th className="pb-2 font-medium">{t('pages.groups.title')}</th>
+                    <th className="pb-2 font-medium">{t('pages.coaches.title')}</th>
                     <th className="pb-2 font-medium">{t('pages.athletes.branch')}</th>
                     <th className="pb-2 font-medium" />
                   </tr>
@@ -80,6 +82,11 @@ export function TeamsPage() {
                         {x.code ? <span className="ml-2 text-amateur-muted">({x.code})</span> : null}
                       </td>
                       <td className="py-3 text-amateur-muted">{x.group?.name ?? '—'}</td>
+                      <td className="py-3 text-amateur-muted">
+                        {x.headCoach
+                          ? `${x.headCoach.preferredName || x.headCoach.firstName} ${x.headCoach.lastName}`
+                          : t('pages.coaches.unassigned')}
+                      </td>
                       <td className="py-3 text-amateur-muted">{x.sportBranch?.name ?? '—'}</td>
                       <td className="py-3 text-right">
                         <Link

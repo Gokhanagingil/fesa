@@ -1,22 +1,15 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { Tenant } from './tenant.entity';
 import { Athlete } from './athlete.entity';
 import { ChargeItem } from './charge-item.entity';
+import { PrivateLesson } from './private-lesson.entity';
 import { AthleteChargeStatus } from '../enums';
 
 @Entity('athlete_charges')
 @Index(['tenantId', 'athleteId'])
 @Index(['tenantId', 'status'])
 @Index(['tenantId', 'dueDate'])
+@Index(['tenantId', 'privateLessonId'])
 export class AthleteCharge {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -41,6 +34,13 @@ export class AthleteCharge {
   @ManyToOne(() => ChargeItem, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'chargeItemId' })
   chargeItem!: ChargeItem;
+
+  @Column({ type: 'uuid', nullable: true })
+  privateLessonId!: string | null;
+
+  @ManyToOne(() => PrivateLesson, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'privateLessonId' })
+  privateLesson!: PrivateLesson | null;
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   amount!: string;

@@ -8,6 +8,7 @@ import { Athlete } from '../../database/entities/athlete.entity';
 import { Attendance } from '../../database/entities/attendance.entity';
 import { AthleteTeamMembership } from '../../database/entities/athlete-team-membership.entity';
 import { TrainingSessionSeries } from '../../database/entities/training-session-series.entity';
+import { Coach } from '../../database/entities/coach.entity';
 import { TrainingService } from './training.service';
 import { AttendanceController, TrainingController } from './training.controller';
 
@@ -22,6 +23,7 @@ import { AttendanceController, TrainingController } from './training.controller'
       Attendance,
       AthleteTeamMembership,
       TrainingSessionSeries,
+      Coach,
     ]),
   ],
   controllers: [TrainingController, AttendanceController],

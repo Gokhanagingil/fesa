@@ -41,6 +41,51 @@ Eligibility rule in the API: an athlete must share the session’s **primary gro
 - **Recurring planning** stays group-first and team-optional. Series generation creates normal session rows, so attendance, list views, and bulk operations continue to work on the same product surface.
 - **Bulk rescheduling/cancellation** stays intentionally narrow: bulk shift is limited to planned sessions, and bulk cancel appends explicit notes so staff actions remain traceable.
 
+## Coaching operations
+
+- **`coaches`** — lean operational staff records for scheduling, group/team ownership, and private lessons.
+- **Groups** and **teams** can each carry an optional **`headCoachId`** for day-to-day accountability without introducing HR complexity.
+- **Training sessions** and **training session series** can carry an optional **`coachId`** so the normal planning board becomes coach-aware while keeping the existing group/team semantics intact.
+
+### Why this stays lean
+
+- Coaches are treated as **operational actors**, not employees with payroll, permissions, or contracts.
+- The same coach can be visible across:
+  - structural ownership (group / team),
+  - schedule ownership (training sessions),
+  - premium individual work (private lessons).
+
+## Private lessons
+
+- **`private_lessons`** — explicit 1-to-1 lesson rows linked to:
+  - one athlete,
+  - one coach,
+  - one sport branch,
+  - scheduled start/end,
+  - optional focus, location, notes,
+  - status and optional attendance outcome.
+
+### Why private lessons are separate from training sessions
+
+The existing training domain intentionally requires:
+
+- a **group** on every training session,
+- optional **team** filtering inside that group,
+- attendance eligibility based on the athlete’s **primary group** and optional active team membership.
+
+That makes standard sessions excellent for cohort operations, but awkward for 1-to-1 coaching. A separate private-lesson model keeps:
+
+- group vs team semantics clean,
+- attendance rules trustworthy,
+- UX obvious for staff (“who / coach / when / billing”),
+- future reporting and communication targeting straightforward.
+
+### Finance linkage
+
+- A private lesson can optionally create an **athlete charge** at creation time.
+- The finance row links back through **`athlete_charges.privateLessonId`**.
+- This keeps payment allocation and derived charge-state logic centralized in the existing finance flow instead of inventing lesson-specific payment logic.
+
 ## Guardians
 
 - Guardians remain reusable tenant-level contact records.
@@ -82,6 +127,25 @@ Eligibility rule in the API: an athlete must share the session’s **primary gro
   - report definition metadata for the web command center,
   - a live command-center summary for scheduling, attendance, balances, and recent collections,
   - finance summary endpoints that power dashboard, reports, and athlete finance surfaces.
+
+## Communication operations foundation
+
+- Communication remains **operational targeting**, not a full messaging platform.
+- The current wave adds a tenant-scoped audience builder on top of existing athlete / guardian / session / private-lesson / finance data.
+- Targeting can be assembled by:
+  - group,
+  - team,
+  - training session cohort,
+  - private-lesson status / coach / date window,
+  - outstanding or overdue finance state,
+  - primary-contact guardian visibility.
+
+The output is intentionally simple:
+
+- a clear **who is included** preview,
+- explicit **why included** reasons,
+- copy-friendly contact lines and draft preparation support,
+- reuse of **`saved_filter_presets`** as the groundwork for future saved communication audiences.
 
 `report_definitions` and `saved_filter_presets` stay lean so future saved filters/export flows can evolve without reshaping the operational entities above.
 

@@ -3,6 +3,7 @@ import { SportBranch } from './sport-branch.entity';
 import { AgeGroup } from './age-group.entity';
 import { ClubGroup } from './club-group.entity';
 import { Team } from './team.entity';
+import { Coach } from './coach.entity';
 import { ReportDefinition } from './report-definition.entity';
 import { SavedFilterPreset } from './saved-filter-preset.entity';
 import { Athlete } from './athlete.entity';
@@ -12,6 +13,7 @@ import { AthleteTeamMembership } from './athlete-team-membership.entity';
 import { TrainingSessionSeries } from './training-session-series.entity';
 import { TrainingSession } from './training-session.entity';
 import { Attendance } from './attendance.entity';
+import { PrivateLesson } from './private-lesson.entity';
 import { ChargeItem } from './charge-item.entity';
 import { AthleteCharge } from './athlete-charge.entity';
 import { Payment } from './payment.entity';
@@ -23,6 +25,7 @@ export const domainEntities = [
   AgeGroup,
   ClubGroup,
   Team,
+  Coach,
   ReportDefinition,
   SavedFilterPreset,
   Athlete,
@@ -32,6 +35,7 @@ export const domainEntities = [
   TrainingSessionSeries,
   TrainingSession,
   Attendance,
+  PrivateLesson,
   ChargeItem,
   AthleteCharge,
   Payment,
@@ -44,6 +48,7 @@ export {
   AgeGroup,
   ClubGroup,
   Team,
+  Coach,
   ReportDefinition,
   SavedFilterPreset,
   Athlete,
@@ -53,6 +58,7 @@ export {
   TrainingSessionSeries,
   TrainingSession,
   Attendance,
+  PrivateLesson,
   ChargeItem,
   AthleteCharge,
   Payment,

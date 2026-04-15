@@ -18,6 +18,10 @@ export class CreateTrainingSessionDto {
   @IsUUID()
   teamId?: string | null;
 
+  @IsOptional()
+  @IsUUID()
+  coachId?: string | null;
+
   @IsDateString()
   scheduledStart!: string;
 

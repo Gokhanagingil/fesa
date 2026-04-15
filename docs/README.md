@@ -19,7 +19,8 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 - **Who**: club admins and coaches; low-friction, mobile-friendly UX.
 - **What**: operations beyond CRUD — schedules, attendance, fixtures, finance, reporting — introduced in later waves.
 - **Wave one (done)**: scaffolding, health/config, minimal domain model, UX shell, i18n, conventions.
-- **Wave two (current)**: athlete/guardian/training/attendance/finance primitives plus recurring scheduling, collections tracking, and command-center reporting.
+- **Wave two (done)**: athlete/guardian/training/attendance/finance primitives plus recurring scheduling, collections tracking, and command-center reporting.
+- **Wave three (current)**: coach-aware operations, private lessons as a first-class workflow, and communication audience building on top of athlete/guardian/training/finance data.
 
 ## Repository map
 
@@ -45,7 +46,7 @@ Manual staging deploy (SSH, PM2, Nginx template): [staging-deploy.md](./staging-
 
 - Full authentication and RBAC
 - Tournament engine, statistics ingestion, inventory
-- Payment capture, 1-to-1 lessons, recommendations
+- Payment capture, recommendations
 - Advanced reporting execution and exports
 - Accounting ledger, automated billing runs
 

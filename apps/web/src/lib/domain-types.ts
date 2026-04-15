@@ -7,11 +7,26 @@ export type AthleteChargeStatus = 'pending' | 'partially_paid' | 'paid' | 'cance
 export type GuardianRelationshipType = 'mother' | 'father' | 'guardian' | 'other';
 
 export type SportBranch = { id: string; code: string; name: string };
+export type Coach = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  preferredName: string | null;
+  sportBranchId: string;
+  sportBranch?: SportBranch;
+  phone: string | null;
+  email: string | null;
+  specialties: string | null;
+  isActive: boolean;
+  notes: string | null;
+};
 export type ClubGroup = {
   id: string;
   name: string;
   sportBranchId: string;
   sportBranch?: SportBranch;
+  headCoachId?: string | null;
+  headCoach?: Coach | null;
   teams?: Pick<Team, 'id' | 'name'>[];
 };
 export type Team = {
@@ -20,6 +35,8 @@ export type Team = {
   sportBranchId: string;
   groupId: string | null;
   code?: string | null;
+  headCoachId?: string | null;
+  headCoach?: Coach | null;
   sportBranch?: SportBranch;
   group?: ClubGroup | null;
 };
@@ -71,6 +88,7 @@ export type TrainingSessionSeries = {
   sportBranchId: string;
   groupId: string;
   teamId: string | null;
+  coachId?: string | null;
   startsOn: string;
   endsOn: string;
   weekdays: number[];
@@ -87,6 +105,7 @@ export type TrainingSession = {
   sportBranchId: string;
   groupId: string;
   teamId: string | null;
+  coachId?: string | null;
   seriesId?: string | null;
   scheduledStart: string;
   scheduledEnd: string;
@@ -96,6 +115,7 @@ export type TrainingSession = {
   sportBranch?: SportBranch;
   group?: ClubGroup;
   team?: Team | null;
+  coach?: Coach | null;
 };
 
 export type AttendanceRow = {
@@ -118,6 +138,7 @@ export type AthleteCharge = {
   id: string;
   athleteId: string;
   chargeItemId: string;
+  privateLessonId?: string | null;
   amount: string;
   dueDate: string | null;
   status: AthleteChargeStatus;
@@ -128,6 +149,54 @@ export type AthleteCharge = {
   chargeItem?: ChargeItem;
   athlete?: Athlete;
   notes?: string | null;
+};
+
+export type PrivateLesson = {
+  id: string;
+  athleteId: string;
+  coachId: string;
+  sportBranchId: string;
+  focus: string | null;
+  scheduledStart: string;
+  scheduledEnd: string;
+  location: string | null;
+  status: TrainingSessionStatus;
+  attendanceStatus: AttendanceStatus | null;
+  notes: string | null;
+  athlete?: Athlete;
+  coach?: Coach;
+  charge?: AthleteCharge | null;
+};
+
+export type CommunicationAudienceMember = {
+  athleteId: string;
+  athleteName: string;
+  reasons: string[];
+  groupId: string | null;
+  groupName: string | null;
+  teamIds: string[];
+  teamNames: string[];
+  guardians: Array<{
+    guardianId: string;
+    name: string;
+    relationshipType: string;
+    phone: string | null;
+    email: string | null;
+    isPrimaryContact: boolean;
+  }>;
+  outstandingAmount: string;
+  overdueAmount: string;
+  hasOverdueBalance: boolean;
+};
+
+export type CommunicationAudienceResponse = {
+  items: CommunicationAudienceMember[];
+  counts: {
+    athletes: number;
+    guardians: number;
+    primaryContacts: number;
+    withOverdueBalance: number;
+  };
 };
 
 export type Payment = {
@@ -172,6 +241,8 @@ export type DashboardSummary = {
     upcomingSessions: number;
     totalSessions: number;
     cancelledSessions: number;
+    activeCoaches?: number;
+    privateLessonsThisWeek?: number;
     outstandingTotal: string;
     overdueTotal: string;
     collectedTotal: string;
@@ -195,4 +266,11 @@ export type ReportingDefinitionsResponse = {
 
 export type CommandCenterResponse = DashboardSummary & {
   overdueCharges: AthleteCharge[];
+  upcomingPrivateLessons?: PrivateLesson[];
+  coachesByLoad?: Array<{ coach: Coach; upcomingCount: number; privateLessonCount: number }>;
+  communicationReadiness?: {
+    audienceAthletes: number;
+    reachableGuardians: number;
+    athletesWithOverdueBalance: number;
+  };
 };

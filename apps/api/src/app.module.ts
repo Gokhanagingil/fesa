@@ -16,6 +16,9 @@ import { ReportingModule } from './modules/reporting/reporting.module';
 import { GuardianModule } from './modules/guardian/guardian.module';
 import { TrainingModule } from './modules/training/training.module';
 import { SportBranchModule } from './modules/sport-branch/sport-branch.module';
+import { CoachModule } from './modules/coach/coach.module';
+import { PrivateLessonModule } from './modules/private-lesson/private-lesson.module';
+import { CommunicationModule } from './modules/communication/communication.module';
 
 @Module({
   imports: [
@@ -49,6 +52,9 @@ import { SportBranchModule } from './modules/sport-branch/sport-branch.module';
     GuardianModule,
     TrainingModule,
     SportBranchModule,
+    CoachModule,
+    PrivateLessonModule,
+    CommunicationModule,
   ],
 })
 export class AppModule {}

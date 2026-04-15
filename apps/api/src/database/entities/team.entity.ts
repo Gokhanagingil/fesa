@@ -10,6 +10,7 @@ import {
 import { Tenant } from './tenant.entity';
 import { SportBranch } from './sport-branch.entity';
 import { ClubGroup } from './club-group.entity';
+import { Coach } from './coach.entity';
 
 @Entity('teams')
 export class Team {
@@ -43,6 +44,13 @@ export class Team {
 
   @Column({ type: 'varchar', length: 32, nullable: true })
   code!: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  headCoachId!: string | null;
+
+  @ManyToOne(() => Coach, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'headCoachId' })
+  headCoach!: Coach | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

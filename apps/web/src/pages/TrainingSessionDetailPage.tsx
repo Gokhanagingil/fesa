@@ -7,6 +7,7 @@ import { apiGet, apiPost } from '../lib/api';
 import {
   formatDateTime,
   getAttendanceStatusLabel,
+  getCoachName,
   getPersonName,
   getTrainingStatusLabel,
 } from '../lib/display';
@@ -15,6 +16,7 @@ import type {
   AttendanceRow,
   AttendanceStatus,
   ClubGroup,
+  Coach,
   Team,
   TrainingSession,
 } from '../lib/domain-types';
@@ -31,6 +33,7 @@ export function TrainingSessionDetailPage() {
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
   const [groups, setGroups] = useState<ClubGroup[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
   const [draft, setDraft] = useState<Record<string, AttendanceStatus>>({});
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -53,15 +56,17 @@ export function TrainingSessionDetailPage() {
         apiGet<AttendanceRow[]>(`/api/training-sessions/${id}/attendance`),
         apiGet<{ items: Athlete[] }>(`/api/athletes?${athleteParams.toString()}`),
       ]);
-      const [groupRes, teamRes] = await Promise.all([
+      const [groupRes, teamRes, coachRes] = await Promise.all([
         apiGet<{ items: ClubGroup[] }>('/api/groups?limit=200'),
         apiGet<{ items: Team[] }>('/api/teams?limit=200'),
+        apiGet<{ items: Coach[] }>('/api/coaches?limit=200'),
       ]);
       setSession(s);
       setAttendance(att);
       setRoster(athletes.items);
       setGroups(groupRes.items);
       setTeams(teamRes.items);
+      setCoaches(coachRes.items);
       const next: Record<string, AttendanceStatus> = {};
       for (const row of att) {
         next[row.athlete.id] = row.status;
@@ -114,6 +119,7 @@ export function TrainingSessionDetailPage() {
 
   const groupName = session ? groups.find((group) => group.id === session.groupId)?.name : undefined;
   const teamName = session?.teamId ? teams.find((team) => team.id === session.teamId)?.name : undefined;
+  const coachName = session?.coachId ? getCoachName(coaches.find((coach) => coach.id === session.coachId)) : null;
 
   function applyBulkStatus(status: AttendanceStatus) {
     setDraft((current) => {
@@ -164,6 +170,7 @@ export function TrainingSessionDetailPage() {
         <p className="mt-2 text-sm text-amateur-muted">
           {t('pages.athletes.primaryGroup')}: {groupName ?? t('pages.training.unknownGroup')}
           {teamName ? ` · ${t('pages.teams.title')}: ${teamName}` : ''}
+          {coachName ? ` · ${t('pages.coaches.title')}: ${coachName}` : ''}
         </p>
         {session.location ? (
           <p className="mt-1 text-sm">

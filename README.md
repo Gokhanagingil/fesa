@@ -116,13 +116,16 @@ Turkish and English are wired via `i18next` in `apps/web`. Locale files live und
 
 ## Club operations core workflows
 
-Wave 2 turns the existing operational core into a more complete command center without introducing parallel modules:
+The current product wave extends the existing command center into a more complete daily operating system without introducing parallel modules:
 
-- **Athletes + guardians:** existing athlete and guardian flows remain in place, with finance and roster context now feeding more directly into day-to-day management.
-- **Groups + teams:** the group-first / optional-team model remains unchanged and continues to drive scheduling, rosters, and attendance safely.
-- **Training + attendance:** training now supports calendar-oriented filtering, recurring session generation, and safe bulk cancellation / rescheduling on top of the existing session and attendance routes.
-- **Collections + balances:** charge assignment still starts from reusable charge items, but clubs can now record payments with explicit allocations to athlete charges and see paid / partial / overdue / outstanding state clearly.
-- **Dashboard + reporting:** the dashboard and reports pages now surface live operational and collection summaries instead of placeholder counts and disabled report affordances.
+- **Athletes + guardians:** athlete profiles now combine guardians, team context, finance state, private lessons, and communication follow-up signals in one place.
+- **Groups + teams:** the group-first / optional-team model remains unchanged and now also supports lightweight coach assignment for operational ownership.
+- **Coaches:** clubs can manage a focused coaching roster, then assign coaches to groups, teams, training sessions, and private lessons without turning the product into an HR suite.
+- **Training + attendance:** training stays group-first / team-optional, with recurring session generation, safe bulk cancellation / rescheduling, and optional coach visibility in planning and attendance views.
+- **Private lessons:** 1-to-1 lessons are now a first-class workflow with athlete, coach, schedule, attendance, notes, and optional linked charge visibility.
+- **Collections + balances:** charge assignment still starts from reusable charge items, payments still use explicit allocations, and private-lesson charges now fit inside the same finance model.
+- **Communication readiness:** the product now helps staff assemble audiences by group, team, session, private-lesson context, and financial follow-up so family outreach can start from clear operational targets.
+- **Dashboard + reporting:** the dashboard and reports pages now surface live operational, coaching, private-lesson, and collection summaries instead of placeholder counts and disabled report affordances.
 
 ## Domain: Group vs Team vs Athlete
 

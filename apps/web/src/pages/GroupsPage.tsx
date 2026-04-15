@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
+import { InlineAlert } from '../components/ui/InlineAlert';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { apiGet } from '../lib/api';
-import type { ClubGroup } from '../lib/domain-types';
+import { getPersonName } from '../lib/display';
+import type { ClubGroup, Coach } from '../lib/domain-types';
 import { useTenant } from '../lib/tenant-hooks';
 
 export function GroupsPage() {
@@ -14,8 +16,11 @@ export function GroupsPage() {
   const { tenantId, loading: tenantLoading } = useTenant();
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<ClubGroup[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!tenantId) return;
@@ -35,6 +40,18 @@ export function GroupsPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!tenantId) return;
+    void (async () => {
+      try {
+        const res = await apiGet<{ items: Coach[] }>('/api/coaches?limit=200&isActive=true');
+        setCoaches(res.items);
+      } catch {
+        setCoaches([]);
+      }
+    })();
+  }, [tenantId]);
+
   const filteredItems = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return items;
@@ -46,10 +63,40 @@ export function GroupsPage() {
     );
   }, [items, query]);
 
+  async function assignHeadCoach(groupId: string, headCoachId: string) {
+    setSavingId(groupId);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiGet(`/api/groups/${groupId}`);
+      await fetch(`/api/groups/${groupId}/head-coach`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(tenantId ? { 'X-Tenant-Id': tenantId } : {}),
+        },
+        body: JSON.stringify({ headCoachId: headCoachId || null }),
+      }).then(async (res) => {
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || t('app.errors.saveFailed'));
+        }
+      });
+      setMessage(t('pages.groups.headCoachSaved'));
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   return (
     <div>
       <PageHeader title={t('pages.groups.title')} subtitle={t('pages.groups.subtitle')} />
       <p className="mb-4 max-w-2xl text-sm text-amateur-muted">{t('pages.groups.memberHint')}</p>
+      {message ? <InlineAlert tone="success" className="mb-4">{message}</InlineAlert> : null}
+      {error ? <InlineAlert tone="error" className="mb-4">{error}</InlineAlert> : null}
       <ListPageFrame
         search={{ value: query, onChange: setQuery, disabled: !tenantId || tenantLoading }}
         toolbar={
@@ -60,8 +107,6 @@ export function GroupsPage() {
       >
         {!tenantId && !tenantLoading ? (
           <p className="text-sm text-amateur-muted">{t('app.errors.needTenant')}</p>
-        ) : error ? (
-          <p className="text-sm text-red-700">{error}</p>
         ) : loading ? (
           <p className="text-sm text-amateur-muted">{t('app.states.loading')}</p>
         ) : filteredItems.length === 0 ? (
@@ -102,6 +147,32 @@ export function GroupsPage() {
                       {t('pages.groups.structureTitle')}
                     </p>
                     <p className="mt-2 text-sm text-amateur-muted">{t('pages.groups.memberHint')}</p>
+                    <div className="mt-4 rounded-xl border border-amateur-border bg-amateur-canvas/70 p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+                        {t('pages.coaches.headCoach')}
+                      </p>
+                      <p className="mt-1 text-sm text-amateur-ink">
+                        {group.headCoach ? getPersonName(group.headCoach) : t('pages.coaches.unassigned')}
+                      </p>
+                      <label className="mt-3 flex flex-col gap-1 text-sm text-amateur-muted">
+                        <span>{t('pages.groups.assignCoach')}</span>
+                        <select
+                          value={group.headCoachId ?? ''}
+                          onChange={(e) => void assignHeadCoach(group.id, e.target.value)}
+                          disabled={savingId === group.id}
+                          className="rounded-lg border border-amateur-border bg-amateur-surface px-3 py-2 text-amateur-ink disabled:opacity-60"
+                        >
+                          <option value="">{t('pages.coaches.unassigned')}</option>
+                          {coaches
+                            .filter((coach) => coach.sportBranchId === group.sportBranchId)
+                            .map((coach) => (
+                              <option key={coach.id} value={coach.id}>
+                                {getPersonName(coach)}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                    </div>
                   </div>
                   <div className="rounded-xl border border-amateur-border bg-amateur-surface p-4 lg:min-w-[16rem]">
                     <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">

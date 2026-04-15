@@ -32,6 +32,10 @@ export class CreateTrainingSessionSeriesDto {
   @IsUUID()
   teamId?: string | null;
 
+  @IsOptional()
+  @IsUUID()
+  coachId?: string | null;
+
   @IsDateString()
   startsOn!: string;
 
