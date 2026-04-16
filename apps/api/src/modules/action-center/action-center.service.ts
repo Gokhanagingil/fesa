@@ -66,6 +66,14 @@ type ActionCenterCounts = {
   byUrgency: Record<ActionCenterItemUrgency, number>;
 };
 
+type ActionCenterCategoryGroup = {
+  category: ActionCenterItemCategory;
+  total: number;
+  unread: number;
+  overdue: number;
+  items: ActionCenterItem[];
+};
+
 type FinanceChargeSummary = {
   id: string;
   athleteId: string;
@@ -275,6 +283,33 @@ export class ActionCenterService {
       counts.byUrgency[item.urgency] += 1;
     }
     return counts;
+  }
+
+  private buildGroups(items: ActionCenterItem[]): ActionCenterCategoryGroup[] {
+    const orderedCategories: ActionCenterItemCategory[] = [
+      ActionCenterItemCategory.FINANCE,
+      ActionCenterItemCategory.FAMILY,
+      ActionCenterItemCategory.READINESS,
+      ActionCenterItemCategory.TRAINING,
+      ActionCenterItemCategory.PRIVATE_LESSONS,
+    ];
+
+    return orderedCategories
+      .map((category) => {
+        const categoryItems = items.filter((item) => item.category === category);
+        if (categoryItems.length === 0) {
+          return null;
+        }
+
+        return {
+          category,
+          total: categoryItems.length,
+          unread: categoryItems.filter((item) => !item.read).length,
+          overdue: categoryItems.filter((item) => item.urgency === ActionCenterItemUrgency.OVERDUE).length,
+          items: categoryItems,
+        };
+      })
+      .filter((group): group is ActionCenterCategoryGroup => Boolean(group));
   }
 
   private async buildFinanceItems(tenantId: string, now: Date): Promise<GeneratedActionCenterItem[]> {
@@ -685,11 +720,11 @@ export class ActionCenterService {
     ];
   }
 
-  private async buildActiveItems(tenantId: string): Promise<ActionCenterItem[]> {
+  private async buildActiveItems(tenantId: string, staffUserId: string): Promise<ActionCenterItem[]> {
     const now = new Date();
     const [candidates, stateRows] = await Promise.all([
       this.buildCandidateItems(tenantId, now),
-      this.states.find({ where: { tenantId } }),
+      this.states.find({ where: { tenantId, staffUserId } }),
     ]);
     const stateMap = new Map(stateRows.map((state) => [state.itemKey, state]));
     const items = candidates
@@ -698,8 +733,8 @@ export class ActionCenterService {
     return this.sortItems(items);
   }
 
-  async listItems(tenantId: string, query: ListActionCenterItemsQueryDto) {
-    let items = await this.buildActiveItems(tenantId);
+  async listItems(tenantId: string, staffUserId: string, query: ListActionCenterItemsQueryDto) {
+    let items = await this.buildActiveItems(tenantId, staffUserId);
     const includeRead = query.includeRead ?? query.view === ActionCenterView.NOTIFICATIONS;
     if (query.category) {
       items = items.filter((item) => item.category === query.category);
@@ -723,41 +758,50 @@ export class ActionCenterService {
     return {
       items: items.slice(0, limit),
       counts,
+      groups: this.buildGroups(items).map((group) => ({
+        ...group,
+        items: group.items.slice(0, limit),
+      })),
     };
   }
 
-  async listItemsSafe(tenantId: string, query: ListActionCenterItemsQueryDto) {
+  async listItemsSafe(tenantId: string, staffUserId: string, query: ListActionCenterItemsQueryDto) {
     try {
-      return await this.listItems(tenantId, query);
+      return await this.listItems(tenantId, staffUserId, query);
     } catch (error) {
       if (isMissingTableError(error) || isMissingRelationError(error)) {
         return {
           items: [],
           counts: this.createCounts(),
+          groups: [],
         };
       }
       throw error;
     }
   }
 
-  async summary(tenantId: string) {
-    const items = await this.buildActiveItems(tenantId);
+  async summary(tenantId: string, staffUserId: string) {
+    const items = await this.buildActiveItems(tenantId, staffUserId);
     return {
       counts: this.buildCounts(items),
       items: items.slice(0, 6),
+      groups: this.buildGroups(items).map((group) => ({
+        ...group,
+        items: group.items.slice(0, 6),
+      })),
     };
   }
 
-  async updateItems(tenantId: string, dto: UpdateActionCenterItemsDto) {
+  async updateItems(tenantId: string, staffUserId: string, dto: UpdateActionCenterItemsDto) {
     if (dto.action === ActionCenterItemMutation.SNOOZE && !dto.snoozedUntil) {
       throw new BadRequestException('snoozedUntil is required when snoozing action-center items');
     }
 
-    const items = await this.buildActiveItems(tenantId);
+    const items = await this.buildActiveItems(tenantId, staffUserId);
     const itemMap = new Map(items.map((item) => [item.itemKey, item]));
     const now = new Date();
     const existingRows = await this.states.find({
-      where: { tenantId, itemKey: In(dto.itemKeys) },
+      where: { tenantId, staffUserId, itemKey: In(dto.itemKeys) },
     });
     const existingMap = new Map(existingRows.map((row) => [row.itemKey, row]));
     const rowsToSave: ActionCenterItemState[] = [];
@@ -772,6 +816,7 @@ export class ActionCenterService {
         existingMap.get(itemKey) ??
         this.states.create({
           tenantId,
+          staffUserId,
           itemKey,
           metadata: {},
         });

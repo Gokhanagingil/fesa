@@ -1,8 +1,8 @@
 # Reporting and command center
 
-## What Wave 7 adds
+## What Wave 10 hardens
 
-Wave 7 keeps the existing reporting and command-center backbone, then extends it into a practical cross-surface follow-through system:
+Wave 10 keeps the existing reporting and command-center backbone, then hardens it into a more trustworthy daily-operating surface:
 
 - `/api/reporting/definitions` still returns stable live report cards with i18n keys.
 - `/api/reporting/command-center` now combines:
@@ -10,15 +10,16 @@ Wave 7 keeps the existing reporting and command-center backbone, then extends it
   - private-lesson follow-up visibility,
   - communication-readiness counts,
   - family workflow counts and recent family-action items,
-  - **action-center counts and top priority items** for immediate staff follow-through.
+  - **action-center counts and top priority items** for immediate staff follow-through, using the requesting staff member's own read state.
 - `/api/action-center/items` now exposes the shared operational backlog used by:
   - the header notification center,
   - the dedicated staff work queue page,
   - dashboard and report action summaries.
+- `/api/auth/platform-overview` now adds a lightweight cross-club action snapshot for global admins so they can see which clubs have unread, overdue, or follow-up-heavy operational load before switching context.
 
 ## Action center model
 
-Wave 7 still intentionally does **not** introduce a parallel workflow engine.
+Wave 10 still intentionally does **not** introduce a parallel workflow engine.
 
 Instead, it derives actionable items from current operational truth:
 
@@ -37,6 +38,12 @@ Each active item carries:
 - a category, type, urgency, deep link, and optional communication pivot,
 - lightweight persisted state (`read`, `dismissed`, `completed`, `snoozedUntil`) in `action_center_item_states`.
 
+Wave 10 also makes that persisted state **staff-specific**:
+
+- read / snoozed / dismissed items now belong to the current staff user instead of becoming tenant-wide hidden state,
+- one staff user's cleanup no longer silently clears another staff member's queue,
+- snapshot behavior still ensures materially changed issues can resurface instead of remaining hidden.
+
 That keeps the queue trustworthy: if the underlying issue changes materially, the item can resurface instead of remaining silently hidden.
 
 ## Command center conventions
@@ -45,10 +52,11 @@ That keeps the queue trustworthy: if the underlying issue changes materially, th
 - **No notification vanity:** items only exist when they represent clear staff action, not passive system noise.
 - **Deep-link first:** queue items land on the exact workflow surface (`finance`, `athlete detail`, `training`, `private lessons`, `communications`) rather than vague landing pages.
 - **Bulk actions stay pragmatic:** mark read, dismiss, complete, and snooze are route-level actions on the action-center API, not a generic async command bus.
+- **Global admin visibility stays intentional:** cross-club visibility appears in admin-oriented overview surfaces, while club-scoped operational APIs remain tenant-resolved through the existing guard path.
 
 ## Communication follow-through
 
-Wave 7 keeps communications in the “preparation and targeting” lane while adding guardian-portal follow-through targeting:
+Wave 10 keeps communications in the “preparation and targeting” lane while preserving guardian-portal follow-through targeting:
 
 - action-center items can pivot into `/app/communications` with prefilled filters,
 - audience reasons still explain why the athlete or family is included,

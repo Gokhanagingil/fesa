@@ -12,6 +12,7 @@ import { apiGet, apiPatch } from '../lib/api';
 import {
   formatDateTime,
   getActionCenterCategoryLabel,
+  getActionCenterItemTitle,
   getActionCenterItemSummary,
   getActionCenterTypeLabel,
   getActionCenterMutationLabel,
@@ -20,6 +21,7 @@ import {
 } from '../lib/display';
 import type {
   ActionCenterItem,
+  ActionCenterItemGroup,
   ActionCenterItemCategory,
   ActionCenterItemMutation,
   ActionCenterItemUrgency,
@@ -30,6 +32,7 @@ import { useTenant } from '../lib/tenant-hooks';
 const categories: Array<ActionCenterItemCategory | ''> = ['', 'finance', 'family', 'readiness', 'private_lessons', 'training'];
 const urgencies: Array<ActionCenterItemUrgency | ''> = ['', 'overdue', 'today', 'upcoming', 'normal'];
 const bulkActions: ActionCenterItemMutation[] = ['mark_read', 'dismiss', 'complete'];
+const categoryPriority: ActionCenterItemCategory[] = ['finance', 'family', 'readiness', 'training', 'private_lessons'];
 
 export function ActionCenterPage() {
   const { t } = useTranslation();
@@ -88,10 +91,26 @@ export function ActionCenterPage() {
   }, [load]);
 
   const visibleItems = useMemo(() => response?.items ?? [], [response]);
+  const groupedItems = useMemo(() => {
+    const sourceGroups = response?.groups ?? [];
+    if (sourceGroups.length > 0) {
+      return sourceGroups.filter((group) => group.items.length > 0);
+    }
+    return categoryPriority
+      .map((groupCategory) => ({
+        category: groupCategory,
+        count: visibleItems.filter((item) => item.category === groupCategory).length,
+        unread: visibleItems.filter((item) => item.category === groupCategory && !item.read).length,
+        overdue: visibleItems.filter((item) => item.category === groupCategory && item.urgency === 'overdue').length,
+        items: visibleItems.filter((item) => item.category === groupCategory),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [response, visibleItems]);
   const selectedItems = useMemo(
     () => visibleItems.filter((item) => selectedKeys.includes(item.itemKey)),
     [selectedKeys, visibleItems],
   );
+  const hasActiveFilters = Boolean(category || urgency || showRead);
 
   function toggleSelected(itemKey: string) {
     setSelectedKeys((current) =>
@@ -165,11 +184,20 @@ export function ActionCenterPage() {
             compact
             tone={response.counts.today > 0 ? 'danger' : 'default'}
           />
-          <StatCard label={t('pages.actionCenter.summary.followUp')} value={response.counts.byCategory.family + response.counts.byCategory.finance} compact />
+          <StatCard
+            label={t('pages.actionCenter.summary.followUp')}
+            value={
+              response.counts.byCategory.family +
+              response.counts.byCategory.finance +
+              response.counts.byCategory.readiness
+            }
+            compact
+          />
         </div>
       ) : null}
 
       <ListPageFrame
+        toolbarLabel={t('app.actions.filter')}
         toolbar={
           <>
             <label className="flex min-w-0 items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
@@ -224,9 +252,54 @@ export function ActionCenterPage() {
         ) : loading && !response ? (
           <p className="text-sm text-amateur-muted">{t('app.states.loading')}</p>
         ) : !response || visibleItems.length === 0 ? (
-          <EmptyState title={t('pages.actionCenter.empty')} hint={t('pages.actionCenter.emptyHint')} />
+          <EmptyState
+            title={t('pages.actionCenter.empty')}
+            hint={hasActiveFilters ? t('pages.actionCenter.emptyFilteredHint') : t('pages.actionCenter.emptyHint')}
+          />
         ) : (
           <div className="space-y-6">
+            <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-accent">
+                    {t('pages.actionCenter.workQueueEyebrow')}
+                  </p>
+                  <h2 className="mt-2 font-display text-xl font-semibold text-amateur-ink">
+                    {t('pages.actionCenter.workQueueTitle')}
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm text-amateur-muted">
+                    {t('pages.actionCenter.workQueueHint')}
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm">
+                    <p className="text-xs uppercase tracking-wide text-amateur-muted">
+                      {t('pages.actionCenter.summary.overdue')}
+                    </p>
+                    <p className="mt-2 font-display text-2xl font-semibold text-red-700">
+                      {response.counts.overdue}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm">
+                    <p className="text-xs uppercase tracking-wide text-amateur-muted">
+                      {t('pages.actionCenter.summary.today')}
+                    </p>
+                    <p className="mt-2 font-display text-2xl font-semibold text-amateur-ink">
+                      {response.counts.today}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm">
+                    <p className="text-xs uppercase tracking-wide text-amateur-muted">
+                      {t('pages.actionCenter.summary.unread')}
+                    </p>
+                    <p className="mt-2 font-display text-2xl font-semibold text-amateur-ink">
+                      {response.counts.unread}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -254,15 +327,55 @@ export function ActionCenterPage() {
               </div>
             </section>
 
-            <div className="space-y-3">
-              {visibleItems.map((item) => (
-                <ActionCenterRow
-                  key={item.itemKey}
-                  item={item}
-                  selected={selectedKeys.includes(item.itemKey)}
-                  onToggleSelected={() => toggleSelected(item.itemKey)}
-                  onRefresh={load}
-                />
+            <section className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
+              {groupedItems.map((group) => (
+                <CategorySummaryCard key={group.category} group={group} />
+              ))}
+            </section>
+
+            <div className="space-y-6">
+              {groupedItems.map((group) => (
+                <section key={group.category} className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge tone="default">{getActionCenterCategoryLabel(t, group.category)}</StatusBadge>
+                        {group.unread > 0 ? (
+                          <StatusBadge tone="warning">
+                            {t('pages.actionCenter.groupUnread', { count: group.unread })}
+                          </StatusBadge>
+                        ) : null}
+                        {group.overdue > 0 ? (
+                          <StatusBadge tone="danger">
+                            {t('pages.actionCenter.groupOverdue', { count: group.overdue })}
+                          </StatusBadge>
+                        ) : null}
+                      </div>
+                      <h2 className="mt-3 font-display text-lg font-semibold text-amateur-ink">
+                        {getActionCenterCategoryLabel(t, group.category)}
+                      </h2>
+                      <p className="mt-1 text-sm text-amateur-muted">
+                        {t('pages.actionCenter.groupSummary', { count: group.count })}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-dashed border-amateur-border px-3 py-2 text-sm text-amateur-muted">
+                      {t('pages.actionCenter.groupSelectedCount', {
+                        count: group.items.filter((item) => selectedKeys.includes(item.itemKey)).length,
+                      })}
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {group.items.map((item) => (
+                      <ActionCenterRow
+                        key={item.itemKey}
+                        item={item}
+                        selected={selectedKeys.includes(item.itemKey)}
+                        onToggleSelected={() => toggleSelected(item.itemKey)}
+                        onRefresh={load}
+                      />
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           </div>
@@ -278,6 +391,35 @@ type ActionCenterRowProps = {
   onToggleSelected: () => void;
   onRefresh: () => Promise<void>;
 };
+
+function CategorySummaryCard({ group }: { group: ActionCenterItemGroup }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="rounded-2xl border border-amateur-border bg-amateur-surface p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-amateur-muted">
+            {getActionCenterCategoryLabel(t, group.category)}
+          </p>
+          <p className="mt-2 font-display text-2xl font-semibold text-amateur-ink">{group.count}</p>
+        </div>
+        <StatusBadge tone={group.overdue > 0 ? 'danger' : group.unread > 0 ? 'warning' : 'success'}>
+          {group.overdue > 0
+            ? t('pages.actionCenter.groupStatusOverdue')
+            : group.unread > 0
+              ? t('pages.actionCenter.groupStatusUnread')
+              : t('pages.actionCenter.groupStatusStable')}
+        </StatusBadge>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2 text-xs text-amateur-muted">
+        <span>{t('pages.actionCenter.groupUnread', { count: group.unread })}</span>
+        <span>·</span>
+        <span>{t('pages.actionCenter.groupOverdue', { count: group.overdue })}</span>
+      </div>
+    </div>
+  );
+}
 
 function ActionCenterRow({ item, selected, onToggleSelected, onRefresh }: ActionCenterRowProps) {
   const { t, i18n } = useTranslation();
@@ -304,7 +446,7 @@ function ActionCenterRow({ item, selected, onToggleSelected, onRefresh }: Action
   }, []);
 
   return (
-    <article className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+    <article className="rounded-2xl border border-amateur-border bg-amateur-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-start gap-3">
         <input type="checkbox" checked={selected} onChange={onToggleSelected} className="mt-1" />
         <div className="min-w-0 flex-1">
@@ -320,10 +462,10 @@ function ActionCenterRow({ item, selected, onToggleSelected, onRefresh }: Action
                 <StatusBadge tone="default">{getActionCenterCategoryLabel(t, item.category)}</StatusBadge>
               </div>
               <h3 className="mt-3 font-display text-lg font-semibold text-amateur-ink">
-                {getActionCenterTypeLabel(t, item.type)}
+                {getActionCenterItemTitle(t, item)}
               </h3>
               <p className="mt-1 text-sm text-amateur-muted">
-                {[item.subjectName, item.relatedName].filter(Boolean).join(' · ')}
+                {[getActionCenterTypeLabel(t, item.type), item.relatedName].filter(Boolean).join(' · ')}
               </p>
               <p className="mt-2 text-sm text-amateur-ink">
                 {getActionCenterItemSummary(t, item)}

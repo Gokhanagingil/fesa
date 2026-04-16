@@ -23,8 +23,10 @@ export function Header() {
   const [notifications, setNotifications] = useState<ActionCenterResponse | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [savingNotifications, setSavingNotifications] = useState(false);
   const [notificationError, setNotificationError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const panelId = 'header-notification-center';
 
   const loadNotifications = useCallback(async () => {
     if (!tenantId) {
@@ -49,6 +51,26 @@ export function Header() {
   }, [loadNotifications]);
 
   useEffect(() => {
+    if (!tenantId) {
+      return;
+    }
+
+    const id = window.setInterval(() => {
+      void loadNotifications();
+    }, 60000);
+    return () => window.clearInterval(id);
+  }, [loadNotifications, tenantId]);
+
+  useEffect(() => {
+    function handleWindowFocus() {
+      void loadNotifications();
+    }
+
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
+  }, [loadNotifications]);
+
+  useEffect(() => {
     if (!panelOpen) {
       return;
     }
@@ -64,13 +86,13 @@ export function Header() {
   }, [panelOpen]);
 
   async function markAllRead() {
-    const active = await apiGet<ActionCenterResponse>('/api/action-center/items?view=notifications&limit=100&includeRead=true');
-    const unreadKeys = active.items.filter((item) => !item.read).map((item) => item.itemKey);
+    const unreadKeys = notifications?.items.filter((item) => !item.read).map((item) => item.itemKey) ?? [];
     if (unreadKeys.length === 0) {
       return;
     }
 
     try {
+      setSavingNotifications(true);
       await apiPatch('/api/action-center/items', {
         itemKeys: unreadKeys,
         action: 'mark_read',
@@ -78,11 +100,14 @@ export function Header() {
       await loadNotifications();
     } catch (error) {
       setNotificationError(error instanceof Error ? error.message : t('app.errors.saveFailed'));
+    } finally {
+      setSavingNotifications(false);
     }
   }
 
   async function markSingleRead(itemKey: string) {
     try {
+      setSavingNotifications(true);
       await apiPatch('/api/action-center/items', {
         itemKeys: [itemKey],
         action: 'mark_read',
@@ -90,6 +115,8 @@ export function Header() {
       await loadNotifications();
     } catch (error) {
       setNotificationError(error instanceof Error ? error.message : t('app.errors.saveFailed'));
+    } finally {
+      setSavingNotifications(false);
     }
   }
 
@@ -138,18 +165,27 @@ export function Header() {
             <button
               type="button"
               onClick={() => setPanelOpen((current) => !current)}
+              aria-expanded={panelOpen}
+              aria-controls={panelId}
+              aria-haspopup="dialog"
+              aria-label={t('app.notifications.openLabel', { count: notifications?.counts.unread ?? 0 })}
               className="relative inline-flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm font-medium text-amateur-ink transition hover:bg-amateur-surface"
             >
-              <span aria-hidden="true">!</span>
+              <span aria-hidden="true" className="text-base leading-none">◌</span>
               <span>{t('app.notifications.title')}</span>
               {(notifications?.counts.unread ?? 0) > 0 ? (
-                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                <StatusBadge tone="danger" className="px-2 py-0.5">
                   {notifications?.counts.unread ?? 0}
-                </span>
+                </StatusBadge>
               ) : null}
             </button>
             {panelOpen ? (
-              <div className="absolute right-0 top-[calc(100%+0.75rem)] z-20 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-amateur-border bg-amateur-surface p-4 shadow-xl">
+              <div
+                id={panelId}
+                role="dialog"
+                aria-label={t('app.notifications.title')}
+                className="absolute right-0 top-[calc(100%+0.75rem)] z-20 w-[min(25rem,calc(100vw-2rem))] rounded-2xl border border-amateur-border bg-amateur-surface p-4 shadow-xl"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-display text-base font-semibold text-amateur-ink">
@@ -160,7 +196,13 @@ export function Header() {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button type="button" variant="ghost" className="px-3 py-1.5 text-xs" onClick={() => void markAllRead()}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="px-3 py-1.5 text-xs"
+                      onClick={() => void markAllRead()}
+                      disabled={savingNotifications || (notifications?.counts.unread ?? 0) === 0}
+                    >
                       {t('app.notifications.markAllRead')}
                     </Button>
                   </div>
@@ -194,13 +236,11 @@ export function Header() {
                               <StatusBadge tone={getActionCenterUrgencyTone(item.urgency)}>
                                 {getActionCenterUrgencyLabel(t, item.urgency)}
                               </StatusBadge>
-                              <span className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
-                                {getActionCenterCategoryLabel(t, item.category)}
-                              </span>
+                              <StatusBadge tone="default">{getActionCenterCategoryLabel(t, item.category)}</StatusBadge>
                               {!item.read ? (
-                                <span className="rounded-full bg-amateur-accent-soft px-2 py-0.5 text-[11px] font-medium text-amateur-accent">
+                                <StatusBadge tone="warning">
                                   {t('app.notifications.unread')}
-                                </span>
+                                </StatusBadge>
                               ) : null}
                             </div>
                             <p className="mt-2 text-sm font-semibold text-amateur-ink">

@@ -36,6 +36,7 @@ export type ActionCenterItemMutation = 'mark_read' | 'mark_unread' | 'dismiss' |
 export type StaffPlatformRole = 'global_admin' | 'standard';
 export type StaffUserStatus = 'active' | 'disabled';
 export type TenantMembershipRole = 'club_admin' | 'staff' | 'coach';
+export type ActionCenterView = 'notifications' | 'queue';
 
 export type SportBranch = { id: string; code: string; name: string };
 export type Coach = {
@@ -516,10 +517,32 @@ export type ActionCenterSummary = {
     byCategory: Record<ActionCenterItemCategory, number>;
     byUrgency: Record<ActionCenterItemUrgency, number>;
   };
+  groups?: Array<{
+    category: ActionCenterItemCategory;
+    count: number;
+    unread: number;
+    overdue: number;
+    today: number;
+    items: ActionCenterItem[];
+  }>;
   items: ActionCenterItem[];
 };
 
-export type ActionCenterResponse = ActionCenterSummary;
+export type ActionCenterCategorySummary = {
+  category: ActionCenterItemCategory;
+  count: number;
+  unread: number;
+  overdue: number;
+  today: number;
+};
+
+export type ActionCenterResponse = ActionCenterSummary & {
+  meta: {
+    view: ActionCenterView;
+    includeRead: boolean;
+    categorySummaries: ActionCenterCategorySummary[];
+  };
+};
 
 export type StaffMembershipSummary = {
   id: string;

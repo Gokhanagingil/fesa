@@ -86,6 +86,27 @@ export function DashboardPage() {
     [tenantId, tenants],
   );
 
+  const platformActionSummary = useMemo(() => {
+    const items = platformOverview?.items ?? [];
+    return items.reduce(
+      (acc, club) => {
+        acc.unread += club.counts.unreadActions;
+        acc.overdue += club.counts.overdueActions;
+        acc.followUp += club.counts.followUpActions;
+        return acc;
+      },
+      { unread: 0, overdue: 0, followUp: 0 },
+    );
+  }, [platformOverview]);
+
+  const clubsNeedingAttention = useMemo(
+    () =>
+      (platformOverview?.items ?? []).filter(
+        (club) => club.counts.overdueActions > 0 || club.counts.unreadActions > 0,
+      ),
+    [platformOverview],
+  );
+
   const statCards = [
     {
       key: 'athletes',
@@ -204,6 +225,28 @@ export function DashboardPage() {
               compact
             />
           </div>
+          {canAccessCrossTenant ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <StatCard
+                label={t('pages.dashboard.context.platformUnreadActions')}
+                value={platformActionSummary.unread}
+                compact
+                tone={platformActionSummary.unread > 0 ? 'danger' : 'default'}
+              />
+              <StatCard
+                label={t('pages.dashboard.context.platformOverdueActions')}
+                value={platformActionSummary.overdue}
+                compact
+                tone={platformActionSummary.overdue > 0 ? 'danger' : 'default'}
+              />
+              <StatCard
+                label={t('pages.dashboard.context.platformFollowUpClubs')}
+                value={clubsNeedingAttention.length}
+                compact
+                tone={clubsNeedingAttention.length > 0 ? 'danger' : 'default'}
+              />
+            </div>
+          ) : null}
           <p className="mt-4 text-sm text-amateur-muted">
             {canAccessCrossTenant
               ? t('pages.dashboard.context.switchHint')
@@ -275,6 +318,103 @@ export function DashboardPage() {
               {t('app.nav.settings')}
             </Link>
           </div>
+          <div className="mt-4 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amateur-muted">
+                  {t('pages.dashboard.context.attentionTitle')}
+                </p>
+                <p className="mt-1 text-sm text-amateur-muted">
+                  {t('pages.dashboard.context.attentionHint')}
+                </p>
+              </div>
+              <Link to="/app/action-center" className="text-sm font-semibold text-amateur-accent hover:underline">
+                {t('pages.dashboard.openActionCenter')}
+              </Link>
+            </div>
+            {clubsNeedingAttention.length > 0 ? (
+              <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                {clubsNeedingAttention.slice(0, 3).map((club) => {
+                  const active = club.id === tenantId;
+                  return (
+                    <article
+                      key={`attention-${club.id}`}
+                      className="rounded-2xl border border-amateur-border bg-amateur-surface px-4 py-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-display text-base font-semibold text-amateur-ink">
+                            {club.name}
+                          </h3>
+                          <p className="mt-1 text-xs text-amateur-muted">{club.slug}</p>
+                        </div>
+                        <StatusBadge tone={club.counts.overdueActions > 0 ? 'danger' : 'warning'}>
+                          {club.counts.overdueActions > 0
+                            ? t('pages.dashboard.context.overdueAttentionBadge')
+                            : t('pages.dashboard.context.activeAttentionBadge')}
+                        </StatusBadge>
+                      </div>
+                      <div className="mt-4 grid grid-cols-3 gap-2">
+                        <StatCard
+                          label={t('pages.dashboard.actionCenterUnread')}
+                          value={club.counts.unreadActions}
+                          compact
+                        />
+                        <StatCard
+                          label={t('pages.dashboard.actionCenterOverdue')}
+                          value={club.counts.overdueActions}
+                          compact
+                          tone={club.counts.overdueActions > 0 ? 'danger' : 'default'}
+                        />
+                        <StatCard
+                          label={t('pages.dashboard.context.platformFollowUpCount')}
+                          value={club.counts.followUpActions}
+                          compact
+                        />
+                      </div>
+                      {club.actionCenter.topCategories.length > 0 ? (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {club.actionCenter.topCategories.map((entry) => (
+                            <StatusBadge key={`${club.id}-${entry.category}`} tone="default">
+                              {t('pages.dashboard.context.topCategory', {
+                                category: t(`pages.actionCenter.categories.${entry.category}`),
+                                count: entry.count,
+                              })}
+                            </StatusBadge>
+                          ))}
+                        </div>
+                      ) : null}
+                      <div className="mt-4 flex items-center justify-between gap-3">
+                        <p className="text-xs text-amateur-muted">
+                          {t('pages.dashboard.context.membershipRole', {
+                            role:
+                              club.membershipRole === 'global_admin'
+                                ? t('pages.settings.roles.globalAdmin')
+                                : club.membershipRole
+                                  ? t(`pages.settings.roles.${club.membershipRole}`)
+                                  : t('pages.dashboard.context.platformObserver'),
+                          })}
+                        </p>
+                        <Button
+                          type="button"
+                          variant={active ? 'ghost' : 'primary'}
+                          onClick={() => setTenantId(club.id)}
+                        >
+                          {active
+                            ? t('pages.dashboard.context.currentClubAction')
+                            : t('pages.dashboard.context.switchClubAction')}
+                        </Button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-dashed border-amateur-border bg-amateur-surface/60 px-4 py-5 text-sm text-amateur-muted">
+                {t('pages.dashboard.context.attentionEmpty')}
+              </div>
+            )}
+          </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {platformOverview?.items.map((club) => {
               const active = club.id === tenantId;
@@ -324,6 +464,18 @@ export function DashboardPage() {
                         {t('pages.dashboard.context.teams')}
                       </p>
                       <p className="mt-1 font-semibold text-amateur-ink">{club.counts.teams}</p>
+                    </div>
+                    <div className="rounded-xl border border-amateur-border/70 bg-amateur-surface px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-amateur-muted">
+                        {t('pages.dashboard.actionCenterUnread')}
+                      </p>
+                      <p className="mt-1 font-semibold text-amateur-ink">{club.counts.unreadActions}</p>
+                    </div>
+                    <div className="rounded-xl border border-amateur-border/70 bg-amateur-surface px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-amateur-muted">
+                        {t('pages.dashboard.actionCenterOverdue')}
+                      </p>
+                      <p className="mt-1 font-semibold text-red-700">{club.counts.overdueActions}</p>
                     </div>
                   </div>
                   <div className="mt-4 flex items-center justify-between gap-3">

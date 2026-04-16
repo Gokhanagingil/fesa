@@ -19,6 +19,6 @@ export class ReportingController {
 
   @Get('command-center')
   commandCenter(@Req() req: Request) {
-    return this.reporting.commandCenter(req.tenantId!);
+    return this.reporting.commandCenter(req.tenantId!, req.staffUserId!);
   }
 }
