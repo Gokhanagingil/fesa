@@ -545,7 +545,7 @@ export function CommunicationsPage() {
                           <div>
                             <p className="font-medium text-amateur-ink">{item.athleteName}</p>
                             <p className="mt-1 text-xs text-amateur-muted">
-                              [
+                              {[
                                 getAthleteStatusLabel(t, item.athleteStatus),
                                 item.groupName,
                                 ...item.teamNames,
