@@ -76,7 +76,7 @@ export class ReportingService {
     };
   }
 
-  async commandCenter(tenantId: string) {
+  async commandCenter(tenantId: string, staffUserId: string) {
     const lessonsQuery = this.privateLessons
       .createQueryBuilder('lesson')
       .leftJoinAndSelect('lesson.coach', 'coach')
@@ -99,7 +99,7 @@ export class ReportingService {
         lessonsQuery.getMany(),
         this.communications.listAudienceSafe(tenantId, {}),
         this.familyActions.getWorkflowSummarySafe(tenantId),
-        this.actionCenter.listItemsSafe(tenantId, { limit: 6, includeRead: true }),
+        this.actionCenter.listItemsSafe(tenantId, staffUserId, { limit: 6, includeRead: true }),
       ]) as [
         Awaited<ReturnType<FinanceService['getDashboardSummary']>>,
         FinanceSummary,

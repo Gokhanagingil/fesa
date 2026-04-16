@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { StaffUser } from './staff-user.entity';
 import { Tenant } from './tenant.entity';
 import {
   ActionCenterItemCategory,
@@ -15,11 +16,11 @@ import {
 } from '../enums';
 
 @Entity('action_center_item_states')
-@Index(['tenantId', 'itemKey'], { unique: true })
-@Index(['tenantId', 'readAt'])
-@Index(['tenantId', 'dismissedAt'])
-@Index(['tenantId', 'completedAt'])
-@Index(['tenantId', 'snoozedUntil'])
+@Index(['tenantId', 'staffUserId', 'itemKey'], { unique: true })
+@Index(['tenantId', 'staffUserId', 'readAt'])
+@Index(['tenantId', 'staffUserId', 'dismissedAt'])
+@Index(['tenantId', 'staffUserId', 'completedAt'])
+@Index(['tenantId', 'staffUserId', 'snoozedUntil'])
 export class ActionCenterItemState {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -27,9 +28,16 @@ export class ActionCenterItemState {
   @Column({ type: 'uuid' })
   tenantId!: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  staffUserId!: string | null;
+
   @ManyToOne(() => Tenant, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'tenantId' })
   tenant!: Tenant;
+
+  @ManyToOne(() => StaffUser, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'staffUserId' })
+  staffUser!: StaffUser | null;
 
   @Column({ type: 'varchar', length: 160 })
   itemKey!: string;

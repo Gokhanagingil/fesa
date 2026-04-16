@@ -56,6 +56,18 @@ export function SettingsPage() {
     void loadOverview();
   }, [loadOverview]);
 
+  const platformActionTotals = useMemo(() => {
+    const items = platformOverview?.items ?? [];
+    return items.reduce(
+      (acc, item) => ({
+        unread: acc.unread + item.counts.unreadActions,
+        overdue: acc.overdue + item.counts.overdueActions,
+        followUp: acc.followUp + item.counts.followUpActions,
+      }),
+      { unread: 0, overdue: 0, followUp: 0 },
+    );
+  }, [platformOverview]);
+
   return (
     <div>
       <PageHeader title={t('pages.settings.title')} subtitle={t('pages.settings.subtitle')} />
@@ -85,6 +97,26 @@ export function SettingsPage() {
             }
           />
         </section>
+
+        {platformAdmin ? (
+          <section className="grid gap-4 md:grid-cols-3">
+            <StatCard
+              label={t('pages.settings.actionSummary.unread')}
+              value={platformActionTotals.unread}
+              tone={platformActionTotals.unread > 0 ? 'danger' : 'default'}
+            />
+            <StatCard
+              label={t('pages.settings.actionSummary.overdue')}
+              value={platformActionTotals.overdue}
+              tone={platformActionTotals.overdue > 0 ? 'danger' : 'default'}
+            />
+            <StatCard
+              label={t('pages.settings.actionSummary.followUp')}
+              value={platformActionTotals.followUp}
+              tone={platformActionTotals.followUp > 0 ? 'danger' : 'default'}
+            />
+          </section>
+        ) : null}
 
         <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -205,6 +237,16 @@ export function SettingsPage() {
                   value={clubOverview?.counts.portalAccess ?? '—'}
                   compact
                 />
+                <StatCard
+                  label={t('pages.settings.snapshotUnreadActions')}
+                  value={platformAdmin && activeTenant ? platformOverview?.items.find((item) => item.id === activeTenant.id)?.counts.unreadActions ?? '—' : '—'}
+                  compact
+                />
+                <StatCard
+                  label={t('pages.settings.snapshotOverdueActions')}
+                  value={platformAdmin && activeTenant ? platformOverview?.items.find((item) => item.id === activeTenant.id)?.counts.overdueActions ?? '—' : '—'}
+                  compact
+                />
               </div>
               {loadingOverview ? (
                 <p className="mt-4 text-sm text-amateur-muted">{t('app.states.loading')}</p>
@@ -277,11 +319,33 @@ export function SettingsPage() {
                         compact
                       />
                     </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <StatusBadge tone={item.counts.overdueActions > 0 ? 'danger' : item.counts.unreadActions > 0 ? 'warning' : 'default'}>
+                        {t('pages.settings.platformUnreadActions', { count: item.counts.unreadActions })}
+                      </StatusBadge>
+                      <StatusBadge tone={item.counts.overdueActions > 0 ? 'danger' : 'default'}>
+                        {t('pages.settings.platformOverdueActions', { count: item.counts.overdueActions })}
+                      </StatusBadge>
+                      <StatusBadge tone={item.counts.followUpActions > 0 ? 'info' : 'default'}>
+                        {t('pages.settings.platformFollowUpActions', { count: item.counts.followUpActions })}
+                      </StatusBadge>
+                    </div>
                     <p className="mt-3 text-xs text-amateur-muted">
                       {t('pages.settings.platformOverviewCoachCount', {
                         count: item.counts.coaches,
                       })}
                     </p>
+                    {item.actionCenter.topCategories.length > 0 ? (
+                      <p className="mt-2 text-xs text-amateur-muted">
+                        {t('pages.settings.platformActionMix', {
+                          categories: item.actionCenter.topCategories
+                            .map((entry) => `${t(`pages.actionCenter.categories.${entry.category}`)} (${entry.count})`)
+                            .join(' · '),
+                        })}
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-xs text-amateur-muted">{t('pages.settings.platformActionMixEmpty')}</p>
+                    )}
                     <div className="mt-4">
                       <Button
                         type="button"

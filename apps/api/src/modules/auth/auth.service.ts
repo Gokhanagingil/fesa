@@ -23,6 +23,7 @@ import {
 } from '../../database/enums';
 import { Athlete } from '../../database/entities/athlete.entity';
 import { TenantService } from '../tenant/tenant.service';
+import { ActionCenterService } from '../action-center/action-center.service';
 import { LoginStaffDto } from './dto/login-staff.dto';
 
 const STAFF_SESSION_COOKIE = 'amateur_staff_session';
@@ -91,6 +92,7 @@ export class AuthService {
     @InjectRepository(GuardianPortalAccess)
     private readonly guardianPortalAccesses: Repository<GuardianPortalAccess>,
     private readonly tenants: TenantService,
+    private readonly actionCenter: ActionCenterService,
     private readonly config: ConfigService,
   ) {}
 
@@ -328,12 +330,28 @@ export class AuthService {
       id: string;
       name: string;
       slug: string;
+      membershipRole: TenantMembershipRole | StaffPlatformRole.GLOBAL_ADMIN | null;
       counts: {
         athletes: number;
         guardians: number;
         coaches: number;
         groups: number;
         teams: number;
+        unreadActions: number;
+        overdueActions: number;
+        followUpActions: number;
+      };
+      actionCenter: {
+        counts: {
+          total: number;
+          unread: number;
+          overdue: number;
+          today: number;
+        };
+        topCategories: Array<{
+          category: 'finance' | 'family' | 'readiness' | 'private_lessons' | 'training';
+          count: number;
+        }>;
       };
     }>;
     total: number;
@@ -344,23 +362,72 @@ export class AuthService {
     }
 
     const tenants = await this.tenants.findAll();
+    const membershipByTenant = new Map<string, TenantMembershipRole>(
+      profile.memberships.map((membership) => [membership.tenantId, membership.role]),
+    );
     const items = await Promise.all(
-      tenants.map(async (tenant) => ({
-        id: tenant.id,
-        name: tenant.name,
-        slug: tenant.slug,
-        counts: {
-          athletes: await this.athletes.count({ where: { tenantId: tenant.id } }),
-          guardians: await this.guardians.count({ where: { tenantId: tenant.id } }),
-          coaches: await this.coaches.count({ where: { tenantId: tenant.id, isActive: true } }),
-          groups: await this.groups.count({ where: { tenantId: tenant.id } }),
-          teams: await this.teams.count({ where: { tenantId: tenant.id } }),
-        },
-      })),
+      tenants.map(async (tenant) => {
+        const [athletes, guardians, coaches, groups, teams, actionSummary] = await Promise.all([
+          this.athletes.count({ where: { tenantId: tenant.id } }),
+          this.guardians.count({ where: { tenantId: tenant.id } }),
+          this.coaches.count({ where: { tenantId: tenant.id, isActive: true } }),
+          this.groups.count({ where: { tenantId: tenant.id } }),
+          this.teams.count({ where: { tenantId: tenant.id } }),
+          this.actionCenter.listItemsSafe(tenant.id, staffUserId, { limit: 6, includeRead: true }),
+        ]);
+
+        const topCategories = Object.entries(actionSummary.counts.byCategory)
+          .map(([category, count]) => ({ category, count }))
+          .filter((entry) => entry.count > 0)
+          .sort((left, right) => right.count - left.count)
+          .slice(0, 3) as Array<{
+            category: 'finance' | 'family' | 'readiness' | 'private_lessons' | 'training';
+            count: number;
+          }>;
+
+        return {
+          id: tenant.id,
+          name: tenant.name,
+          slug: tenant.slug,
+          membershipRole:
+            membershipByTenant.get(tenant.id) ??
+            (StaffPlatformRole.GLOBAL_ADMIN as StaffPlatformRole.GLOBAL_ADMIN),
+          counts: {
+            athletes,
+            guardians,
+            coaches,
+            groups,
+            teams,
+            unreadActions: actionSummary.counts.unread,
+            overdueActions: actionSummary.counts.overdue,
+            followUpActions:
+              actionSummary.counts.byCategory.finance +
+              actionSummary.counts.byCategory.family +
+              actionSummary.counts.byCategory.readiness,
+          },
+          actionCenter: {
+            counts: {
+              total: actionSummary.counts.total,
+              unread: actionSummary.counts.unread,
+              overdue: actionSummary.counts.overdue,
+              today: actionSummary.counts.today,
+            },
+            topCategories,
+          },
+        };
+      }),
     );
 
     return {
-      items,
+      items: items.sort((left, right) => {
+        if (right.counts.overdueActions !== left.counts.overdueActions) {
+          return right.counts.overdueActions - left.counts.overdueActions;
+        }
+        if (right.counts.unreadActions !== left.counts.unreadActions) {
+          return right.counts.unreadActions - left.counts.unreadActions;
+        }
+        return left.name.localeCompare(right.name);
+      }),
       total: items.length,
     };
   }
