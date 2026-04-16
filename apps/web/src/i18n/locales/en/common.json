@@ -45,7 +45,24 @@
     },
     "tenant": {
       "label": "Club",
-      "empty": "No clubs — seed the API"
+      "empty": "No clubs — seed the API",
+      "helper": {
+        "loadFailed": "Club list could not be loaded.",
+        "noneVisible": "No clubs are visible to this account yet.",
+        "select": "Choose a club to load tenant-scoped data.",
+        "availableCount_one": "{{count}} club available",
+        "availableCount_other": "{{count}} clubs available",
+        "ready": "Club context is ready."
+      },
+      "banner": {
+        "loadTitle": "Club context could not be restored",
+        "loadBody": "The app could not load the clubs available to this account. Refresh the club list or reopen Settings to inspect access.",
+        "emptyTitle": "No clubs are visible yet",
+        "emptyPlatformBody": "This platform admin account is signed in, but no clubs are currently visible. Confirm the staging seed ran against the active database and that tenants exist.",
+        "emptyClubBody": "This staff account is signed in, but no club memberships are currently visible. Confirm the staging seed created the expected club-admin membership.",
+        "selectionTitle": "Choose a club to continue",
+        "selectionBody": "Your account can see clubs, but no active club context is selected right now."
+      }
     },
     "errors": {
       "loadFailed": "Could not load data.",
@@ -236,7 +253,35 @@
       "actionCenterToday": "Due today",
       "actionCenterFinance": "Finance follow-up",
       "actionCenterNeedsReview": "Needs review",
-      "actionCenterEmpty": "No active action-center items are visible right now."
+      "actionCenterEmpty": "No active action-center items are visible right now.",
+      "context": {
+        "modePlatform": "Platform admin mode",
+        "modeClub": "Club admin mode",
+        "noClub": "No active club selected",
+        "platformBody_one": "You can inspect {{count}} visible club from the same shell and switch context intentionally before testing each flow.",
+        "platformBody_other": "You can inspect {{count}} visible clubs from the same shell and switch context intentionally before testing each flow.",
+        "clubBody": "You are working inside a single club context. The dashboard, reports, finance, and communications surfaces all reflect this club only.",
+        "currentClub": "Current club context",
+        "availableClubs": "Visible clubs",
+        "visibleAthletes": "Visible athletes",
+        "visibleGroups": "Visible groups",
+        "switchHint": "Use the club switcher in the header or the catalog below to move between seeded demo clubs without leaving the app shell.",
+        "clubReadyHint": "This account is already scoped to one club, so the main testing surfaces should load seeded club data directly.",
+        "snapshotTitle": "Current club snapshot",
+        "snapshotHint": "A quick operational summary confirms that the selected club is populated and ready for demo flows.",
+        "portalAccess": "Portal access",
+        "coaches": "Coaches",
+        "groups": "Groups",
+        "teams": "Teams",
+        "clubCatalogTitle": "Club catalog",
+        "clubCatalogHint": "Platform admins can inspect the seeded club landscape here before switching into a specific club context.",
+        "currentClubBadge": "Current club",
+        "availableClubBadge": "Available",
+        "coachCount_one": "{{count}} coach visible",
+        "coachCount_other": "{{count}} coaches visible",
+        "currentClubAction": "Viewing now",
+        "switchClubAction": "Switch to club"
+      }
     },
     "athletes": {
       "title": "Athletes",
@@ -522,6 +567,11 @@
       "seriesGenerated_other": "{{count}} sessions generated.",
       "seriesSkipped_one": "{{count}} matching session already existed and was skipped.",
       "seriesSkipped_other": "{{count}} matching sessions already existed and were skipped.",
+      "resetWeek": "Reset to this week",
+      "expandWindow": "Show next 30 days",
+      "clearFiltersAction": "Clear filters",
+      "emptyWindowHint": "No sessions are visible between {{from}} and {{to}}. The default weekly window can hide seeded sessions if you are testing outside the seeded date range.",
+      "emptyFilteredHint": "No sessions match the current filters between {{from}} and {{to}}. Widen the date range or clear the filters to confirm seeded sessions are available.",
       "weekdaysShort": {
         "1": "Mon",
         "2": "Tue",
@@ -556,7 +606,8 @@
       "summaryOpenBilling": "Open billing",
       "financeHint": "Use private lessons for premium 1-to-1 work, then jump into finance or communications from the same operating loop.",
       "profileHint": "Private lesson history gives staff one clear view of coaching, attendance, and billing for this athlete.",
-      "openBoard": "Open private lessons board"
+      "openBoard": "Open private lessons board",
+      "focus": "Focus to be confirmed"
     },
     "communications": {
       "title": "Communications",
@@ -616,7 +667,8 @@
       "reasonAwaitingReview": "Awaiting staff review",
       "reasonFamilyReadiness": "Family readiness: {{status}}",
       "portalEnabledOnly": "Portal access enabled",
-      "portalPendingOnly": "Pending portal follow-up"
+      "portalPendingOnly": "Pending portal follow-up",
+      "emptyFilteredHint": "No audience matches the current filter set. Clear filters or widen the targeting rules to confirm the seeded communication audience is available."
     },
     "finance": {
       "title": "Finance",
@@ -938,20 +990,45 @@
     "settings": {
       "title": "Settings",
       "subtitle": "Administration, club context, and operating preferences.",
-      "platformTitle": "Platform administration",
-      "platformHint": "Global admins can see the clubs they can act in and switch context intentionally before entering club operations.",
-      "platformRole": "Platform role",
-      "platformMemberships": "Accessible clubs",
-      "platformMembershipHint": "Your memberships determine which clubs can be opened from the shared shell.",
-      "clubTitle": "Club administration",
-      "clubHint": "Keep club context, staff access, and day-to-day operating preferences visible in one calm admin surface.",
+      "summary": {
+        "accessibleClubs": "Accessible clubs",
+        "activeClub": "Active club",
+        "role": "Active role",
+        "noClub": "No club selected",
+        "noRole": "No scoped role"
+      },
+      "roles": {
+        "globalAdmin": "Global admin",
+        "club_admin": "Club admin",
+        "staff": "Staff",
+        "coach": "Coach"
+      },
+      "platformAdminTitle": "Platform administration",
+      "platformAdminHint": "This account can see multiple clubs. Use this surface to verify seeded club density, then switch intentionally into the club you want to test.",
+      "clubAdminTitle": "Club administration",
+      "clubAdminHint": "This account is scoped to one club. The selected club context below should match what the main app surfaces are loading.",
       "currentClub": "Current club",
-      "clubRole": "Club role",
-      "clubSlug": "Club slug",
-      "clubContextTitle": "Current working context",
-      "clubContextHint": "This is the club scope used by day-to-day operations, finance follow-up, communications, and reports.",
-      "switchContextTitle": "Tenant context",
-      "switchContextHint": "Global admins can switch clubs intentionally. Club admins stay bound to their assigned club.",
+      "accessTitle": "Club access",
+      "currentContextBadge": "Current context",
+      "availableContextBadge": "Available",
+      "defaultMembership": "Default",
+      "secondaryMembership": "Additional access",
+      "currentContextAction": "Viewing now",
+      "switchContextAction": "Switch context",
+      "snapshotTitle": "Selected club snapshot",
+      "snapshotHint": "These counts come from the real club overview endpoint and help confirm that the selected club is meaningfully populated.",
+      "snapshotAthletes": "Athletes",
+      "snapshotGuardians": "Guardians",
+      "snapshotGroups": "Groups",
+      "snapshotTeams": "Teams",
+      "snapshotCoaches": "Coaches",
+      "snapshotPortal": "Portal access",
+      "platformOverviewTitle": "Platform club overview",
+      "platformOverviewHint": "Each seeded club should be visible here with enough density to make the staging environment testable.",
+      "platformOverviewCount_one": "{{count}} club visible",
+      "platformOverviewCount_other": "{{count}} clubs visible",
+      "platformOverviewCoachCount_one": "{{count}} active coach",
+      "platformOverviewCoachCount_other": "{{count}} active coaches",
       "preferencesTitle": "Operational preferences",
       "preferencesHint": "A lightweight settings surface keeps the product feeling real even before deeper configuration modules arrive.",
       "localePreference": "Interface language follows the switcher in the header.",

@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { apiGet, getStoredTenantId, setStoredTenantId } from './api';
+import {
+  apiGet,
+  clearStoredTenantId,
+  getStoredTenantId,
+  setStoredTenantId,
+} from './api';
 import { TenantContext, type TenantRow } from './tenant-context';
 import { useAuth } from './auth-context';
 
@@ -20,6 +25,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     if (!session) {
       setTenants([]);
       setTenantIdState(null);
+      clearStoredTenantId();
       setLoading(false);
       setError(null);
       return;
@@ -38,9 +44,13 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         setStoredTenantId(next);
         setTenantIdState(next);
       } else {
+        clearStoredTenantId();
         setTenantIdState(null);
       }
     } catch (e) {
+      setTenants([]);
+      setTenantIdState(null);
+      clearStoredTenantId();
       setError(e instanceof Error ? e.message : 'Failed to load tenants');
     } finally {
       setLoading(false);

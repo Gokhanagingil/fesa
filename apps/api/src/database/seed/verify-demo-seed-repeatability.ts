@@ -1,6 +1,18 @@
 import 'reflect-metadata';
 import { AppDataSource } from '../data-source';
-import { StaffUser, Tenant, TenantMembership } from '../entities';
+import {
+  Athlete,
+  AthleteCharge,
+  ClubGroup,
+  FamilyActionRequest,
+  Guardian,
+  GuardianPortalAccess,
+  StaffUser,
+  Team,
+  Tenant,
+  TenantMembership,
+  TrainingSession,
+} from '../entities';
 import {
   DEMO_CLUB_ADMINS,
   DEMO_TENANTS,
@@ -27,6 +39,14 @@ async function main(): Promise<void> {
     const tenants = AppDataSource.getRepository(Tenant);
     const staffUsers = AppDataSource.getRepository(StaffUser);
     const memberships = AppDataSource.getRepository(TenantMembership);
+    const athletes = AppDataSource.getRepository(Athlete);
+    const guardians = AppDataSource.getRepository(Guardian);
+    const groups = AppDataSource.getRepository(ClubGroup);
+    const teams = AppDataSource.getRepository(Team);
+    const sessions = AppDataSource.getRepository(TrainingSession);
+    const athleteCharges = AppDataSource.getRepository(AthleteCharge);
+    const familyActionRequests = AppDataSource.getRepository(FamilyActionRequest);
+    const guardianPortalAccesses = AppDataSource.getRepository(GuardianPortalAccess);
 
     for (const tenantSeed of DEMO_TENANTS) {
       const tenant = await tenants.findOneBy({ slug: tenantSeed.slug });
@@ -38,6 +58,42 @@ async function main(): Promise<void> {
       if (tenantCount !== 1) {
         throw new Error(`Expected exactly 1 demo tenant row for slug ${tenantSeed.slug}; found ${tenantCount}.`);
       }
+
+      const counts = {
+        athletes: await athletes.countBy({ tenantId: tenant.id }),
+        guardians: await guardians.countBy({ tenantId: tenant.id }),
+        groups: await groups.countBy({ tenantId: tenant.id }),
+        teams: await teams.countBy({ tenantId: tenant.id }),
+        sessions: await sessions.countBy({ tenantId: tenant.id }),
+        charges: await athleteCharges.countBy({ tenantId: tenant.id }),
+        familyActions: await familyActionRequests.countBy({ tenantId: tenant.id }),
+        portalAccess: await guardianPortalAccesses.countBy({ tenantId: tenant.id }),
+      };
+
+      const minimums = {
+        athletes: 3,
+        guardians: 2,
+        groups: 2,
+        teams: 1,
+        sessions: 3,
+        charges: 3,
+        familyActions: 1,
+        portalAccess: 1,
+      };
+
+      for (const [key, minimum] of Object.entries(minimums) as Array<
+        [keyof typeof minimums, number]
+      >) {
+        if (counts[key] < minimum) {
+          throw new Error(
+            `Expected demo tenant ${tenantSeed.slug} to have at least ${minimum} ${key}; found ${counts[key]}.`,
+          );
+        }
+      }
+
+      console.log(
+        `Demo tenant ${tenantSeed.slug}: athletes=${counts.athletes}, guardians=${counts.guardians}, groups=${counts.groups}, teams=${counts.teams}, sessions=${counts.sessions}, charges=${counts.charges}, familyActions=${counts.familyActions}, portalAccess=${counts.portalAccess}`,
+      );
     }
 
     const seededStaffEmails = [GLOBAL_ADMIN_EMAIL, ...DEMO_CLUB_ADMINS.map((admin) => admin.email)];

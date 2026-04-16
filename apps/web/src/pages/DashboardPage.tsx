@@ -5,6 +5,8 @@ import { InlineAlert } from '../components/ui/InlineAlert';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { StatusBadge } from '../components/ui/StatusBadge';
+import { Button } from '../components/ui/Button';
+import { useAuth } from '../lib/auth-context';
 import { apiGet } from '../lib/api';
 import {
   getActionCenterItemSummary,
@@ -14,14 +16,18 @@ import {
   getPersonName,
 } from '../lib/display';
 import type { Coach, CommandCenterResponse, Payment, PrivateLesson } from '../lib/domain-types';
+import type { ClubOverviewResponse, PlatformOverviewResponse } from '../lib/overview-types';
 import { useTenant } from '../lib/tenant-hooks';
 
 export function DashboardPage() {
   const { t } = useTranslation();
-  const { tenantId, loading: tenantLoading } = useTenant();
+  const { canAccessCrossTenant } = useAuth();
+  const { tenantId, loading: tenantLoading, tenants, setTenantId } = useTenant();
   const [summary, setSummary] = useState<CommandCenterResponse | null>(null);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [privateLessons, setPrivateLessons] = useState<PrivateLesson[]>([]);
+  const [clubOverview, setClubOverview] = useState<ClubOverviewResponse | null>(null);
+  const [platformOverview, setPlatformOverview] = useState<PlatformOverviewResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,11 +36,18 @@ export function DashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const [dashboard, guardians, coachRes, privateLessonRes] = await Promise.all([
+      const [dashboard, guardians, coachRes, privateLessonRes, currentClubOverview, currentPlatformOverview] =
+        await Promise.all([
         apiGet<CommandCenterResponse>('/api/reporting/command-center'),
         apiGet<{ total: number }>('/api/guardians?limit=1'),
         apiGet<{ items: Coach[] }>('/api/coaches?limit=50&isActive=true'),
         apiGet<{ items: PrivateLesson[] }>('/api/private-lessons?limit=5'),
+        tenantId
+          ? apiGet<ClubOverviewResponse>('/api/auth/club-overview').catch(() => null)
+          : Promise.resolve(null),
+        canAccessCrossTenant
+          ? apiGet<PlatformOverviewResponse>('/api/auth/platform-overview').catch(() => null)
+          : Promise.resolve(null),
       ]);
       setSummary({
         ...dashboard,
@@ -45,12 +58,14 @@ export function DashboardPage() {
       });
       setCoaches(coachRes.items);
       setPrivateLessons(privateLessonRes.items);
+      setClubOverview(currentClubOverview);
+      setPlatformOverview(currentPlatformOverview);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [t, tenantId]);
+  }, [canAccessCrossTenant, t, tenantId]);
 
   useEffect(() => {
     void load();
@@ -64,6 +79,11 @@ export function DashboardPage() {
       { key: 'absent', label: t('app.enums.attendanceStatus.absent'), value: summary?.attendance.absent ?? 0 },
     ],
     [summary, t],
+  );
+
+  const activeTenantName = useMemo(
+    () => tenants.find((tenant) => tenant.id === tenantId)?.name ?? null,
+    [tenantId, tenants],
   );
 
   const statCards = [
@@ -138,6 +158,194 @@ export function DashboardPage() {
       />
       {!tenantId && !tenantLoading ? <InlineAlert tone="info">{t('app.errors.needTenant')}</InlineAlert> : null}
       {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+      <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-accent">
+                {canAccessCrossTenant
+                  ? t('pages.dashboard.context.modePlatform')
+                  : t('pages.dashboard.context.modeClub')}
+              </p>
+              <h2 className="mt-2 font-display text-2xl font-semibold text-amateur-ink">
+                {activeTenantName ?? t('pages.dashboard.context.noClub')}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm text-amateur-muted">
+                {canAccessCrossTenant
+                  ? t('pages.dashboard.context.platformBody', {
+                      count: platformOverview?.total ?? tenants.length,
+                    })
+                  : t('pages.dashboard.context.clubBody')}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm">
+              <p className="font-medium text-amateur-ink">
+                {t('pages.dashboard.context.currentClub')}
+              </p>
+              <p className="mt-1 text-amateur-muted">
+                {activeTenantName ?? t('pages.dashboard.context.noClub')}
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <StatCard
+              label={t('pages.dashboard.context.availableClubs')}
+              value={platformOverview?.total ?? tenants.length}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.context.visibleAthletes')}
+              value={clubOverview?.counts.athletes ?? summary?.stats.athletes ?? 0}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.context.visibleGroups')}
+              value={clubOverview?.counts.groups ?? 0}
+              compact
+            />
+          </div>
+          <p className="mt-4 text-sm text-amateur-muted">
+            {canAccessCrossTenant
+              ? t('pages.dashboard.context.switchHint')
+              : t('pages.dashboard.context.clubReadyHint')}
+          </p>
+        </section>
+
+        <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                {t('pages.dashboard.context.snapshotTitle')}
+              </h2>
+              <p className="mt-1 text-sm text-amateur-muted">
+                {t('pages.dashboard.context.snapshotHint')}
+              </p>
+            </div>
+            <Link to="/app/settings" className="text-sm font-semibold text-amateur-accent hover:underline">
+              {t('app.nav.settings')}
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <StatCard
+              label={t('pages.dashboard.stats.athletes')}
+              value={clubOverview?.counts.athletes ?? summary?.stats.athletes ?? 0}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.stats.guardians')}
+              value={clubOverview?.counts.guardians ?? summary?.stats.guardians ?? 0}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.context.portalAccess')}
+              value={clubOverview?.counts.portalAccess ?? 0}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.context.coaches')}
+              value={clubOverview?.counts.coaches ?? coaches.length}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.context.groups')}
+              value={clubOverview?.counts.groups ?? 0}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.context.teams')}
+              value={clubOverview?.counts.teams ?? 0}
+              compact
+            />
+          </div>
+        </section>
+      </div>
+
+      {canAccessCrossTenant && (platformOverview?.items.length ?? 0) > 0 ? (
+        <section className="mb-6 rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                {t('pages.dashboard.context.clubCatalogTitle')}
+              </h2>
+              <p className="mt-1 text-sm text-amateur-muted">
+                {t('pages.dashboard.context.clubCatalogHint')}
+              </p>
+            </div>
+            <Link to="/app/settings" className="text-sm font-semibold text-amateur-accent hover:underline">
+              {t('app.nav.settings')}
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {platformOverview?.items.map((club) => {
+              const active = club.id === tenantId;
+              return (
+                <article
+                  key={club.id}
+                  className={`rounded-2xl border px-4 py-4 shadow-sm transition ${
+                    active
+                      ? 'border-amateur-accent/40 bg-amateur-accent-soft/40'
+                      : 'border-amateur-border bg-amateur-canvas'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-display text-base font-semibold text-amateur-ink">
+                        {club.name}
+                      </h3>
+                      <p className="mt-1 text-xs text-amateur-muted">{club.slug}</p>
+                    </div>
+                    <StatusBadge tone={active ? 'success' : 'default'}>
+                      {active
+                        ? t('pages.dashboard.context.currentClubBadge')
+                        : t('pages.dashboard.context.availableClubBadge')}
+                    </StatusBadge>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-xl border border-amateur-border/70 bg-amateur-surface px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-amateur-muted">
+                        {t('pages.dashboard.stats.athletes')}
+                      </p>
+                      <p className="mt-1 font-semibold text-amateur-ink">{club.counts.athletes}</p>
+                    </div>
+                    <div className="rounded-xl border border-amateur-border/70 bg-amateur-surface px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-amateur-muted">
+                        {t('pages.dashboard.stats.guardians')}
+                      </p>
+                      <p className="mt-1 font-semibold text-amateur-ink">{club.counts.guardians}</p>
+                    </div>
+                    <div className="rounded-xl border border-amateur-border/70 bg-amateur-surface px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-amateur-muted">
+                        {t('pages.dashboard.context.groups')}
+                      </p>
+                      <p className="mt-1 font-semibold text-amateur-ink">{club.counts.groups}</p>
+                    </div>
+                    <div className="rounded-xl border border-amateur-border/70 bg-amateur-surface px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-amateur-muted">
+                        {t('pages.dashboard.context.teams')}
+                      </p>
+                      <p className="mt-1 font-semibold text-amateur-ink">{club.counts.teams}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <p className="text-xs text-amateur-muted">
+                      {t('pages.dashboard.context.coachCount', { count: club.counts.coaches })}
+                    </p>
+                    <Button
+                      type="button"
+                      variant={active ? 'ghost' : 'primary'}
+                      onClick={() => setTenantId(club.id)}
+                    >
+                      {active
+                        ? t('pages.dashboard.context.currentClubAction')
+                        : t('pages.dashboard.context.switchClubAction')}
+                    </Button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         {statCards.map((card) => (
           <Link

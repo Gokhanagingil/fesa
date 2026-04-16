@@ -263,6 +263,20 @@ What to verify:
 
 If `/build-info.json` is missing or has a different commit than `/api/health/version`, Nginx is not serving the freshly built `apps/web/dist` directory.
 
+### Post-deploy demo smoke (staff UX)
+
+After runtime identity is confirmed, do one browser smoke against the seeded staff accounts:
+
+| Account | Email | Password | Expected visibility |
+|---------|-------|----------|---------------------|
+| Platform admin | `platform.admin@amateur.local` | `Admin123!` | Dashboard and Settings should show all four seeded clubs; tenant switch should expose Fesa Basketbol, Kadıköy Gençlik Spor Kulübü, Moda Voleybol Akademi, and Marmara Futbol Okulu. |
+| Kadıköy club admin | `club.admin@amateur.local` | `Admin123!` | Club-scoped dashboard plus athletes, groups, teams, training, finance, communications, and family workflow for Kadıköy. |
+| Fesa club admin | `admin@fesabasketbol.local` | `Admin123!` | Club-scoped Fesa Basketbol demo data. |
+| Moda club admin | `admin@modavoleybol.local` | `Admin123!` | Club-scoped Moda Voleybol Akademi demo data. |
+| Marmara club admin | `admin@marmarafutbol.local` | `Admin123!` | Club-scoped Marmara Futbol Okulu demo data. |
+
+If login works but the header shows **no clubs**, the likely issue is not stale frontend deploy state anymore: inspect `/api/tenants`, the seed logs from the deploy step, and the tenant/status guidance now shown in the app shell.
+
 ## Branch / hotfix discipline
 
 Staging confusion often comes from proving a fix on a branch without proving it landed on `main`.

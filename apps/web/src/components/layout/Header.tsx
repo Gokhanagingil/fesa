@@ -19,7 +19,7 @@ import { StatusBadge } from '../ui/StatusBadge';
 export function Header() {
   const { t } = useTranslation();
   const { user, logout, canAccessCrossTenant } = useAuth();
-  const { tenants, tenantId, setTenantId, loading } = useTenant();
+  const { tenants, tenantId, setTenantId, loading, error: tenantError, refresh } = useTenant();
   const [notifications, setNotifications] = useState<ActionCenterResponse | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
@@ -97,6 +97,24 @@ export function Header() {
     () => tenants.find((tenant) => tenant.id === tenantId)?.name ?? null,
     [tenantId, tenants],
   );
+
+  const tenantHelperText = useMemo(() => {
+    if (tenantError) {
+      return t('app.tenant.helper.loadFailed');
+    }
+    if (loading) {
+      return t('app.states.loading');
+    }
+    if (tenants.length === 0) {
+      return t('app.tenant.helper.noneVisible');
+    }
+    if (!tenantId) {
+      return t('app.tenant.helper.select');
+    }
+    return canAccessCrossTenant
+      ? t('app.tenant.helper.availableCount', { count: tenants.length })
+      : t('app.tenant.helper.ready');
+  }, [canAccessCrossTenant, loading, t, tenantError, tenantId, tenants.length]);
 
   return (
     <header className="sticky top-0 z-10 border-b border-amateur-border bg-amateur-surface/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-10">
@@ -227,25 +245,39 @@ export function Header() {
               </p>
             </div>
           ) : null}
-          <label className="flex items-center gap-2 text-sm text-amateur-muted">
-            <span className="whitespace-nowrap">{t('app.tenant.label')}</span>
-            <select
-              className="max-w-[14rem] rounded-lg border border-amateur-border bg-amateur-canvas px-2 py-1.5 text-sm text-amateur-ink outline-none focus:ring-2 focus:ring-amateur-accent/30"
-              value={tenantId ?? ''}
-              disabled={loading || tenants.length === 0}
-              onChange={(e) => setTenantId(e.target.value)}
-            >
-              {tenants.length === 0 ? (
-                <option value="">{t('app.tenant.empty')}</option>
-              ) : (
-                tenants.map((x) => (
-                  <option key={x.id} value={x.id}>
-                    {x.name}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-2 text-sm text-amateur-muted">
+              <span className="whitespace-nowrap">{t('app.tenant.label')}</span>
+              <select
+                className="max-w-[14rem] rounded-lg border border-amateur-border bg-amateur-canvas px-2 py-1.5 text-sm text-amateur-ink outline-none focus:ring-2 focus:ring-amateur-accent/30"
+                value={tenantId ?? ''}
+                disabled={loading || tenants.length === 0}
+                onChange={(e) => setTenantId(e.target.value)}
+              >
+                {tenants.length === 0 ? (
+                  <option value="">{t('app.tenant.empty')}</option>
+                ) : (
+                  tenants.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <div className="flex items-center justify-between gap-2 text-[11px] text-amateur-muted">
+              <span className={tenantError ? 'text-red-700' : undefined}>{tenantHelperText}</span>
+              {(tenantError || tenants.length === 0) && !loading ? (
+                <button
+                  type="button"
+                  onClick={() => void refresh()}
+                  className="font-semibold text-amateur-accent transition hover:underline"
+                >
+                  {t('app.actions.refresh')}
+                </button>
+              ) : null}
+            </div>
+          </div>
           <Link to={canAccessCrossTenant ? '/app/settings?section=platform' : '/app/settings?section=club'}>
             <Button variant="ghost">{t('app.nav.settings')}</Button>
           </Link>
