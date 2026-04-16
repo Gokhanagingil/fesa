@@ -12,6 +12,7 @@ import {
   formatDate,
   getChargeCurrencyAmount,
   getChargeStatusLabel,
+  getAthleteStatusLabel,
   getPersonName,
 } from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
@@ -19,6 +20,7 @@ import type {
   Athlete,
   AthleteCharge,
   AthleteChargeStatus,
+  AthleteStatus,
   AthleteFinanceSummaryResponse,
   ChargeItem,
   ClubGroup,
@@ -53,6 +55,8 @@ type PeriodicGenerationPreview = {
 };
 
 type PeriodicTargetType = 'selected' | 'group' | 'team';
+type BulkChargeTargetType = 'selected' | 'group' | 'team';
+type BulkChargeStatusScope = 'default' | 'all' | AthleteStatus;
 
 function createPaymentFormState(): PaymentFormState {
   return {
@@ -90,6 +94,10 @@ export function AthleteChargesPage() {
   const [bulkChargeItemId, setBulkChargeItemId] = useState('');
   const [bulkAmount, setBulkAmount] = useState('');
   const [bulkDueDate, setBulkDueDate] = useState('');
+  const [bulkTargetType, setBulkTargetType] = useState<BulkChargeTargetType>('selected');
+  const [bulkGroupId, setBulkGroupId] = useState('');
+  const [bulkTeamId, setBulkTeamId] = useState('');
+  const [bulkStatusScope, setBulkStatusScope] = useState<BulkChargeStatusScope>('default');
   const [periodicTargetType, setPeriodicTargetType] = useState<PeriodicTargetType>('selected');
   const [periodicGroupId, setPeriodicGroupId] = useState('');
   const [periodicTeamId, setPeriodicTeamId] = useState('');
@@ -190,6 +198,10 @@ export function AthleteChargesPage() {
     () => (periodicGroupId ? teams.filter((team) => team.groupId === periodicGroupId) : teams),
     [periodicGroupId, teams],
   );
+  const visibleBulkTeams = useMemo(
+    () => (bulkGroupId ? teams.filter((team) => team.groupId === bulkGroupId) : teams),
+    [bulkGroupId, teams],
+  );
 
   const chargeOptionsForPayment = useMemo(() => {
     const relevant = athleteId ? items.filter((charge) => charge.athleteId === athleteId) : items;
@@ -223,6 +235,31 @@ export function AthleteChargesPage() {
         athleteName: skippedAthleteMap.get(athleteId) ?? athleteId,
         reason: 'duplicate_period',
       })),
+    };
+  }
+
+  function buildBulkStatusFilter(): AthleteStatus[] | undefined {
+    if (bulkTargetType === 'selected') {
+      return undefined;
+    }
+    if (bulkStatusScope === 'default') {
+      return ['active', 'trial'];
+    }
+    if (bulkStatusScope === 'all') {
+      return undefined;
+    }
+    return [bulkStatusScope];
+  }
+
+  function buildBulkPayload() {
+    return {
+      athleteIds: bulkTargetType === 'selected' ? selectedAthleteIds : undefined,
+      groupId: bulkTargetType === 'group' ? bulkGroupId : undefined,
+      teamId: bulkTargetType === 'team' ? bulkTeamId : undefined,
+      athleteStatuses: buildBulkStatusFilter(),
+      chargeItemId: bulkChargeItemId,
+      amount: bulkAmount ? Number.parseFloat(bulkAmount) : undefined,
+      dueDate: bulkDueDate || undefined,
     };
   }
 
@@ -312,22 +349,25 @@ export function AthleteChargesPage() {
   }
 
   async function assignBulkCharges() {
-    if (!bulkChargeItemId || selectedAthleteIds.length === 0) return;
+    if (!bulkChargeItemId) return;
+    if (bulkTargetType === 'selected' && selectedAthleteIds.length === 0) return;
+    if (bulkTargetType === 'group' && !bulkGroupId) return;
+    if (bulkTargetType === 'team' && !bulkTeamId) return;
+
     setBulkSaving(true);
     setError(null);
     setMessage(null);
     try {
-      await apiPost('/api/athlete-charges/bulk', {
-        athleteIds: selectedAthleteIds,
-        chargeItemId: bulkChargeItemId,
-        amount: bulkAmount ? Number.parseFloat(bulkAmount) : undefined,
-        dueDate: bulkDueDate || undefined,
-      });
-      const assignedCount = selectedAthleteIds.length;
+      const created = await apiPost<AthleteCharge[]>('/api/athlete-charges/bulk', buildBulkPayload());
+      const assignedCount = created.length;
       setSelectedAthleteIds([]);
       setBulkChargeItemId('');
       setBulkAmount('');
       setBulkDueDate('');
+      setBulkGroupId('');
+      setBulkTeamId('');
+      setBulkStatusScope('default');
+      setBulkTargetType('selected');
       setMessage(t('pages.athleteCharges.bulkSuccess', { count: assignedCount }));
       await load();
     } catch (e) {
@@ -491,6 +531,80 @@ export function AthleteChargesPage() {
                   <div className="rounded-xl border border-amateur-border bg-amateur-surface p-4">
                     <div className="space-y-3">
                       <label className="flex flex-col gap-1 text-sm">
+                        <span>{t('pages.athleteCharges.bulkTargetType')}</span>
+                        <select
+                          value={bulkTargetType}
+                          onChange={(e) => {
+                            const next = e.target.value as BulkChargeTargetType;
+                            setBulkTargetType(next);
+                            if (next !== 'group') setBulkGroupId('');
+                            if (next !== 'team') setBulkTeamId('');
+                          }}
+                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                        >
+                          <option value="selected">{t('pages.athleteCharges.bulkTargetSelected')}</option>
+                          <option value="group">{t('pages.athleteCharges.bulkTargetGroup')}</option>
+                          <option value="team">{t('pages.athleteCharges.bulkTargetTeam')}</option>
+                        </select>
+                      </label>
+                      {bulkTargetType === 'group' ? (
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span>{t('pages.athletes.primaryGroup')}</span>
+                          <select
+                            value={bulkGroupId}
+                            onChange={(e) => {
+                              setBulkGroupId(e.target.value);
+                              setBulkTeamId('');
+                            }}
+                            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                          >
+                            <option value="">{t('pages.athletes.allGroups')}</option>
+                            {groups.map((group) => (
+                              <option key={group.id} value={group.id}>
+                                {group.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
+                      {bulkTargetType === 'team' ? (
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span>{t('pages.teams.title')}</span>
+                          <select
+                            value={bulkTeamId}
+                            onChange={(e) => setBulkTeamId(e.target.value)}
+                            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                          >
+                            <option value="">{t('pages.athletes.allTeams')}</option>
+                            {visibleBulkTeams.map((team) => (
+                              <option key={team.id} value={team.id}>
+                                {team.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
+                      {bulkTargetType !== 'selected' ? (
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span>{t('pages.athleteCharges.bulkStatusScope')}</span>
+                          <select
+                            value={bulkStatusScope}
+                            onChange={(e) => setBulkStatusScope(e.target.value as BulkChargeStatusScope)}
+                            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                          >
+                            <option value="default">{t('pages.athleteCharges.bulkStatusScopeDefault')}</option>
+                            <option value="all">{t('pages.athleteCharges.bulkStatusScopeAll')}</option>
+                            {(['trial', 'active', 'paused', 'inactive', 'archived'] as AthleteStatus[]).map((athleteStatus) => (
+                              <option key={athleteStatus} value={athleteStatus}>
+                                {t('pages.athleteCharges.bulkStatusScopeSingle', {
+                                  status: getAthleteStatusLabel(t, athleteStatus),
+                                })}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
+                      <label className="flex flex-col gap-1 text-sm">
                         <span>{t('pages.athleteCharges.item')}</span>
                         <select
                           value={bulkChargeItemId}
@@ -527,12 +641,27 @@ export function AthleteChargesPage() {
                         />
                       </label>
                       <div className="rounded-xl border border-dashed border-amateur-border px-3 py-2 text-sm text-amateur-muted">
-                        {t('pages.athleteCharges.selectedCount', { count: selectedAthletes.length })}
+                        {bulkTargetType === 'selected'
+                          ? t('pages.athleteCharges.selectedCount', { count: selectedAthletes.length })
+                          : bulkTargetType === 'group'
+                            ? t('pages.athleteCharges.bulkTargetSummaryGroup', {
+                                group: groups.find((group) => group.id === bulkGroupId)?.name ?? '—',
+                              })
+                            : t('pages.athleteCharges.bulkTargetSummaryTeam', {
+                                team: teams.find((team) => team.id === bulkTeamId)?.name ?? '—',
+                              })}
                       </div>
+                      <p className="text-xs text-amateur-muted">{t('pages.athleteCharges.bulkScopeHint')}</p>
                       <Button
                         type="button"
                         onClick={() => void assignBulkCharges()}
-                        disabled={!bulkChargeItemId || selectedAthleteIds.length === 0 || bulkSaving}
+                        disabled={
+                          !bulkChargeItemId ||
+                          bulkSaving ||
+                          (bulkTargetType === 'selected' && selectedAthleteIds.length === 0) ||
+                          (bulkTargetType === 'group' && !bulkGroupId) ||
+                          (bulkTargetType === 'team' && !bulkTeamId)
+                        }
                       >
                         {t('pages.athleteCharges.assignBulk')}
                       </Button>

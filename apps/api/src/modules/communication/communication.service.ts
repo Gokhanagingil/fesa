@@ -11,7 +11,7 @@ import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.e
 import { Team } from '../../database/entities/team.entity';
 import { TrainingSession } from '../../database/entities/training-session.entity';
 import { GuardianPortalAccess } from '../../database/entities/guardian-portal-access.entity';
-import { FamilyReadinessStatus } from '../../database/enums';
+import { AthleteStatus, FamilyReadinessStatus } from '../../database/enums';
 import { FinanceService } from '../finance/finance.service';
 import { FamilyActionService } from '../family-action/family-action.service';
 import { isRelationTableMissingError } from '../core/database-error.util';
@@ -20,6 +20,7 @@ import { ListCommunicationAudienceQueryDto } from './dto/list-communication-audi
 type AudienceMember = {
   athleteId: string;
   athleteName: string;
+  athleteStatus: AthleteStatus;
   reasons: string[];
   groupId: string | null;
   groupName: string | null;
@@ -207,7 +208,7 @@ export class CommunicationService {
 
     if (ids.size === 0) {
       const athletes = await this.athletes.find({
-        where: { tenantId },
+        where: { tenantId, ...(query.athleteStatus ? { status: query.athleteStatus } : {}) },
         order: { lastName: 'ASC', firstName: 'ASC' },
         take: 200,
         select: { id: true },
@@ -312,6 +313,9 @@ export class CommunicationService {
       if (query.familyReadiness && readiness?.status === query.familyReadiness) {
         reasons.push(`family_readiness:${query.familyReadiness}`);
       }
+      if (query.athleteStatus && athlete.status === query.athleteStatus) {
+        reasons.push(`athlete_status:${query.athleteStatus}`);
+      }
       if (
         query.portalEnabledOnly &&
         (guardiansByAthlete.get(athlete.id) ?? []).some((link) => {
@@ -345,6 +349,7 @@ export class CommunicationService {
       return {
         athleteId: athlete.id,
         athleteName: [athlete.preferredName || athlete.firstName, athlete.lastName].filter(Boolean).join(' '),
+        athleteStatus: athlete.status,
         reasons: this.unique(reasons),
         groupId: athlete.primaryGroupId,
         groupName: athlete.primaryGroup?.name ?? null,
@@ -372,6 +377,9 @@ export class CommunicationService {
     }
     if (query.needsFollowUp) {
       items = items.filter((item) => item.familyReadinessStatus !== FamilyReadinessStatus.COMPLETE);
+    }
+    if (query.athleteStatus) {
+      items = items.filter((item) => item.athleteStatus === query.athleteStatus);
     }
 
     if (query.q?.trim()) {

@@ -130,6 +130,11 @@ export function getPrivateLessonReasonLabel(t: TFunction, reason: string): strin
       status: getFamilyReadinessLabel(t, reason.slice('family_readiness:'.length) as FamilyReadinessStatus),
     });
   }
+  if (reason.startsWith('athlete_status:')) {
+    return t('pages.communications.reasonAthleteStatus', {
+      status: getAthleteStatusLabel(t, reason.slice('athlete_status:'.length) as AthleteStatus),
+    });
+  }
   const labels: Record<string, string> = {
     'finance:overdue': t('pages.communications.reasonOverdue'),
     'finance:outstanding': t('pages.communications.reasonOutstanding'),

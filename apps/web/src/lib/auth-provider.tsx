@@ -3,6 +3,8 @@ import { apiGet, apiPost } from './api';
 import { AuthContext } from './auth-context';
 import type { StaffAuthSummary, StaffLoginRequest } from './auth-types';
 
+const SESSION_BOOTSTRAP_FAILED = 'SESSION_BOOTSTRAP_FAILED';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<StaffAuthSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,9 +27,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (payload: StaffLoginRequest) => {
-      const next = await apiPost<StaffAuthSummary>('/api/auth/login', payload);
-      setSession(next);
-      return next;
+      await apiPost<StaffAuthSummary>('/api/auth/login', payload);
+      try {
+        const verified = await apiGet<StaffAuthSummary>('/api/auth/me');
+        setSession(verified);
+        return verified;
+      } catch {
+        setSession(null);
+        throw new Error(SESSION_BOOTSTRAP_FAILED);
+      }
     },
     [],
   );
@@ -60,3 +68,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+
+export { SESSION_BOOTSTRAP_FAILED };

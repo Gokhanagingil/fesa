@@ -186,6 +186,68 @@ export class FinanceService {
     return athletes;
   }
 
+  private async resolveBulkChargeTargets(
+    tenantId: string,
+    dto: CreateBulkAthleteChargesDto,
+  ): Promise<Athlete[]> {
+    const selectedAthleteIds = Array.from(new Set(dto.athleteIds ?? []));
+    const hasSelectedAthletes = selectedAthleteIds.length > 0;
+    const hasFilterTarget = Boolean(dto.groupId || dto.teamId);
+
+    if (!hasSelectedAthletes && !hasFilterTarget) {
+      throw new BadRequestException('Choose selected athletes, a group, or a team before assigning charges');
+    }
+
+    if (hasSelectedAthletes && hasFilterTarget) {
+      throw new BadRequestException('Use either selected athletes or a group/team target for bulk charges');
+    }
+
+    const statuses =
+      dto.athleteStatuses && dto.athleteStatuses.length > 0
+        ? dto.athleteStatuses
+        : hasSelectedAthletes
+          ? null
+          : [AthleteStatus.ACTIVE, AthleteStatus.TRIAL];
+
+    const qb = this.athletes
+      .createQueryBuilder('athlete')
+      .where('athlete.tenantId = :tenantId', { tenantId })
+      .distinct(true);
+
+    if (hasSelectedAthletes) {
+      qb.andWhere('athlete.id IN (:...athleteIds)', { athleteIds: selectedAthleteIds });
+    }
+
+    if (dto.groupId) {
+      qb.andWhere('athlete.primaryGroupId = :groupId', { groupId: dto.groupId });
+    }
+
+    if (dto.teamId) {
+      qb.innerJoin(
+        AthleteTeamMembership,
+        'membership',
+        'membership.tenantId = athlete.tenantId AND membership.athleteId = athlete.id AND membership.teamId = :teamId AND membership.endedAt IS NULL',
+        { teamId: dto.teamId },
+      );
+    }
+
+    if (statuses && statuses.length > 0) {
+      qb.andWhere('athlete.status IN (:...statuses)', { statuses });
+    }
+
+    const athletes = await qb.orderBy('athlete.lastName', 'ASC').addOrderBy('athlete.firstName', 'ASC').getMany();
+
+    if (hasSelectedAthletes && athletes.length !== selectedAthleteIds.length) {
+      throw new BadRequestException('One or more selected athletes were not found for this tenant');
+    }
+
+    if (!hasSelectedAthletes && athletes.length === 0) {
+      throw new BadRequestException('No athletes matched the selected bulk charge scope');
+    }
+
+    return athletes;
+  }
+
   private async buildPeriodicChargePlan(tenantId: string, dto: GeneratePeriodicAthleteChargesDto) {
     const [item, targets] = await Promise.all([
       this.chargeItems.findOne({ where: { id: dto.chargeItemId, tenantId } }),
@@ -443,20 +505,15 @@ export class FinanceService {
   }
 
   async createBulkAthleteCharges(tenantId: string, dto: CreateBulkAthleteChargesDto): Promise<AthleteCharge[]> {
-    const athleteIds = Array.from(new Set(dto.athleteIds));
-    const athletes = await this.athletes.find({ where: athleteIds.map((id) => ({ id, tenantId })) });
-    if (athletes.length !== athleteIds.length) {
-      throw new BadRequestException('One or more athletes were not found for this tenant');
-    }
-
+    const targets = await this.resolveBulkChargeTargets(tenantId, dto);
     const item = await this.chargeItems.findOne({ where: { id: dto.chargeItemId, tenantId } });
     if (!item) throw new BadRequestException('Charge item not found');
 
     const amount = dto.amount ?? Number(item.defaultAmount);
-    const rows = athleteIds.map((athleteId) =>
+    const rows = targets.map((athlete) =>
       this.athleteCharges.create({
         tenantId,
-        athleteId,
+        athleteId: athlete.id,
         chargeItemId: dto.chargeItemId,
         amount: amount.toFixed(2),
         dueDate: dto.dueDate ? new Date(dto.dueDate) : null,

@@ -73,6 +73,14 @@ Instead:
   - optional team assignment
   - open finance state
 - This keeps onboarding operational and fast: staff can open a profile and immediately see what is still missing without leaving the core athlete surface.
+- Clubs can now apply **bulk athlete lifecycle changes** from the roster itself:
+  - update status for a reviewed selection,
+  - move a reviewed selection into a new primary group,
+  - see explicit feedback when open team memberships were ended automatically to preserve group/team consistency.
+- Status and roster side effects stay intentionally lean:
+  - moving an athlete to `inactive` or `archived` ends open team memberships,
+  - moving an athlete to a new primary group ends only the open team memberships that conflict with the destination group,
+  - athletes can still remain group-only with no team membership at all.
 
 ## Training & attendance
 
@@ -215,7 +223,8 @@ This keeps the product in a practical club-operations lane rather than turning i
 - **Athlete charges** can be assigned:
   - individually from an athlete profile,
   - individually through the finance area,
-  - in **bulk** across multiple selected athletes.
+  - in **bulk** across multiple selected athletes,
+  - in **bulk** by primary group or active team membership, with an explicit athlete-status scope.
 - **Periodic charges** can also be generated from the existing athlete-charges surface using:
   - selected athletes,
   - a target group, or
@@ -249,6 +258,7 @@ This keeps the product in a practical club-operations lane rather than turning i
 - Targeting can be assembled by:
   - group,
   - team,
+  - athlete lifecycle status,
   - training session cohort,
   - private-lesson status / coach / date window,
   - outstanding or overdue finance state,

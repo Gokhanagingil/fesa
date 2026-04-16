@@ -9,6 +9,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { apiGet } from '../lib/api';
 import {
+  getAthleteStatusLabel,
   getFamilyReadinessStatusLabel,
   getFamilyReadinessTone,
   getPersonName,
@@ -19,6 +20,7 @@ import type {
   ClubGroup,
   CommunicationAudienceResponse,
   Coach,
+  AthleteStatus,
   FamilyReadinessStatus,
   Team,
   TrainingSession,
@@ -32,6 +34,9 @@ export function CommunicationsPage() {
   const [groupId, setGroupId] = useState(searchParams.get('groupId') ?? '');
   const [teamId, setTeamId] = useState(searchParams.get('teamId') ?? '');
   const [coachId, setCoachId] = useState(searchParams.get('coachId') ?? '');
+  const [athleteStatus, setAthleteStatus] = useState<AthleteStatus | ''>(
+    (searchParams.get('athleteStatus') as AthleteStatus | null) ?? '',
+  );
   const [financialState, setFinancialState] = useState(searchParams.get('financialState') ?? '');
   const [privateLessonStatus, setPrivateLessonStatus] = useState(searchParams.get('privateLessonStatus') ?? '');
   const [trainingSessionId, setTrainingSessionId] = useState(searchParams.get('trainingSessionId') ?? '');
@@ -60,6 +65,7 @@ export function CommunicationsPage() {
     setGroupId(searchParams.get('groupId') ?? '');
     setTeamId(searchParams.get('teamId') ?? '');
     setCoachId(searchParams.get('coachId') ?? '');
+    setAthleteStatus((searchParams.get('athleteStatus') as AthleteStatus | null) ?? '');
     setFinancialState(searchParams.get('financialState') ?? '');
     setPrivateLessonStatus(searchParams.get('privateLessonStatus') ?? '');
     setTrainingSessionId(searchParams.get('trainingSessionId') ?? '');
@@ -77,6 +83,7 @@ export function CommunicationsPage() {
     if (groupId) next.set('groupId', groupId);
     if (teamId) next.set('teamId', teamId);
     if (coachId) next.set('coachId', coachId);
+    if (athleteStatus) next.set('athleteStatus', athleteStatus);
     if (financialState) next.set('financialState', financialState);
     if (privateLessonStatus) next.set('privateLessonStatus', privateLessonStatus);
     if (trainingSessionId) next.set('trainingSessionId', trainingSessionId);
@@ -89,6 +96,7 @@ export function CommunicationsPage() {
     setSearchParams(next, { replace: true });
   }, [
     athleteIds,
+      athleteStatus,
     coachId,
     familyReadiness,
     financialState,
@@ -137,6 +145,7 @@ export function CommunicationsPage() {
       if (groupId) params.set('groupId', groupId);
       if (teamId) params.set('teamId', teamId);
       if (coachId) params.set('coachId', coachId);
+      if (athleteStatus) params.set('athleteStatus', athleteStatus);
       if (financialState) params.set('financialState', financialState);
       if (privateLessonStatus) params.set('privateLessonStatus', privateLessonStatus);
       if (trainingSessionId) params.set('trainingSessionId', trainingSessionId);
@@ -162,6 +171,7 @@ export function CommunicationsPage() {
     }
   }, [
     athleteIds,
+    athleteStatus,
     coachId,
     draftBody,
     draftTitle,
@@ -197,6 +207,7 @@ export function CommunicationsPage() {
           groupId ||
           teamId ||
           coachId ||
+          athleteStatus ||
           financialState ||
           privateLessonStatus ||
           trainingSessionId ||
@@ -209,6 +220,7 @@ export function CommunicationsPage() {
       ),
     [
       athleteIds.length,
+      athleteStatus,
       coachId,
       familyReadiness,
       financialState,
@@ -299,6 +311,21 @@ export function CommunicationsPage() {
                 {coaches.map((coach) => (
                   <option key={coach.id} value={coach.id}>
                     {getPersonName(coach)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
+              <span>{t('pages.athletes.status')}</span>
+              <select
+                value={athleteStatus}
+                onChange={(e) => setAthleteStatus((e.target.value as AthleteStatus) || '')}
+                className="bg-transparent text-amateur-ink outline-none"
+              >
+                <option value="">{t('pages.communications.anyAthleteStatus')}</option>
+                {(['trial', 'active', 'paused', 'inactive', 'archived'] as AthleteStatus[]).map((value) => (
+                  <option key={value} value={value}>
+                    {getAthleteStatusLabel(t, value)}
                   </option>
                 ))}
               </select>
@@ -395,6 +422,7 @@ export function CommunicationsPage() {
                 setGroupId('');
                 setTeamId('');
                 setCoachId('');
+                setAthleteStatus('');
                 setFinancialState('');
                 setPrivateLessonStatus('');
                 setTrainingSessionId('');
@@ -488,6 +516,7 @@ export function CommunicationsPage() {
                             setGroupId('');
                             setTeamId('');
                             setCoachId('');
+                            setAthleteStatus('');
                             setFinancialState('');
                             setPrivateLessonStatus('');
                             setTrainingSessionId('');
@@ -516,7 +545,13 @@ export function CommunicationsPage() {
                           <div>
                             <p className="font-medium text-amateur-ink">{item.athleteName}</p>
                             <p className="mt-1 text-xs text-amateur-muted">
-                              {[item.groupName, ...item.teamNames].filter(Boolean).join(' · ') || '—'}
+                              [
+                                getAthleteStatusLabel(t, item.athleteStatus),
+                                item.groupName,
+                                ...item.teamNames,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ') || '—'}
                             </p>
                             <div className="mt-2 flex flex-wrap gap-2">
                               <span

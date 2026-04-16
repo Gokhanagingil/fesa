@@ -7,6 +7,7 @@ import {
 } from './api';
 import { TenantContext, type TenantRow } from './tenant-context';
 import { useAuth } from './auth-context';
+import type { StaffAuthSummary } from './auth-types';
 
 /** Matches demo seed slug (`npm run seed:demo`) so first-run picks the curated tenant when present. */
 const PREFERRED_DEMO_TENANT_SLUG = 'kadikoy-genc-spor';
@@ -17,6 +18,54 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [tenantId, setTenantIdState] = useState<string | null>(getStoredTenantId());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const mapSessionTenants = useCallback(
+    (currentSession: StaffAuthSummary | null): TenantRow[] =>
+      currentSession?.accessibleTenants.map((tenant) => ({
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        role: tenant.role,
+        isDefault: tenant.isDefault,
+      })) ?? [],
+    [],
+  );
+
+  const reconcileTenantId = useCallback(
+    (list: TenantRow[], preferredTenantId?: string | null) => {
+      const stored = getStoredTenantId();
+      if (stored && list.some((tenant) => tenant.id === stored)) {
+        return stored;
+      }
+      if (preferredTenantId && list.some((tenant) => tenant.id === preferredTenantId)) {
+        return preferredTenantId;
+      }
+
+      const explicitDefault = list.find((tenant) => tenant.isDefault);
+      if (explicitDefault) {
+        return explicitDefault.id;
+      }
+
+      const preferredDemo = list.find((tenant) => tenant.slug === PREFERRED_DEMO_TENANT_SLUG);
+      return preferredDemo?.id ?? list[0]?.id ?? null;
+    },
+    [],
+  );
+
+  const applyTenantState = useCallback(
+    (list: TenantRow[], preferredTenantId?: string | null) => {
+      setTenants(list);
+      const nextTenantId = reconcileTenantId(list, preferredTenantId);
+      if (nextTenantId) {
+        setStoredTenantId(nextTenantId);
+        setTenantIdState(nextTenantId);
+      } else {
+        clearStoredTenantId();
+        setTenantIdState(null);
+      }
+    },
+    [reconcileTenantId],
+  );
 
   const refresh = useCallback(async () => {
     if (authLoading) {
@@ -30,32 +79,23 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       setError(null);
       return;
     }
+
+    const fallbackTenants = mapSessionTenants(session);
+    applyTenantState(fallbackTenants, session.defaultTenantId);
     setLoading(true);
     setError(null);
     try {
       const list = await apiGet<TenantRow[]>('/api/tenants');
-      setTenants(list);
-      const stored = getStoredTenantId();
-      if (stored && list.some((t) => t.id === stored)) {
-        setTenantIdState(stored);
-      } else if (list.length > 0) {
-        const preferred = list.find((t) => t.slug === PREFERRED_DEMO_TENANT_SLUG);
-        const next = preferred?.id ?? list[0].id;
-        setStoredTenantId(next);
-        setTenantIdState(next);
-      } else {
-        clearStoredTenantId();
-        setTenantIdState(null);
-      }
+      applyTenantState(list, session.defaultTenantId);
     } catch (e) {
-      setTenants([]);
-      setTenantIdState(null);
-      clearStoredTenantId();
+      if (fallbackTenants.length === 0) {
+        applyTenantState([], null);
+      }
       setError(e instanceof Error ? e.message : 'Failed to load tenants');
     } finally {
       setLoading(false);
     }
-  }, [authLoading, session]);
+  }, [applyTenantState, authLoading, mapSessionTenants, session]);
 
   useEffect(() => {
     void refresh();

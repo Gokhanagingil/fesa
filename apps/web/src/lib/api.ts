@@ -1,5 +1,15 @@
 const STORAGE_KEY = 'amateur.tenantId';
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export function getStoredTenantId(): string | null {
   return localStorage.getItem(STORAGE_KEY);
 }
@@ -30,9 +40,15 @@ async function parseError(res: Response): Promise<string> {
   return res.statusText || 'Request failed';
 }
 
+async function assertOk(res: Response): Promise<void> {
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseError(res));
+  }
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(path, { headers: headers(), credentials: 'include' });
-  if (!res.ok) throw new Error(await parseError(res));
+  await assertOk(res);
   return res.json() as Promise<T>;
 }
 
@@ -43,7 +59,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  await assertOk(res);
   return res.json() as Promise<T>;
 }
 
@@ -54,17 +70,17 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  await assertOk(res);
   return res.json() as Promise<T>;
 }
 
 export async function apiPatchNoBody<T>(path: string): Promise<T> {
   const res = await fetch(path, { method: 'PATCH', headers: headers(), credentials: 'include' });
-  if (!res.ok) throw new Error(await parseError(res));
+  await assertOk(res);
   return res.json() as Promise<T>;
 }
 
 export async function apiDelete(path: string): Promise<void> {
   const res = await fetch(path, { method: 'DELETE', headers: headers(), credentials: 'include' });
-  if (!res.ok) throw new Error(await parseError(res));
+  await assertOk(res);
 }

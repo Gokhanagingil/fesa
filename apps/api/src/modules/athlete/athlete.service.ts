@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, Repository } from 'typeorm';
+import { Brackets, In, IsNull, Repository } from 'typeorm';
 import { Athlete } from '../../database/entities/athlete.entity';
 import { ClubGroup } from '../../database/entities/club-group.entity';
 import { SportBranch } from '../../database/entities/sport-branch.entity';
@@ -12,6 +12,7 @@ import { AthleteGuardian } from '../../database/entities/athlete-guardian.entity
 import { AthleteTeamMembership } from '../../database/entities/athlete-team-membership.entity';
 import { Team } from '../../database/entities/team.entity';
 import { FamilyActionService } from '../family-action/family-action.service';
+import { BulkUpdateAthletesDto } from './dto/bulk-update-athletes.dto';
 
 @Injectable()
 export class AthleteService {
@@ -47,6 +48,60 @@ export class AthleteService {
     if (g.sportBranchId !== sportBranchId) {
       throw new BadRequestException('primaryGroupId must be under the same sport branch as the athlete');
     }
+  }
+
+  private async endTeamMemberships(memberships: AthleteTeamMembership[]): Promise<number> {
+    const openMemberships = memberships.filter((membership) => !membership.endedAt);
+    if (openMemberships.length === 0) {
+      return 0;
+    }
+
+    const endedAt = new Date();
+    openMemberships.forEach((membership) => {
+      membership.endedAt = endedAt;
+    });
+    await this.teamMemberships.save(openMemberships);
+    return openMemberships.length;
+  }
+
+  private async endOpenTeamMembershipsForAthletes(tenantId: string, athleteIds: string[]): Promise<number> {
+    if (athleteIds.length === 0) {
+      return 0;
+    }
+
+    const memberships = await this.teamMemberships.find({
+      where: {
+        tenantId,
+        athleteId: In(athleteIds),
+        endedAt: IsNull(),
+      },
+    });
+    return this.endTeamMemberships(memberships);
+  }
+
+  private async endConflictingGroupMemberships(
+    tenantId: string,
+    athleteIds: string[],
+    primaryGroupId: string,
+  ): Promise<number> {
+    if (athleteIds.length === 0) {
+      return 0;
+    }
+
+    const memberships = await this.teamMemberships.find({
+      where: {
+        tenantId,
+        athleteId: In(athleteIds),
+        endedAt: IsNull(),
+      },
+      relations: ['team'],
+    });
+
+    return this.endTeamMemberships(
+      memberships.filter(
+        (membership) => Boolean(membership.team?.groupId) && membership.team.groupId !== primaryGroupId,
+      ),
+    );
   }
 
   async create(tenantId: string, dto: CreateAthleteDto): Promise<Athlete> {
@@ -148,6 +203,7 @@ export class AthleteService {
 
   async update(tenantId: string, id: string, dto: UpdateAthleteDto): Promise<Athlete> {
     const existing = await this.findOne(tenantId, id);
+    const previousPrimaryGroupId = existing.primaryGroupId;
     const sportBranchId = dto.sportBranchId ?? existing.sportBranchId;
     if (dto.sportBranchId) {
       await this.assertBranch(tenantId, dto.sportBranchId);
@@ -169,7 +225,17 @@ export class AthleteService {
       jerseyNumber: dto.jerseyNumber !== undefined ? dto.jerseyNumber ?? null : existing.jerseyNumber,
       notes: dto.notes !== undefined ? dto.notes ?? null : existing.notes,
     });
-    return this.athletes.save(existing);
+
+    const saved = await this.athletes.save(existing);
+    if (saved.status === AthleteStatus.INACTIVE || saved.status === AthleteStatus.ARCHIVED) {
+      await this.endOpenTeamMembershipsForAthletes(tenantId, [saved.id]);
+    } else if (dto.primaryGroupId === null && previousPrimaryGroupId) {
+      await this.endOpenTeamMembershipsForAthletes(tenantId, [saved.id]);
+    } else if (dto.primaryGroupId && dto.primaryGroupId !== previousPrimaryGroupId) {
+      await this.endConflictingGroupMemberships(tenantId, [saved.id], dto.primaryGroupId);
+    }
+
+    return saved;
   }
 
   async remove(tenantId: string, id: string): Promise<void> {
@@ -202,6 +268,14 @@ export class AthleteService {
     if (team.sportBranchId !== athlete.sportBranchId) {
       throw new BadRequestException('Team must belong to the same sport branch as the athlete');
     }
+    if (team.groupId) {
+      if (!athlete.primaryGroupId) {
+        throw new BadRequestException('Assign a primary group before adding a team membership');
+      }
+      if (athlete.primaryGroupId !== team.groupId) {
+        throw new BadRequestException('Team must belong to the athlete primary group');
+      }
+    }
     const open = await this.teamMemberships
       .createQueryBuilder('m')
       .where('m.tenantId = :tenantId', { tenantId })
@@ -219,6 +293,58 @@ export class AthleteService {
       endedAt: null,
     });
     return this.teamMemberships.save(m);
+  }
+
+  async bulkUpdate(tenantId: string, dto: BulkUpdateAthletesDto) {
+    if (dto.status === undefined && dto.primaryGroupId === undefined) {
+      throw new BadRequestException('Choose a status or a primary group before applying a bulk update');
+    }
+
+    const athleteIds = Array.from(new Set(dto.athleteIds));
+    const athletes = await this.athletes.find({
+      where: athleteIds.map((id) => ({ id, tenantId })),
+      order: { lastName: 'ASC', firstName: 'ASC' },
+    });
+    if (athletes.length !== athleteIds.length) {
+      throw new BadRequestException('One or more athletes were not found for this tenant');
+    }
+
+    if (dto.primaryGroupId) {
+      const targetGroup = await this.groups.findOne({ where: { id: dto.primaryGroupId, tenantId } });
+      if (!targetGroup) {
+        throw new BadRequestException('primaryGroupId does not belong to this tenant');
+      }
+      const branchMismatch = athletes.some((athlete) => athlete.sportBranchId !== targetGroup.sportBranchId);
+      if (branchMismatch) {
+        throw new BadRequestException(
+          'Selected athletes must share the same sport branch as the destination group',
+        );
+      }
+    }
+
+    const nextRows = athletes.map((athlete) =>
+      this.athletes.create({
+        ...athlete,
+        status: dto.status ?? athlete.status,
+        primaryGroupId: dto.primaryGroupId ?? athlete.primaryGroupId,
+      }),
+    );
+    await this.athletes.save(nextRows);
+
+    const endedTeamMemberships =
+      dto.status === AthleteStatus.INACTIVE || dto.status === AthleteStatus.ARCHIVED
+        ? await this.endOpenTeamMembershipsForAthletes(tenantId, athleteIds)
+        : dto.primaryGroupId
+          ? await this.endConflictingGroupMemberships(tenantId, athleteIds, dto.primaryGroupId)
+          : 0;
+
+    return {
+      updatedCount: nextRows.length,
+      endedTeamMemberships,
+      affectedAthleteIds: athleteIds,
+      status: dto.status ?? null,
+      primaryGroupId: dto.primaryGroupId ?? null,
+    };
   }
 
   async endTeamMembership(tenantId: string, athleteId: string, membershipId: string) {

@@ -236,6 +236,23 @@ export function AthleteDetailPage() {
     }
   }
 
+  async function updateAthleteProfileStatus(nextStatus: Athlete['status']) {
+    if (!id || !athlete) {
+      return;
+    }
+    try {
+      await apiPatch(`/api/athletes/${id}`, { status: nextStatus });
+      setMessage(
+        t('pages.athletes.statusUpdated', {
+          status: getAthleteStatusLabel(t, nextStatus),
+        }),
+      );
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
+    }
+  }
+
   const activeTeams = teams.filter((m) => !m.endedAt);
   const endedTeams = teams.filter((m) => m.endedAt);
   const availableGuardians = useMemo(
@@ -391,6 +408,39 @@ export function AthleteDetailPage() {
                 {getFamilyReadinessStatusLabel(t, readinessStatus)}
               </span>
             </div>
+          </div>
+          <div className="mt-4 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amateur-muted">
+                  {t('pages.athletes.lifecycleTitle')}
+                </p>
+                <p className="mt-1 text-sm text-amateur-muted">{t('pages.athletes.lifecycleHint')}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {athlete.status !== 'trial' ? (
+                  <Button type="button" variant="ghost" onClick={() => void updateAthleteProfileStatus('trial')}>
+                    {t('pages.athletes.lifecycleToTrial')}
+                  </Button>
+                ) : null}
+                {athlete.status !== 'active' ? (
+                  <Button type="button" variant="ghost" onClick={() => void updateAthleteProfileStatus('active')}>
+                    {t('pages.athletes.lifecycleToActive')}
+                  </Button>
+                ) : null}
+                {athlete.status !== 'paused' ? (
+                  <Button type="button" variant="ghost" onClick={() => void updateAthleteProfileStatus('paused')}>
+                    {t('pages.athletes.lifecycleToPaused')}
+                  </Button>
+                ) : null}
+                {athlete.status !== 'inactive' ? (
+                  <Button type="button" variant="ghost" onClick={() => void updateAthleteProfileStatus('inactive')}>
+                    {t('pages.athletes.lifecycleToInactive')}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-amateur-muted">{t('pages.athletes.lifecycleSideEffectHint')}</p>
           </div>
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <div>

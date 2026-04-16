@@ -20,6 +20,7 @@ import { LinkAthleteGuardianDto } from '../guardian/dto/link-athlete-guardian.dt
 import { GuardianService } from '../guardian/guardian.service';
 import { AddTeamMembershipDto } from './dto/add-team-membership.dto';
 import { FamilyActionService } from '../family-action/family-action.service';
+import { BulkUpdateAthletesDto } from './dto/bulk-update-athletes.dto';
 
 @Controller('athletes')
 @UseGuards(TenantGuard)
@@ -38,6 +39,11 @@ export class AthleteController {
   @Post()
   create(@Req() req: Request, @Body() dto: CreateAthleteDto) {
     return this.athletes.create(req.tenantId!, dto);
+  }
+
+  @Patch('bulk')
+  bulkUpdate(@Req() req: Request, @Body() dto: BulkUpdateAthletesDto) {
+    return this.athletes.bulkUpdate(req.tenantId!, dto);
   }
 
   @Get(':id')
