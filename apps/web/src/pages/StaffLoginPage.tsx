@@ -5,6 +5,7 @@ import { LanguageSwitch } from '../components/ui/LanguageSwitch';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../lib/auth-context';
+import { SESSION_BOOTSTRAP_FAILED } from '../lib/auth-provider';
 
 export function StaffLoginPage() {
   const { t } = useTranslation();
@@ -32,7 +33,11 @@ export function StaffLoginPage() {
       const next = (location.state as { from?: string } | null)?.from ?? '/app';
       navigate(next, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('app.errors.saveFailed'));
+      if (err instanceof Error && err.message === SESSION_BOOTSTRAP_FAILED) {
+        setError(t('pages.staffLogin.sessionBootstrapFailed'));
+      } else {
+        setError(err instanceof Error ? err.message : t('app.errors.saveFailed'));
+      }
     } finally {
       setSaving(false);
     }

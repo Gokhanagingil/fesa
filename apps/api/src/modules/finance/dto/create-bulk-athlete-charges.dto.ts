@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  ArrayMinSize,
   IsArray,
   IsDateString,
   IsEnum,
@@ -12,12 +11,27 @@ import {
   Min,
 } from 'class-validator';
 import { AthleteChargeStatus } from '../../../database/enums';
+import { AthleteStatus } from '../../../database/enums';
 
 export class CreateBulkAthleteChargesDto {
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @IsUUID('4', { each: true })
-  athleteIds!: string[];
+  athleteIds?: string[];
+
+  @IsOptional()
+  @IsUUID()
+  groupId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  teamId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(AthleteStatus, { each: true })
+  @Type(() => String)
+  athleteStatuses?: AthleteStatus[];
 
   @IsUUID()
   chargeItemId!: string;

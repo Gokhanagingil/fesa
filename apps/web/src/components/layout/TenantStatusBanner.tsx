@@ -13,7 +13,7 @@ export function TenantStatusBanner() {
     return null;
   }
 
-  if (!error && tenants.length > 0 && tenantId) {
+  if (tenants.length > 0 && tenantId) {
     return null;
   }
 

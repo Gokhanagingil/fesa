@@ -126,7 +126,7 @@ export function Header() {
   );
 
   const tenantHelperText = useMemo(() => {
-    if (tenantError) {
+    if (tenantError && tenants.length === 0) {
       return t('app.tenant.helper.loadFailed');
     }
     if (loading) {
@@ -307,7 +307,7 @@ export function Header() {
             </label>
             <div className="flex items-center justify-between gap-2 text-[11px] text-amateur-muted">
               <span className={tenantError ? 'text-red-700' : undefined}>{tenantHelperText}</span>
-              {(tenantError || tenants.length === 0) && !loading ? (
+              {((tenantError && tenants.length === 0) || tenants.length === 0) && !loading ? (
                 <button
                   type="button"
                   onClick={() => void refresh()}

@@ -235,6 +235,7 @@ export type PrivateLesson = {
 export type CommunicationAudienceMember = {
   athleteId: string;
   athleteName: string;
+  athleteStatus: AthleteStatus;
   reasons: string[];
   groupId: string | null;
   groupName: string | null;

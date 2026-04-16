@@ -23,6 +23,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 - **Wave two (done)**: athlete/guardian/training/attendance/finance primitives plus recurring scheduling, collections tracking, and command-center reporting.
 - **Wave seven (done)**: Guardian Portal MVP with controlled guardian access, linked-athlete visibility, family-action completion, and staff review/apply controls inside the same operational system.
 - **Wave eight (current)**: release-quality hardening plus staff/admin login, explicit tenant membership, global vs club admin semantics, and a lightweight admin/settings console.
+- **Wave eleven (current)**: post-login bootstrap recovery, reliable tenant-context restoration, athlete lifecycle controls, and safer bulk club operations across roster, finance, and communications surfaces.
 
 ## Repository map
 
