@@ -35,6 +35,8 @@ export function DashboardPage() {
     if (!tenantId) return;
     setLoading(true);
     setError(null);
+    setSummary(null);
+    setClubOverview(null);
     try {
       const [dashboard, guardians, coachRes, privateLessonRes, currentClubOverview, currentPlatformOverview] =
         await Promise.all([

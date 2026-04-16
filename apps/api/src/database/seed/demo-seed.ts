@@ -1543,30 +1543,6 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
       lastLoginAt: null,
     });
 
-    for (const [clubKey, account] of Object.entries(CLUB_ADMIN_ACCOUNTS)) {
-      const id =
-        clubKey === 'kadikoy'
-          ? KADIKOY_CLUB_ADMIN_ID
-          : clubKey === 'moda'
-            ? MODA_CLUB_ADMIN_ID
-            : clubKey === 'marmara'
-              ? MARMARA_CLUB_ADMIN_ID
-              : stableId('staff', clubKey, 'club-admin');
-      const salt = `${clubKey}-club-admin-salt`;
-      await ensureStaffUser(staffUsers, {
-        id,
-        email: account.email,
-        firstName: account.firstName,
-        lastName: account.lastName,
-        preferredName: null,
-        passwordSalt: salt,
-        passwordHash: hashPassword('Admin123!', salt),
-        platformRole: StaffPlatformRole.STANDARD,
-        status: StaffUserStatus.ACTIVE,
-        lastLoginAt: null,
-      });
-    }
-
     const clubs = getDemoClubs();
     for (const club of clubs) {
       await ensureTenant(tenants, club.tenant);

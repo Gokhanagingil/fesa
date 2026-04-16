@@ -80,15 +80,21 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const fallbackTenants = mapSessionTenants(session);
-    applyTenantState(fallbackTenants, session.defaultTenantId);
-    setLoading(true);
+    const sessionTenants = mapSessionTenants(session);
+    applyTenantState(sessionTenants, session.defaultTenantId);
+
+    if (sessionTenants.length > 0) {
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     setError(null);
+
     try {
       const list = await apiGet<TenantRow[]>('/api/tenants');
       applyTenantState(list, session.defaultTenantId);
     } catch (e) {
-      if (fallbackTenants.length === 0) {
+      if (sessionTenants.length === 0) {
         applyTenantState([], null);
       }
       setError(e instanceof Error ? e.message : 'Failed to load tenants');

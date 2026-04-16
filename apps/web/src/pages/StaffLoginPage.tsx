@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitch } from '../components/ui/LanguageSwitch';
 import { InlineAlert } from '../components/ui/InlineAlert';
@@ -7,22 +7,42 @@ import { Button } from '../components/ui/Button';
 import { useAuth } from '../lib/auth-context';
 import { SESSION_BOOTSTRAP_FAILED } from '../lib/auth-provider';
 
+const DEMO_ACCOUNTS = [
+  { label: 'Platform Admin', email: 'platform.admin@amateur.local' },
+  { label: 'Kadıköy Gençlik', email: 'club.admin@amateur.local' },
+  { label: 'Fesa Basketbol', email: 'admin@fesabasketbol.local' },
+  { label: 'Moda Voleybol', email: 'admin@modavoleybol.local' },
+  { label: 'Marmara Futbol', email: 'admin@marmarafutbol.local' },
+];
+const DEMO_PASSWORD = 'Admin123!';
+
 export function StaffLoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { login, isAuthenticated } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const redirectTarget =
+    searchParams.get('redirect') ??
+    (location.state as { from?: string } | null)?.from ??
+    '/app';
+
   useEffect(() => {
     if (isAuthenticated) {
-      const next = (location.state as { from?: string } | null)?.from ?? '/app';
-      navigate(next, { replace: true });
+      navigate(redirectTarget, { replace: true });
     }
-  }, [isAuthenticated, location.state, navigate]);
+  }, [isAuthenticated, navigate, redirectTarget]);
+
+  function prefillAccount(accountEmail: string) {
+    setEmail(accountEmail);
+    setPassword(DEMO_PASSWORD);
+    setError(null);
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -30,8 +50,7 @@ export function StaffLoginPage() {
     setError(null);
     try {
       await login({ email, password });
-      const next = (location.state as { from?: string } | null)?.from ?? '/app';
-      navigate(next, { replace: true });
+      navigate(redirectTarget, { replace: true });
     } catch (err) {
       if (err instanceof Error && err.message === SESSION_BOOTSTRAP_FAILED) {
         setError(t('pages.staffLogin.sessionBootstrapFailed'));
@@ -101,6 +120,30 @@ export function StaffLoginPage() {
             <p className="font-medium text-amateur-ink">{t('pages.staffLogin.helperTitle')}</p>
             <p className="mt-1">{t('pages.staffLogin.helperBody')}</p>
           </div>
+
+          <div className="mt-4 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3">
+            <p className="text-xs font-medium text-amateur-ink">{t('pages.staffLogin.demoAccountsTitle')}</p>
+            <p className="mt-1 text-xs text-amateur-muted">{t('pages.staffLogin.demoAccountsHint')}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {DEMO_ACCOUNTS.map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  onClick={() => prefillAccount(account.email)}
+                  className="rounded-lg border border-amateur-border bg-amateur-surface px-2.5 py-1.5 text-xs font-medium text-amateur-accent transition hover:bg-amateur-accent/10"
+                >
+                  {account.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-accent">
+            {t('pages.staffLogin.platformNoticeTitle')}
+          </p>
+          <p className="mt-2 text-sm text-amateur-muted">{t('pages.staffLogin.platformNoticeBody')}</p>
         </section>
       </div>
     </div>

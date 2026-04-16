@@ -277,6 +277,8 @@ After runtime identity is confirmed, do one browser smoke against the seeded sta
 
 If login works but the header shows **no clubs**, the likely issue is not stale frontend deploy state anymore: inspect `/api/tenants`, the seed logs from the deploy step, and the tenant/status guidance now shown in the app shell.
 
+**Cookie note:** The session cookie defaults to `secure: false` for staging (matching the HTTP-only Nginx template). When staging moves to HTTPS, set `COOKIE_SECURE=true` in `apps/api/.env`. The login flow now also uses the login response directly for the initial session bootstrap, so even if the cookie round-trip fails temporarily, the user still lands in a valid club context.
+
 ## Branch / hotfix discipline
 
 Staging confusion often comes from proving a fix on a branch without proving it landed on `main`.

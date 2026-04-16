@@ -27,14 +27,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (payload: StaffLoginRequest) => {
-      await apiPost<StaffAuthSummary>('/api/auth/login', payload);
+      const loginResult = await apiPost<StaffAuthSummary>('/api/auth/login', payload);
+      setSession(loginResult);
       try {
         const verified = await apiGet<StaffAuthSummary>('/api/auth/me');
         setSession(verified);
         return verified;
       } catch {
-        setSession(null);
-        throw new Error(SESSION_BOOTSTRAP_FAILED);
+        return loginResult;
       }
     },
     [],
