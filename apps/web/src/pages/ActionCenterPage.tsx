@@ -102,6 +102,7 @@ export function ActionCenterPage() {
         count: visibleItems.filter((item) => item.category === groupCategory).length,
         unread: visibleItems.filter((item) => item.category === groupCategory && !item.read).length,
         overdue: visibleItems.filter((item) => item.category === groupCategory && item.urgency === 'overdue').length,
+        today: visibleItems.filter((item) => item.category === groupCategory && item.urgency === 'today').length,
         items: visibleItems.filter((item) => item.category === groupCategory),
       }))
       .filter((group) => group.items.length > 0);

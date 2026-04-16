@@ -362,7 +362,9 @@ export class AuthService {
     }
 
     const tenants = await this.tenants.findAll();
-    const membershipByTenant = new Map(profile.memberships.map((membership) => [membership.tenantId, membership.role]));
+    const membershipByTenant = new Map<string, TenantMembershipRole>(
+      profile.memberships.map((membership) => [membership.tenantId, membership.role]),
+    );
     const items = await Promise.all(
       tenants.map(async (tenant) => {
         const [athletes, guardians, coaches, groups, teams, actionSummary] = await Promise.all([
@@ -387,7 +389,9 @@ export class AuthService {
           id: tenant.id,
           name: tenant.name,
           slug: tenant.slug,
-          membershipRole: membershipByTenant.get(tenant.id) ?? StaffPlatformRole.GLOBAL_ADMIN,
+          membershipRole:
+            membershipByTenant.get(tenant.id) ??
+            (StaffPlatformRole.GLOBAL_ADMIN as StaffPlatformRole.GLOBAL_ADMIN),
           counts: {
             athletes,
             guardians,

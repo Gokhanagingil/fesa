@@ -517,14 +517,7 @@ export type ActionCenterSummary = {
     byCategory: Record<ActionCenterItemCategory, number>;
     byUrgency: Record<ActionCenterItemUrgency, number>;
   };
-  groups?: Array<{
-    category: ActionCenterItemCategory;
-    count: number;
-    unread: number;
-    overdue: number;
-    today: number;
-    items: ActionCenterItem[];
-  }>;
+  groups?: ActionCenterItemGroup[];
   items: ActionCenterItem[];
 };
 
@@ -534,6 +527,15 @@ export type ActionCenterCategorySummary = {
   unread: number;
   overdue: number;
   today: number;
+};
+
+export type ActionCenterItemGroup = {
+  category: ActionCenterItemCategory;
+  count: number;
+  unread: number;
+  overdue: number;
+  today: number;
+  items: ActionCenterItem[];
 };
 
 export type ActionCenterResponse = ActionCenterSummary & {
