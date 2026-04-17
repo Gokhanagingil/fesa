@@ -75,6 +75,203 @@ so coverage stays fast and maintainable.
 | **Management Pack** | The `Reports` page now lists a curated, manager-friendly subset of the same starter catalog. |
 | **Export polish** | CSV headers are humanised; grouped exports include a `-grouped-by-*` filename hint. |
 
+## Wave 13 — Attendance & Training Intelligence Pack v1
+
+Wave 13 extends the same reporting foundation into a first real attendance and
+training intelligence capability for club operators.
+
+The goal is not "analytics for analytics' sake". The capability is designed to
+help coordinators, coaches, and club managers answer everyday operational
+questions quickly:
+
+- Which athletes are steadily showing up?
+- Which athletes have cooled off recently?
+- Which trial athletes are engaging strongly?
+- Which active athletes are training regularly but still have no team?
+- Which groups are carrying weaker attendance patterns?
+- Which coaches are carrying the heaviest short-term session load?
+- Which sessions still need attendance or prep follow-up?
+
+Everything still lives inside the same reporting/catalog/query/compiler stack
+introduced in Waves 11-12:
+
+- no parallel analytics subsystem,
+- no special attendance-only reporting engine,
+- no opaque scoring model,
+- and no tenant model changes.
+
+### What Wave 13 adds
+
+| Area | Addition |
+|------|----------|
+| **Reporting entities** | A new `training_sessions` reporting entity joins the existing `athletes`, `guardians`, `private_lessons`, and `finance_charges` entities. |
+| **Athlete attendance metrics** | The `athletes` entity now exposes recent attendance counts, absence counts, attendance rate, attendance-rate delta, last present date, and days since last present. |
+| **Session operations metrics** | The `training_sessions` entity exposes coach/group/branch/session status plus roster size, attendance recorded count, attendance rate, absence rate, missing coach/location, and attendance-pending state. |
+| **Starter pack** | New attendance/training starters surface follow-up lists, grouped summaries, and demo-friendly management views. |
+| **Command center summary** | `/api/reporting/command-center` now includes a compact `attendanceIntelligence` block used by Reports and Dashboard surfaces. |
+| **Dashboard / Reports UX** | The dashboard and reports launchpad now surface a calm "training pulse" instead of forcing staff to build attendance reports from scratch. |
+| **Attendance capture UX** | Training attendance entry no longer defaults unseen athletes to `present`; staff now get a clear unmarked state and explicit review cue before saving. |
+
+### New reportable areas
+
+#### Athlete attendance fields
+
+The `athletes` reporting entity now supports:
+
+- `athlete.recordedAttendanceCount30d`
+- `athlete.attendedCount30d`
+- `athlete.absentCount30d`
+- `athlete.excusedCount30d`
+- `athlete.attendanceRate30d`
+- `athlete.attendanceRateDelta30d`
+- `athlete.lastPresentAt`
+- `athlete.daysSinceLastPresent`
+
+These are derived from real rows in `attendances` joined to non-cancelled
+`training_sessions`, scoped to the current tenant, and calculated with fixed
+time windows anchored by the current reporting run.
+
+#### Training session fields
+
+The new `training_sessions` reporting entity supports:
+
+- `session.title`
+- `session.scheduledStart`
+- `session.scheduledDate`
+- `session.status`
+- `session.branchName`
+- `session.groupName`
+- `session.teamName`
+- `session.coachName`
+- `session.location`
+- `session.missingCoach`
+- `session.missingLocation`
+- `session.hoursUntilStart`
+- `session.rosterSize`
+- `session.attendanceRecordedCount`
+- `session.attendedCount`
+- `session.absentCount`
+- `session.excusedCount`
+- `session.lateCount`
+- `session.attendanceRate`
+- `session.absenceRate`
+- `session.attendancePending`
+
+Like the rest of the catalog, these are explicit SQL projections in
+`query-compiler.ts`. There is still no arbitrary relation traversal or free-form
+join expansion.
+
+### Attendance intelligence rules
+
+The first wave intentionally uses a few explainable thresholds rather than a
+large scoring model. The shared constants live in
+`apps/api/src/modules/reporting/attendance-intelligence.ts`.
+
+Current defaults:
+
+- **recent attendance window:** 30 days
+- **previous comparison window:** 30 days
+- **minimum marked sessions:** 3
+- **regular attendance signal:** 70%+
+- **strong trial engagement:** 75%+
+- **declining attendance signal:** -15 attendance points or worse
+- **repeat absence signal:** 2+ recent absences
+- **follow-up recency gap:** 21+ days since last present
+- **training prep window:** next 48 hours
+- **coach load comparison window:** +/-14 days around "now"
+
+These are intentionally transparent and conservative. They are meant for
+operator follow-up and demos, not prediction.
+
+### New starter views
+
+Wave 13 adds these attendance/training starters:
+
+| ID | Entity | Why it exists |
+|----|--------|---------------|
+| `athletes.decliningAttendance` | athletes | Athletes whose recent attendance rate dropped vs the prior window. |
+| `athletes.trialHighEngagement` | athletes | Trial athletes showing strong recent participation. |
+| `athletes.regularWithoutTeam` | athletes | Active athletes attending regularly but still not assigned to a team. |
+| `athletes.recentAbsences` | athletes | Athletes with repeated recent absences. |
+| `athletes.noRecentCheckIn` | athletes | Athletes not seen in recent training activity. |
+| `athletes.attendanceWatchlist` | athletes | Warm, manager-friendly combined follow-up list. |
+| `training_sessions.attendancePending` | training_sessions | Sessions that ended but still have no recorded attendance. |
+| `training_sessions.upcomingNeedsAttention` | training_sessions | Upcoming sessions missing basic prep details such as coach or location. |
+| `training_sessions.notableAbsence` | training_sessions | Sessions with concentrated absence patterns. |
+| `training_sessions.lowAttendanceGroups` | training_sessions | Grouped view of groups carrying weaker attendance rates. |
+| `training_sessions.coachLoad` | training_sessions | Grouped view of coach session concentration. |
+
+These use only real catalog fields and validate through the same
+`reporting:starter-views:test` script as the rest of the starter catalog.
+
+### Dashboard and Reports integration
+
+Two frontend entry points now surface attendance intelligence directly:
+
+#### Dashboard
+
+`DashboardPage` now includes a compact **training pulse** section with:
+
+- attendance watchlist count,
+- trial momentum count,
+- follow-up count,
+- attendance-pending session count,
+- upcoming prep-attention count,
+- watchlist preview,
+- low-attendance group snapshot,
+- coach-load snapshot.
+
+The main drill-down cards also now point into attendance/training starters for:
+
+- attendance watchlist,
+- low-attendance groups,
+- coach load.
+
+#### Reports page
+
+`ReportsPage` now includes an **attendance pulse** block so attendance starters
+are first-class inside the reporting launchpad, not buried behind a generic
+management pack.
+
+### Attendance capture UX change
+
+Wave 13 also improves the operational attendance-entry screen:
+
+- athletes without an existing attendance row now start as **unmarked**
+  instead of silently defaulting to `present`,
+- the page shows how many athletes still need an explicit mark,
+- "clear marks" is available alongside bulk status actions,
+- staff see whether each athlete was already recorded or still needs a decision.
+
+This makes the surface safer for live operations and more trustworthy in demos.
+
+### Validation for Wave 13
+
+Wave 13 keeps the same validation structure and extends it with the new entity
+and starters:
+
+- `npm run build`
+- `npm run lint`
+- `npm run reporting:starter-views:test`
+- `npm run frontend:smoke`
+- `npm run i18n:check`
+- `npm run repo:guard`
+
+### Intentionally still deferred
+
+This wave still does **not** include:
+
+- predictive churn scoring,
+- attendance forecasting,
+- chart-heavy dashboarding,
+- multi-dimensional pivoting,
+- communications automation from attendance segments,
+- coach availability optimization,
+- or a separate attendance analytics service.
+
+Those can build later on top of the same reporting catalog once the operational
+signals in this wave have been used and refined.
+
 ### Starter / curated reports
 
 Defined in `apps/api/src/modules/reporting/catalog.ts` as `STARTER_VIEWS` and

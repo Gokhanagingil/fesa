@@ -6,7 +6,12 @@
  * Field names and shapes must stay in sync with packages/shared-types/src/index.ts.
  */
 
-export type ReportEntityKey = 'athletes' | 'guardians' | 'private_lessons' | 'finance_charges';
+export type ReportEntityKey =
+  | 'athletes'
+  | 'guardians'
+  | 'private_lessons'
+  | 'finance_charges'
+  | 'training_sessions';
 
 export type ReportFieldType =
   | 'string'

@@ -147,6 +147,54 @@ const catalog: ReportCatalogResponse = {
       ],
     },
     {
+      key: 'training_sessions',
+      labelKey: 'pages.reports.entities.trainingSessions',
+      defaultColumns: ['session.title', 'session.groupName', 'session.attendancePending'],
+      defaultSort: { field: 'session.scheduledStart', direction: 'asc' },
+      exportRowLimit: 500,
+      fields: [
+        {
+          key: 'session.title',
+          entity: 'training_sessions',
+          labelKey: 'pages.reports.fields.session.title',
+          type: 'string',
+          operators: ['contains', 'is'],
+          selectable: true,
+          sortable: true,
+          quickSearch: true,
+        },
+        {
+          key: 'session.groupName',
+          entity: 'training_sessions',
+          labelKey: 'pages.reports.fields.session.groupName',
+          type: 'string',
+          operators: ['contains', 'is'],
+          selectable: true,
+          sortable: true,
+          groupable: true,
+        },
+        {
+          key: 'session.scheduledStart',
+          entity: 'training_sessions',
+          labelKey: 'pages.reports.fields.session.scheduledStart',
+          type: 'datetime',
+          operators: ['gt', 'gte', 'lt', 'lte'],
+          selectable: true,
+          sortable: true,
+        },
+        {
+          key: 'session.attendancePending',
+          entity: 'training_sessions',
+          labelKey: 'pages.reports.fields.session.attendancePending',
+          type: 'boolean',
+          operators: ['is', 'isNot'],
+          selectable: true,
+          sortable: true,
+          groupable: true,
+        },
+      ],
+    },
+    {
       key: 'finance_charges',
       labelKey: 'pages.dashboard.cardFinance',
       defaultColumns: ['charge.athleteName', 'charge.amount'],
@@ -212,6 +260,22 @@ const starterViews: StarterReportView[] = [
     managementPack: true,
   },
   {
+    id: 'athletes.attendanceWatchlist',
+    entity: 'athletes',
+    titleKey: 'pages.reports.starter.athletes.attendanceWatchlist.title',
+    descriptionKey: 'pages.reports.starter.athletes.attendanceWatchlist.description',
+    categoryKey: 'pages.reports.starter.categories.attendance',
+    category: 'Attendance',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [],
+    },
+    columns: ['athlete.firstName', 'athlete.lastName', 'athlete.outstandingTotal'],
+    sort: [{ field: 'athlete.outstandingTotal', direction: 'desc' }],
+    managementPack: true,
+  },
+  {
     id: 'lessons.byCoach',
     entity: 'private_lessons',
     titleKey: 'pages.reports.starter.lessons.byCoach.title',
@@ -230,6 +294,29 @@ const starterViews: StarterReportView[] = [
       sort: { alias: 'count', direction: 'desc' },
       limit: 25,
     },
+    managementPack: true,
+  },
+  {
+    id: 'training_sessions.attendancePending',
+    entity: 'training_sessions',
+    titleKey: 'pages.reports.starter.trainingSessions.attendancePending.title',
+    descriptionKey: 'pages.reports.starter.trainingSessions.attendancePending.description',
+    categoryKey: 'pages.reports.starter.categories.attendance',
+    category: 'Attendance',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [
+        {
+          type: 'condition',
+          field: 'session.attendancePending',
+          operator: 'is',
+          value: true,
+        },
+      ],
+    },
+    columns: ['session.title', 'session.groupName', 'session.attendancePending'],
+    sort: [{ field: 'session.scheduledStart', direction: 'asc' }],
     managementPack: true,
   },
   {
@@ -267,7 +354,28 @@ const baseSavedViews: SavedReportView[] = [
   },
 ];
 
-function makeRowsResponse(entity: 'athletes' | 'finance_charges' = 'athletes') {
+function makeRowsResponse(entity: 'athletes' | 'finance_charges' | 'training_sessions' = 'athletes') {
+  if (entity === 'training_sessions') {
+    return {
+      entity,
+      total: 2,
+      limit: 25,
+      offset: 0,
+      columns: ['session.title', 'session.groupName', 'session.attendancePending'],
+      rows: [
+        {
+          'session.title': 'U14 Evening Practice',
+          'session.groupName': 'U14 Girls',
+          'session.attendancePending': true,
+        },
+        {
+          'session.title': 'Mini Academy Fundamentals',
+          'session.groupName': 'Mini Academy',
+          'session.attendancePending': true,
+        },
+      ],
+    };
+  }
   if (entity === 'finance_charges') {
     return {
       entity,
@@ -294,7 +402,30 @@ function makeRowsResponse(entity: 'athletes' | 'finance_charges' = 'athletes') {
   };
 }
 
-function makeGroupedResponse() {
+function makeGroupedResponse(entity: 'private_lessons' | 'training_sessions' = 'private_lessons') {
+  if (entity === 'training_sessions') {
+    return {
+      entity,
+      total: 2,
+      limit: 25,
+      offset: 0,
+      columns: ['session.groupName', 'sessionCount'],
+      rows: [
+        { 'session.groupName': 'U14 Girls', sessionCount: 4 },
+        { 'session.groupName': 'Mini Academy', sessionCount: 3 },
+      ],
+      groupBy: {
+        field: 'session.groupName',
+        measures: [{ op: 'count', alias: 'sessionCount' }],
+        sort: { alias: 'sessionCount', direction: 'desc' },
+        limit: 25,
+      },
+      columnLabels: [
+        { key: 'session.groupName', labelKey: 'pages.reports.fields.session.groupName' },
+        { key: 'sessionCount', label: 'Count', isMeasure: true },
+      ],
+    };
+  }
   return {
     entity: 'private_lessons' as const,
     total: 2,
@@ -346,6 +477,56 @@ function makeCommandCenterResponse(): CommandCenterResponse {
       athletesAwaitingGuardianAction: 1,
       athletesAwaitingStaffReview: 1,
       athletesNeedingFollowUp: 4,
+    },
+    attendanceIntelligence: {
+      windows: { recentDays: 30, followUpDays: 21, prepHours: 48 },
+      thresholds: {
+        minimumMarkedSessions: 3,
+        declinePoints: 15,
+        repeatAbsences: 2,
+        trialStrongRate: 75,
+      },
+      counts: {
+        watchlist: 4,
+        trialMomentum: 2,
+        followUp: 3,
+        attendancePending: 2,
+        upcomingAttention: 1,
+      },
+      watchlist: [
+        {
+          'athlete.firstName': 'Deniz',
+          'athlete.lastName': 'Kaya',
+          'athlete.primaryGroupName': 'U14 Girls',
+          'athlete.attendanceRate30d': 58,
+          'athlete.attendanceRateDelta30d': -24,
+          'athlete.absentCount30d': 3,
+          'athlete.daysSinceLastPresent': 11,
+        },
+      ],
+      trialMomentum: [
+        {
+          'athlete.firstName': 'Ece',
+          'athlete.lastName': 'Demir',
+          'athlete.primaryGroupName': 'Mini Academy',
+          'athlete.recordedAttendanceCount30d': 4,
+          'athlete.attendanceRate30d': 100,
+        },
+      ],
+      followUp: [],
+      coachLoad: [{ dim_session_coachName: 'Coach Ada', sessionCount: 4, avgRosterSize: 11 }],
+      lowAttendanceGroups: [{ dim_session_groupName: 'U14 Girls', sessionCount: 4, avgAttendanceRate: 62 }],
+      attendancePendingSessions: [
+        {
+          'session.title': 'U14 Evening Practice',
+          'session.scheduledStart': '2026-04-16T18:00:00.000Z',
+          'session.groupName': 'U14 Girls',
+          'session.coachName': 'Coach Ada',
+          'session.rosterSize': 12,
+          'session.attendanceRecordedCount': 0,
+        },
+      ],
+      upcomingAttentionSessions: [],
     },
     familyWorkflow: {
       open: 3,
@@ -429,12 +610,17 @@ function setBuilderDefaults(savedViews: SavedReportView[] = baseSavedViews) {
     if (!match) throw new Error(`Unknown saved view ${id}`);
     return match;
   });
-  mockReportingClient.runReport.mockImplementation(async (request: { entity: 'athletes' | 'private_lessons' | 'finance_charges'; groupBy?: unknown }) => {
+  mockReportingClient.runReport.mockImplementation(async (request: { entity: 'athletes' | 'private_lessons' | 'finance_charges' | 'training_sessions'; groupBy?: unknown }) => {
     if (request.groupBy) {
-      return makeGroupedResponse();
+      return request.entity === 'training_sessions'
+        ? makeGroupedResponse('training_sessions')
+        : makeGroupedResponse();
     }
     if (request.entity === 'finance_charges') {
       return makeRowsResponse('finance_charges');
+    }
+    if (request.entity === 'training_sessions') {
+      return makeRowsResponse('training_sessions');
     }
     return makeRowsResponse('athletes');
   });
@@ -491,6 +677,29 @@ describe('reporting frontend smoke coverage', () => {
 
     expect(await screen.findByText('Athletes with outstanding balance')).toBeInTheDocument();
     expect(await screen.findByText('Deniz')).toBeInTheDocument();
+  });
+
+  it('exposes attendance starters and opens a training attendance starter', async () => {
+    renderWithRoute(<ReportBuilderPage />, {
+      path: '/app/report-builder',
+      initialEntry: '/app/report-builder',
+    });
+
+    const user = userEvent.setup();
+    const trainingStarterCard = await screen.findByText('Sessions still missing attendance');
+    const trainingOpenButton = trainingStarterCard.closest('article')?.querySelector('button');
+    expect(trainingOpenButton).toBeTruthy();
+    await user.click(trainingOpenButton as HTMLButtonElement);
+
+    await user.click(await screen.findByRole('button', { name: 'Training sessions' }));
+    await waitFor(() => {
+      expect(mockReportingClient.runReport).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entity: 'training_sessions',
+        }),
+      );
+    });
+    expect(await screen.findByText('U14 Evening Practice')).toBeInTheDocument();
   });
 
   it('enables grouping and renders a grouped result', async () => {

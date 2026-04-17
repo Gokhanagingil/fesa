@@ -90,7 +90,12 @@ export interface SavedFilterPreset {
  * Logical reporting domains exposed in the Reportable Field Catalog.
  * Each entity is a base for advanced filtering, exports, and Report Builder v1.
  */
-export type ReportEntityKey = 'athletes' | 'guardians' | 'private_lessons' | 'finance_charges';
+export type ReportEntityKey =
+  | 'athletes'
+  | 'guardians'
+  | 'private_lessons'
+  | 'finance_charges'
+  | 'training_sessions';
 
 /** Field data types supported by the universal filter grammar. */
 export type ReportFieldType =

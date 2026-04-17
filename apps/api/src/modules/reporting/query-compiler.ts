@@ -23,8 +23,13 @@ import { Athlete } from '../../database/entities/athlete.entity';
 import { Guardian } from '../../database/entities/guardian.entity';
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { AthleteCharge } from '../../database/entities/athlete-charge.entity';
+import { TrainingSession } from '../../database/entities/training-session.entity';
 import { getCatalogEntity, getFieldDefinition } from './catalog';
 import { validateFilterTree } from './filter-tree';
+import {
+  ATTENDANCE_PREVIOUS_WINDOW_DAYS,
+  ATTENDANCE_RECENT_WINDOW_DAYS,
+} from './attendance-intelligence';
 
 interface FieldSql {
   /** SQL fragment evaluating the field. */
@@ -42,14 +47,31 @@ const ENTITY_ALIAS: Record<ReportEntityKey, string> = {
   guardians: 'g',
   private_lessons: 'lesson',
   finance_charges: 'ac',
+  training_sessions: 'session',
 };
+
+function addDaysUtc(base: Date, amount: number): Date {
+  const next = new Date(base);
+  next.setUTCDate(next.getUTCDate() + amount);
+  return next;
+}
 
 const TODAY_PARAM = (qb: SelectQueryBuilder<ObjectLiteral>) => {
   const params = qb.getParameters();
-  if (!('reportingToday' in params)) {
-    const today = new Date();
+  if (!('reportingNow' in params)) {
+    const now = new Date();
+    const today = new Date(now);
     today.setUTCHours(0, 0, 0, 0);
+    qb.setParameter('reportingNow', now);
     qb.setParameter('reportingToday', today);
+    qb.setParameter(
+      'reportingAttendanceRecentStart',
+      addDaysUtc(today, -ATTENDANCE_RECENT_WINDOW_DAYS),
+    );
+    qb.setParameter(
+      'reportingAttendancePreviousStart',
+      addDaysUtc(today, -(ATTENDANCE_RECENT_WINDOW_DAYS + ATTENDANCE_PREVIOUS_WINDOW_DAYS)),
+    );
   }
 };
 
@@ -75,9 +97,139 @@ const JOIN_DEFS: Record<string, (qb: SelectQueryBuilder<ObjectLiteral>) => void>
     ),
   lesson_charge_item: (qb) =>
     qb.leftJoin('lesson_charge.chargeItem', 'lesson_charge_item'),
+  training_session_branch: (qb) =>
+    qb.leftJoin('session.sportBranch', 'session_branch'),
+  training_session_group: (qb) =>
+    qb.leftJoin('session.group', 'session_group'),
+  training_session_team: (qb) =>
+    qb.leftJoin('session.team', 'session_team'),
+  training_session_coach: (qb) =>
+    qb.leftJoin('session.coach', 'session_coach'),
 };
 
+function renderPercentExpression(
+  numeratorSql: string,
+  denominatorSql: string,
+  zeroFallback = 'NULL',
+): string {
+  return `CASE
+    WHEN (${denominatorSql}) > 0
+      THEN ROUND(((${numeratorSql})::numeric * 100.0) / NULLIF((${denominatorSql})::numeric, 0), 2)
+    ELSE ${zeroFallback}
+  END`;
+}
+
+function athleteAttendanceCountSql(
+  fromParam: string | null,
+  toParam: string | null,
+  extraCondition?: string,
+): string {
+  return `(
+    SELECT COUNT(*)::int
+    FROM attendances att_sub
+    INNER JOIN training_sessions session_att
+      ON session_att.id = att_sub."trainingSessionId"
+      AND session_att."tenantId" = a."tenantId"
+    WHERE att_sub."athleteId" = a.id
+      AND att_sub."tenantId" = a."tenantId"
+      AND session_att.status <> 'cancelled'
+      ${fromParam ? `AND session_att."scheduledStart" >= :${fromParam}` : ''}
+      ${toParam ? `AND session_att."scheduledStart" < :${toParam}` : ''}
+      ${extraCondition ? `AND ${extraCondition}` : ''}
+  )`;
+}
+
+function athleteLastPresentAtSql(): string {
+  return `(
+    SELECT MAX(session_att."scheduledStart")
+    FROM attendances att_sub
+    INNER JOIN training_sessions session_att
+      ON session_att.id = att_sub."trainingSessionId"
+      AND session_att."tenantId" = a."tenantId"
+    WHERE att_sub."athleteId" = a.id
+      AND att_sub."tenantId" = a."tenantId"
+      AND session_att.status <> 'cancelled'
+      AND att_sub.status IN ('present', 'late')
+  )`;
+}
+
+function trainingRosterCountSql(): string {
+  return `(
+    SELECT COUNT(*)::int
+    FROM athletes athlete_roster
+    WHERE athlete_roster."tenantId" = session."tenantId"
+      AND athlete_roster."primaryGroupId" = session."groupId"
+      AND athlete_roster.status IN ('active', 'trial', 'paused')
+      AND (
+        session."teamId" IS NULL
+        OR EXISTS (
+          SELECT 1
+          FROM athlete_team_memberships membership_sub
+          WHERE membership_sub."tenantId" = athlete_roster."tenantId"
+            AND membership_sub."athleteId" = athlete_roster.id
+            AND membership_sub."teamId" = session."teamId"
+            AND membership_sub."endedAt" IS NULL
+        )
+      )
+  )`;
+}
+
+function trainingAttendanceCountSql(extraCondition?: string): string {
+  return `(
+    SELECT COUNT(*)::int
+    FROM attendances attendance_sub
+    WHERE attendance_sub."tenantId" = session."tenantId"
+      AND attendance_sub."trainingSessionId" = session.id
+      ${extraCondition ? `AND ${extraCondition}` : ''}
+  )`;
+}
+
 /** Fields => SQL expression / joins per entity. */
+const ATHLETE_RECORDED_30_SQL = athleteAttendanceCountSql('reportingAttendanceRecentStart', null);
+const ATHLETE_ATTENDED_30_SQL = athleteAttendanceCountSql(
+  'reportingAttendanceRecentStart',
+  null,
+  `att_sub.status IN ('present', 'late')`,
+);
+const ATHLETE_ABSENT_30_SQL = athleteAttendanceCountSql(
+  'reportingAttendanceRecentStart',
+  null,
+  `att_sub.status = 'absent'`,
+);
+const ATHLETE_EXCUSED_30_SQL = athleteAttendanceCountSql(
+  'reportingAttendanceRecentStart',
+  null,
+  `att_sub.status = 'excused'`,
+);
+const ATHLETE_RECORDED_PREV_SQL = athleteAttendanceCountSql(
+  'reportingAttendancePreviousStart',
+  'reportingAttendanceRecentStart',
+);
+const ATHLETE_ATTENDED_PREV_SQL = athleteAttendanceCountSql(
+  'reportingAttendancePreviousStart',
+  'reportingAttendanceRecentStart',
+  `att_sub.status IN ('present', 'late')`,
+);
+const ATHLETE_ATTENDANCE_RATE_30_SQL = renderPercentExpression(
+  ATHLETE_ATTENDED_30_SQL,
+  ATHLETE_RECORDED_30_SQL,
+);
+const ATHLETE_ATTENDANCE_RATE_PREV_SQL = renderPercentExpression(
+  ATHLETE_ATTENDED_PREV_SQL,
+  ATHLETE_RECORDED_PREV_SQL,
+);
+const ATHLETE_LAST_PRESENT_AT_SQL = athleteLastPresentAtSql();
+const ATHLETE_ATTENDANCE_DELTA_30_SQL = `CASE
+  WHEN (${ATHLETE_RECORDED_PREV_SQL}) > 0
+    THEN ROUND(COALESCE((${ATHLETE_ATTENDANCE_RATE_30_SQL}), 0)::numeric - (${ATHLETE_ATTENDANCE_RATE_PREV_SQL})::numeric, 2)
+  ELSE NULL
+END`;
+const ATHLETE_DAYS_SINCE_LAST_PRESENT_SQL = `CASE
+  WHEN ${ATHLETE_LAST_PRESENT_AT_SQL} IS NULL
+    THEN NULL
+  ELSE FLOOR(EXTRACT(EPOCH FROM ((:reportingNow) - (${ATHLETE_LAST_PRESENT_AT_SQL}))) / 86400)::int
+END`;
+
 const ATHLETE_FIELDS: Record<string, FieldSql> = {
   'athlete.id': { expression: 'a.id' },
   'athlete.firstName': { expression: 'a."firstName"' },
@@ -125,6 +277,14 @@ const ATHLETE_FIELDS: Record<string, FieldSql> = {
       WHERE atm_sub."athleteId" = a.id AND atm_sub."tenantId" = a."tenantId" AND atm_sub."endedAt" IS NULL
     )`,
   },
+  'athlete.recordedAttendanceCount30d': { expression: ATHLETE_RECORDED_30_SQL },
+  'athlete.attendedCount30d': { expression: ATHLETE_ATTENDED_30_SQL },
+  'athlete.absentCount30d': { expression: ATHLETE_ABSENT_30_SQL },
+  'athlete.excusedCount30d': { expression: ATHLETE_EXCUSED_30_SQL },
+  'athlete.attendanceRate30d': { expression: ATHLETE_ATTENDANCE_RATE_30_SQL },
+  'athlete.attendanceRateDelta30d': { expression: ATHLETE_ATTENDANCE_DELTA_30_SQL },
+  'athlete.lastPresentAt': { expression: ATHLETE_LAST_PRESENT_AT_SQL },
+  'athlete.daysSinceLastPresent': { expression: ATHLETE_DAYS_SINCE_LAST_PRESENT_SQL },
 };
 
 const GUARDIAN_FIELDS: Record<string, FieldSql> = {
@@ -176,6 +336,71 @@ const LESSON_FIELDS: Record<string, FieldSql> = {
       WHERE pa_inner."athleteChargeId" = lesson_charge.id
     ), 0), 0)::numeric(12,2)`,
     joins: [{ id: 'lesson_charge', apply: JOIN_DEFS.lesson_charge }],
+  },
+};
+
+const TRAINING_ROSTER_SIZE_SQL = trainingRosterCountSql();
+const TRAINING_ATTENDANCE_RECORDED_SQL = trainingAttendanceCountSql();
+const TRAINING_ATTENDED_SQL = trainingAttendanceCountSql(
+  `attendance_sub.status IN ('present', 'late')`,
+);
+const TRAINING_ABSENT_SQL = trainingAttendanceCountSql(`attendance_sub.status = 'absent'`);
+const TRAINING_EXCUSED_SQL = trainingAttendanceCountSql(`attendance_sub.status = 'excused'`);
+const TRAINING_LATE_SQL = trainingAttendanceCountSql(`attendance_sub.status = 'late'`);
+const TRAINING_ATTENDANCE_RATE_SQL = renderPercentExpression(
+  TRAINING_ATTENDED_SQL,
+  TRAINING_ATTENDANCE_RECORDED_SQL,
+);
+const TRAINING_ABSENCE_RATE_SQL = renderPercentExpression(
+  TRAINING_ABSENT_SQL,
+  TRAINING_ATTENDANCE_RECORDED_SQL,
+);
+
+const TRAINING_SESSION_FIELDS: Record<string, FieldSql> = {
+  'session.id': { expression: 'session.id' },
+  'session.title': { expression: 'session.title' },
+  'session.scheduledStart': { expression: 'session."scheduledStart"' },
+  'session.scheduledDate': {
+    expression: 'DATE(session."scheduledStart")',
+    sortExpression: 'session."scheduledStart"',
+    whereExpression: 'DATE(session."scheduledStart")',
+  },
+  'session.status': { expression: 'session.status' },
+  'session.branchName': {
+    expression: 'session_branch.name',
+    joins: [{ id: 'training_session_branch', apply: JOIN_DEFS.training_session_branch }],
+  },
+  'session.groupName': {
+    expression: 'session_group.name',
+    joins: [{ id: 'training_session_group', apply: JOIN_DEFS.training_session_group }],
+  },
+  'session.teamName': {
+    expression: 'session_team.name',
+    joins: [{ id: 'training_session_team', apply: JOIN_DEFS.training_session_team }],
+  },
+  'session.coachName': {
+    expression: `COALESCE(NULLIF(TRIM(session_coach."preferredName"), ''), TRIM(CONCAT_WS(' ', session_coach."firstName", session_coach."lastName")))`,
+    joins: [{ id: 'training_session_coach', apply: JOIN_DEFS.training_session_coach }],
+    sortExpression: 'session_coach."lastName"',
+  },
+  'session.location': { expression: 'session.location' },
+  'session.missingCoach': { expression: '(session."coachId" IS NULL)' },
+  'session.missingLocation': {
+    expression: `(session.location IS NULL OR TRIM(session.location) = '')`,
+  },
+  'session.hoursUntilStart': {
+    expression: `ROUND((EXTRACT(EPOCH FROM (session."scheduledStart" - :reportingNow)) / 3600.0)::numeric, 2)`,
+  },
+  'session.rosterSize': { expression: TRAINING_ROSTER_SIZE_SQL },
+  'session.attendanceRecordedCount': { expression: TRAINING_ATTENDANCE_RECORDED_SQL },
+  'session.attendedCount': { expression: TRAINING_ATTENDED_SQL },
+  'session.absentCount': { expression: TRAINING_ABSENT_SQL },
+  'session.excusedCount': { expression: TRAINING_EXCUSED_SQL },
+  'session.lateCount': { expression: TRAINING_LATE_SQL },
+  'session.attendanceRate': { expression: TRAINING_ATTENDANCE_RATE_SQL },
+  'session.absenceRate': { expression: TRAINING_ABSENCE_RATE_SQL },
+  'session.attendancePending': {
+    expression: `(session.status <> 'cancelled' AND session."scheduledEnd" <= :reportingNow AND ${TRAINING_ATTENDANCE_RECORDED_SQL} = 0)`,
   },
 };
 
@@ -231,6 +456,7 @@ const FIELD_TABLE: Record<ReportEntityKey, Record<string, FieldSql>> = {
   athletes: ATHLETE_FIELDS,
   guardians: GUARDIAN_FIELDS,
   private_lessons: LESSON_FIELDS,
+  training_sessions: TRAINING_SESSION_FIELDS,
   finance_charges: CHARGE_FIELDS,
 };
 
@@ -622,6 +848,9 @@ export class ReportingQueryCompiler {
         break;
       case 'finance_charges':
         qb = this.dataSource.getRepository(AthleteCharge).createQueryBuilder(alias);
+        break;
+      case 'training_sessions':
+        qb = this.dataSource.getRepository(TrainingSession).createQueryBuilder(alias);
         break;
       default:
         throw new BadRequestException(`Unsupported entity "${entity}".`);
