@@ -109,6 +109,37 @@ export function DashboardPage() {
     [platformOverview],
   );
 
+  const headline = useMemo(() => {
+    if (!summary) return null;
+    const overdueCount = summary.actionCenter?.counts.overdue ?? 0;
+    const todayCount = summary.actionCenter?.counts.today ?? 0;
+    const overdueTotal = summary.stats.overdueTotal ?? '0.00';
+    const collectedTotal = summary.stats.collectedTotal ?? '0.00';
+    const upcomingSessions = summary.stats.upcomingSessions ?? 0;
+    const followUpFamilies = summary.familyWorkflow?.pendingFamilyAction ?? 0;
+    if (overdueCount > 0 || Number(overdueTotal) > 0) {
+      return {
+        tone: 'attention' as const,
+        title: t('pages.dashboard.headline.attentionTitle', {
+          count: overdueCount || followUpFamilies,
+        }),
+        body: t('pages.dashboard.headline.attentionBody', {
+          overdueTotal,
+          collectedTotal,
+          upcomingSessions,
+        }),
+      };
+    }
+    return {
+      tone: 'calm' as const,
+      title: t('pages.dashboard.headline.calmTitle', { count: upcomingSessions }),
+      body: t('pages.dashboard.headline.calmBody', {
+        collectedTotal,
+        todayCount,
+      }),
+    };
+  }, [summary, t]);
+
   const statCards = [
     {
       key: 'athletes',
@@ -172,15 +203,57 @@ export function DashboardPage() {
         title={t('pages.dashboard.title')}
         subtitle={t('pages.dashboard.subtitle')}
         actions={
-          <Link to="/app/reports">
-            <div className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3 text-sm font-semibold text-amateur-accent shadow-sm">
-              {t('pages.dashboard.openCommandCenter')}
-            </div>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/app/report-builder">
+              <div className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3 text-sm font-semibold text-amateur-accent shadow-sm">
+                {t('pages.dashboard.openReportBuilder')}
+              </div>
+            </Link>
+            <Link to="/app/reports">
+              <div className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3 text-sm font-semibold text-amateur-accent shadow-sm">
+                {t('pages.dashboard.openCommandCenter')}
+              </div>
+            </Link>
+          </div>
         }
       />
       {!tenantId && !tenantLoading ? <InlineAlert tone="info">{t('app.errors.needTenant')}</InlineAlert> : null}
       {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+      {headline ? (
+        <section
+          className={`mb-6 rounded-3xl border p-5 shadow-sm ${
+            headline.tone === 'attention'
+              ? 'border-rose-200 bg-rose-50'
+              : 'border-emerald-200 bg-emerald-50'
+          }`}
+        >
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-muted">
+            {t('pages.dashboard.headline.eyebrow')}
+          </p>
+          <h2 className="mt-2 font-display text-2xl font-semibold text-amateur-ink">{headline.title}</h2>
+          <p className="mt-2 max-w-3xl text-sm text-amateur-muted">{headline.body}</p>
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            <Link
+              to="/app/finance/athlete-charges?overdueOnly=true"
+              className="rounded-xl border border-amateur-border bg-white px-3 py-2 font-semibold text-amateur-accent shadow-sm hover:bg-amateur-canvas"
+            >
+              {t('pages.dashboard.headline.openOverdue')}
+            </Link>
+            <Link
+              to="/app/action-center"
+              className="rounded-xl border border-amateur-border bg-white px-3 py-2 font-semibold text-amateur-accent shadow-sm hover:bg-amateur-canvas"
+            >
+              {t('pages.dashboard.headline.openQueue')}
+            </Link>
+            <Link
+              to="/app/report-builder"
+              className="rounded-xl border border-amateur-border bg-white px-3 py-2 font-semibold text-amateur-accent shadow-sm hover:bg-amateur-canvas"
+            >
+              {t('pages.dashboard.headline.openBuilder')}
+            </Link>
+          </div>
+        </section>
+      ) : null}
       <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">

@@ -7,6 +7,7 @@ import { InlineAlert } from '../components/ui/InlineAlert';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
+import { DataExplorer } from '../components/reporting/DataExplorer';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
 import {
   formatDateTime,
@@ -203,6 +204,42 @@ export function PrivateLessonsPage() {
     }
   }
 
+  const view = (searchParams.get('view') as 'list' | 'advanced') ?? 'list';
+
+  if (view === 'advanced') {
+    return (
+      <div>
+        <PageHeader title={t('pages.privateLessons.title')} subtitle={t('pages.privateLessons.subtitle')} />
+        <div className="mb-3 inline-flex overflow-hidden rounded-xl border border-amateur-border bg-amateur-surface text-xs">
+          {(['list', 'advanced'] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                if (option === 'list') next.delete('view');
+                else next.set('view', option);
+                setSearchParams(next, { replace: true });
+              }}
+              className={`px-4 py-2 font-semibold uppercase tracking-wide ${
+                view === option ? 'bg-amateur-accent text-white' : 'text-amateur-muted hover:text-amateur-ink'
+              }`}
+            >
+              {t(`pages.reports.viewToggle.${option}`)}
+            </button>
+          ))}
+        </div>
+        <ListPageFrame>
+          {!tenantId && !tenantLoading ? (
+            <p className="text-sm text-amateur-muted">{t('app.errors.needTenant')}</p>
+          ) : (
+            <DataExplorer entity="private_lessons" embed />
+          )}
+        </ListPageFrame>
+      </div>
+    );
+  }
+
   return (
     <div>
       <PageHeader
@@ -220,6 +257,26 @@ export function PrivateLessonsPage() {
           </Button>
         }
       />
+
+      <div className="mb-3 inline-flex overflow-hidden rounded-xl border border-amateur-border bg-amateur-surface text-xs">
+        {(['list', 'advanced'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              if (option === 'list') next.delete('view');
+              else next.set('view', option);
+              setSearchParams(next, { replace: true });
+            }}
+            className={`px-4 py-2 font-semibold uppercase tracking-wide ${
+              view === option ? 'bg-amateur-accent text-white' : 'text-amateur-muted hover:text-amateur-ink'
+            }`}
+          >
+            {t(`pages.reports.viewToggle.${option}`)}
+          </button>
+        ))}
+      </div>
 
       {message ? (
         <InlineAlert tone="success" className="mb-4">

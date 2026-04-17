@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
+import { DataExplorer } from '../components/reporting/DataExplorer';
 import { apiGet } from '../lib/api';
 import { getPersonName } from '../lib/display';
 import type { Guardian } from '../lib/domain-types';
@@ -43,9 +44,40 @@ export function GuardiansPage() {
     return () => clearTimeout(id);
   }, [load]);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = (searchParams.get('view') as 'list' | 'advanced') ?? 'list';
+
   return (
     <div>
       <PageHeader title={t('pages.guardians.title')} subtitle={t('pages.guardians.subtitle')} />
+      <div className="mb-3 inline-flex overflow-hidden rounded-xl border border-amateur-border bg-amateur-surface text-xs">
+        {(['list', 'advanced'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              if (option === 'list') next.delete('view');
+              else next.set('view', option);
+              setSearchParams(next, { replace: true });
+            }}
+            className={`px-4 py-2 font-semibold uppercase tracking-wide ${
+              view === option ? 'bg-amateur-accent text-white' : 'text-amateur-muted hover:text-amateur-ink'
+            }`}
+          >
+            {t(`pages.reports.viewToggle.${option}`)}
+          </button>
+        ))}
+      </div>
+      {view === 'advanced' ? (
+        <ListPageFrame>
+          {!tenantId && !tenantLoading ? (
+            <p className="text-sm text-amateur-muted">{t('app.errors.needTenant')}</p>
+          ) : (
+            <DataExplorer entity="guardians" embed />
+          )}
+        </ListPageFrame>
+      ) : (
       <ListPageFrame
         search={{ value: q, onChange: setQ, disabled: !tenantId || tenantLoading }}
         toolbar={
@@ -95,6 +127,7 @@ export function GuardiansPage() {
           </div>
         )}
       </ListPageFrame>
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ const links = [
   { to: '/app/finance', key: 'finance' as const },
   { to: '/app/communications', key: 'communications' as const },
   { to: '/app/reports', key: 'reports' as const },
+  { to: '/app/report-builder', key: 'reportBuilder' as const },
   { to: '/app/settings', key: 'settings' as const },
 ];
 
