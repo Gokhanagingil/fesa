@@ -55,6 +55,9 @@ jobs:
       - name: Lint (workspaces)
         run: npm run lint
 
+      - name: Frontend reporting smoke
+        run: npm run frontend:smoke
+
       - name: i18n parity check
         run: npm run i18n:check
 

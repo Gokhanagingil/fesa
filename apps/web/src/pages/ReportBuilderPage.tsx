@@ -5,10 +5,17 @@ import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { DataExplorer, type ExplorerInitialState } from '../components/reporting/DataExplorer';
 import { StarterViewsPanel } from '../components/reporting/StarterViewsPanel';
-import { fetchCatalog, fetchStarterView } from '../lib/reporting-client';
+import { Button } from '../components/ui/Button';
+import {
+  fetchCatalog,
+  fetchSavedView,
+  fetchStarterView,
+  listSavedViews,
+} from '../lib/reporting-client';
 import type {
   ReportCatalogEntity,
   ReportEntityKey,
+  SavedReportView,
   StarterReportView,
 } from '../lib/reporting-types';
 import { useTenant } from '../lib/tenant-hooks';
@@ -28,6 +35,7 @@ export function ReportBuilderPage() {
   const [active, setActive] = useState<ReportEntityKey>('athletes');
   const [initialState, setInitialState] = useState<ExplorerInitialState | undefined>(undefined);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [savedViews, setSavedViews] = useState<SavedReportView[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,10 +49,30 @@ export function ReportBuilderPage() {
     };
   }, []);
 
-  // Hydrate from URL: ?starter=<id> or ?entity=<key>&filter=<base64-json>...
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const views = await listSavedViews();
+        if (!cancelled) {
+          setSavedViews(views.items);
+        }
+      } catch {
+        if (!cancelled) {
+          setSavedViews([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
+
+  // Hydrate from URL: ?starter=<id>, ?savedView=<id>, or ?preset=<base64-json>.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const starterId = params.get('starter');
+    const savedViewId = params.get('savedView');
     const entityKey = params.get('entity') as ReportEntityKey | null;
     const filterParam = params.get('preset');
 
@@ -53,6 +81,15 @@ export function ReportBuilderPage() {
         try {
           const starter = await fetchStarterView(starterId);
           applyStarter(starter);
+        } catch (e) {
+          setPendingMessage(e instanceof Error ? e.message : t('app.errors.loadFailed'));
+        }
+        return;
+      }
+      if (savedViewId) {
+        try {
+          const savedView = await fetchSavedView(savedViewId);
+          applySavedView(savedView);
         } catch (e) {
           setPendingMessage(e instanceof Error ? e.message : t('app.errors.loadFailed'));
         }
@@ -71,11 +108,14 @@ export function ReportBuilderPage() {
             search: decoded.search ?? null,
             groupBy: decoded.groupBy ?? null,
             contextLabel: decoded.contextLabel ?? null,
+            activeViewId: null,
           });
           if (decoded.entity) setActive(decoded.entity);
         } catch {
           setPendingMessage(t('pages.reportBuilder.invalidPreset'));
         }
+      } else if (!entityKey) {
+        setInitialState(undefined);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,35 +130,40 @@ export function ReportBuilderPage() {
       search: starter.search ?? null,
       groupBy: starter.groupBy ?? null,
       derivedFromStarterId: starter.id,
-      contextLabel: undefined,
+      contextLabel: t(starter.titleKey, starter.id),
       activeViewId: null,
     });
-    // We render the starter title via contextLabel; explorer translates above.
-    setInitialState((prev) => prev);
+    setPendingMessage(null);
+  }, [t]);
+
+  const applySavedView = useCallback((view: SavedReportView) => {
+    setActive(view.entity);
+    setInitialState({
+      filter: view.filter ?? null,
+      columns: view.columns,
+      sort: view.sort,
+      search: view.search ?? null,
+      groupBy: view.groupBy ?? null,
+      derivedFromStarterId: view.derivedFromStarterId ?? null,
+      contextLabel: view.name,
+      activeViewId: view.id,
+    });
+    setPendingMessage(null);
   }, []);
 
   const onPickStarter = useCallback(
     (starter: StarterReportView) => {
       applyStarter(starter);
-      setInitialState({
-        filter: starter.filter ?? null,
-        columns: starter.columns,
-        sort: starter.sort,
-        search: starter.search ?? null,
-        groupBy: starter.groupBy ?? null,
-        derivedFromStarterId: starter.id,
-        contextLabel: t(starter.titleKey, starter.id),
-        activeViewId: null,
-      });
       setActive(starter.entity);
       // Update URL so the starter link can be shared / refreshed.
       const params = new URLSearchParams(location.search);
       params.set('starter', starter.id);
+      params.delete('savedView');
       params.delete('entity');
       params.delete('preset');
       navigate({ search: `?${params.toString()}` }, { replace: true });
     },
-    [applyStarter, location.search, navigate, t],
+    [applyStarter, location.search, navigate],
   );
 
   const activeEntityLabel = useMemo(() => {
@@ -166,6 +211,66 @@ export function ReportBuilderPage() {
             </div>
 
             <StarterViewsPanel onApply={onPickStarter} />
+
+            {savedViews.length > 0 ? (
+              <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-accent">
+                      {t('pages.reports.savedViews.title')}
+                    </p>
+                    <h3 className="mt-1 font-display text-base font-semibold text-amateur-ink">
+                      {t('pages.reportBuilder.continueTitle')}
+                    </h3>
+                    <p className="mt-1 text-sm text-amateur-muted">
+                      {t('pages.reportBuilder.continueBody')}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      const params = new URLSearchParams(location.search);
+                      params.delete('starter');
+                      params.delete('savedView');
+                      params.delete('preset');
+                      if (params.get('entity') !== active) {
+                        params.set('entity', active);
+                      }
+                      navigate({ search: `?${params.toString()}` }, { replace: true });
+                      setInitialState(undefined);
+                    }}
+                  >
+                    {t('pages.reportBuilder.startFresh')}
+                  </Button>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {savedViews.slice(0, 6).map((view) => (
+                    <button
+                      key={view.id}
+                      type="button"
+                      onClick={() => {
+                        applySavedView(view);
+                        const params = new URLSearchParams(location.search);
+                        params.set('savedView', view.id);
+                        params.delete('starter');
+                        params.delete('preset');
+                        params.delete('entity');
+                        navigate({ search: `?${params.toString()}` }, { replace: true });
+                      }}
+                      className="rounded-full border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-ink transition hover:border-amateur-accent/40 hover:bg-amateur-canvas"
+                    >
+                      <span className="font-semibold">{view.name}</span>
+                      <span className="ml-2 text-xs text-amateur-muted">
+                        {view.visibility === 'shared'
+                          ? t('pages.reports.savedViews.sharedTag')
+                          : t('pages.reports.savedViews.private')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-muted">

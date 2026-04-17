@@ -98,12 +98,21 @@ export function DataExplorer({ entity, initialFilter = null, initialState, headi
       const found = cat.entities.find((e) => e.key === entity) ?? null;
       setCatalog(found);
       if (found) {
-        setColumns((current) => (current.length ? current : initialState?.columns ?? found.defaultColumns));
-        setSort((current) =>
-          current.length
-            ? current
-            : initialState?.sort ?? (found.defaultSort ? [found.defaultSort] : []),
-        );
+        const hasExplicitInitialState = typeof initialState !== 'undefined';
+        setColumns(hasExplicitInitialState ? (initialState?.columns ?? found.defaultColumns) : found.defaultColumns);
+        setSort(hasExplicitInitialState ? (initialState?.sort ?? (found.defaultSort ? [found.defaultSort] : [])) : found.defaultSort ? [found.defaultSort] : []);
+        if (!hasExplicitInitialState) {
+          setFilter(initialFilter ?? null);
+          setSearch('');
+          setGroupBy(null);
+          setDerivedFromStarterId(null);
+          setActiveViewId(null);
+          setContextLabel(null);
+          setShowFilters(!isFilterEmpty(initialFilter ?? null));
+          setShowGrouping(false);
+        }
+        setShowColumnsPicker(false);
+        setPage(0);
       }
     })();
     return () => {
@@ -291,7 +300,28 @@ export function DataExplorer({ entity, initialFilter = null, initialState, headi
             type="button"
             variant="ghost"
             onClick={() => {
-              setShowGrouping((v) => !v);
+              setShowGrouping((visible) => {
+                const nextVisible = !visible;
+                if (nextVisible && !groupBy) {
+                  const defaultDimension = catalog.fields.find((field) => field.groupable);
+                  setGroupBy(
+                    defaultDimension
+                      ? {
+                          field: defaultDimension.key,
+                          measures: [{ op: 'count', alias: 'count' }],
+                          sort: { alias: 'count', direction: 'desc' },
+                          limit: 50,
+                        }
+                      : null,
+                  );
+                  setPage(0);
+                }
+                if (!nextVisible) {
+                  setGroupBy(null);
+                  setPage(0);
+                }
+                return nextVisible;
+              });
             }}
           >
             {groupBy

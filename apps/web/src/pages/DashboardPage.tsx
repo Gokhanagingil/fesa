@@ -18,7 +18,7 @@ import {
 import type { Coach, CommandCenterResponse, Payment, PrivateLesson } from '../lib/domain-types';
 import type { ClubOverviewResponse, PlatformOverviewResponse } from '../lib/overview-types';
 import { useTenant } from '../lib/tenant-hooks';
-import { buildStarterLink } from '../lib/report-deep-link';
+import { buildReportBuilderLink, buildStarterLink } from '../lib/report-deep-link';
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -158,13 +158,13 @@ export function DashboardPage() {
       key: 'sessions',
       label: t('pages.dashboard.stats.upcomingSessions'),
       value: summary?.stats.upcomingSessions ?? 0,
-      href: '/app/training',
+      href: buildStarterLink('lessons.upcoming'),
     },
     {
       key: 'overdue',
       label: t('pages.dashboard.stats.overdueTotal'),
       value: summary?.stats.overdueTotal ?? '0.00',
-      href: '/app/finance/athlete-charges?overdueOnly=true',
+      href: buildStarterLink('finance.overdue'),
     },
     {
       key: 'follow-up',
@@ -273,7 +273,7 @@ export function DashboardPage() {
           <p className="mt-2 max-w-3xl text-sm text-amateur-muted">{headline.body}</p>
           <div className="mt-3 flex flex-wrap gap-2 text-sm">
             <Link
-              to="/app/finance/athlete-charges?overdueOnly=true"
+              to={buildStarterLink('finance.overdue')}
               className="rounded-xl border border-amateur-border bg-white px-3 py-2 font-semibold text-amateur-accent shadow-sm hover:bg-amateur-canvas"
             >
               {t('pages.dashboard.headline.openOverdue')}
@@ -285,7 +285,7 @@ export function DashboardPage() {
               {t('pages.dashboard.headline.openQueue')}
             </Link>
             <Link
-              to="/app/report-builder"
+              to={buildStarterLink('athletes.outstandingBalance')}
               className="rounded-xl border border-amateur-border bg-white px-3 py-2 font-semibold text-amateur-accent shadow-sm hover:bg-amateur-canvas"
             >
               {t('pages.dashboard.headline.openBuilder')}
@@ -949,21 +949,25 @@ export function DashboardPage() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <Link
-          to="/app/athletes"
+          to={buildStarterLink('athletes.activeWithoutTeam')}
           className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm transition hover:border-amateur-accent/40"
         >
           <p className="text-sm font-semibold text-amateur-accent">{t('pages.dashboard.cardPeople')}</p>
           <p className="mt-2 text-sm text-amateur-muted">{t('pages.dashboard.cardPeopleBody')}</p>
         </Link>
         <Link
-          to="/app/training"
+          to={buildStarterLink('lessons.byCoach')}
           className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm transition hover:border-amateur-accent/40"
         >
           <p className="text-sm font-semibold text-amateur-accent">{t('pages.dashboard.cardOps')}</p>
           <p className="mt-2 text-sm text-amateur-muted">{t('pages.dashboard.cardOpsBody')}</p>
         </Link>
         <Link
-          to="/app/finance"
+          to={buildReportBuilderLink({
+            entity: 'finance_charges',
+            sort: [{ field: 'charge.remainingAmount', direction: 'desc' }],
+            contextLabel: t('pages.dashboard.cardFinanceReportContext'),
+          })}
           className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm transition hover:border-amateur-accent/40"
         >
           <p className="text-sm font-semibold text-amateur-accent">{t('pages.dashboard.cardFinance')}</p>

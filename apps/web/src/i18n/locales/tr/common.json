@@ -1242,6 +1242,12 @@
         "title": "Yönetim seti",
         "subtitle": "Canlı verinizden çekilmiş, yönetici dostu, hazır özetler."
       },
+      "continueTitle": "Kaldığınız yerden devam edin",
+      "continueSubtitle": "Son kaydedilen görünümler burada kalır; ekibin tekrar kullandığı raporlara tek tıkla dönün.",
+      "continueOpen": "Görünümü aç",
+      "openBuilderFromDefinition": "Oluşturucuda aç",
+      "openGroupedStarter": "Gruplu özeti aç",
+      "openSavedView": "Kayıtlı görünüme dön",
       "fields": {
         "athlete": {
           "id": "ID",

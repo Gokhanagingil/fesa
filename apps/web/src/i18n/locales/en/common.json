@@ -1342,6 +1342,12 @@
       "tipPickEntity": "Pick what you want to look at — athletes, guardians, private lessons, or finance.",
       "tipFilterOrGroup": "Add filters, or switch on grouping for one-dimension summaries.",
       "tipSaveOrExport": "Save the view (just for you, or shared with the club) and export to CSV when needed.",
+      "continueEyebrow": "Pick up where you left off",
+      "continueTitle": "Open a saved view or jump back into a trusted starter.",
+      "continueBody": "Use the same explorer for saved club views, grouped summaries, and one-click starters so the next step is always obvious.",
+      "continueSaved": "Continue saved view",
+      "continueStarter": "Open starter",
+      "continueGrouped": "Grouped starter",
       "entityPickerEyebrow": "Or start fresh with one entity",
       "exploringEntity": "Exploring {{name}}",
       "invalidPreset": "Could not load the preset from the link — opening a blank explorer instead."

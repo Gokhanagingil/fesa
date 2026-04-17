@@ -12,6 +12,7 @@
     "i18n:check": "node scripts/check-i18n-parity.mjs",
     "api:boot:smoke": "node scripts/api-boot-smoke.mjs",
     "dashboard:smoke": "node scripts/dashboard-smoke.mjs",
+    "frontend:smoke": "npm run test:smoke -w @amateur/web",
     "reporting:smoke": "node scripts/reporting-smoke.mjs",
     "reporting:filter-tree:test": "node scripts/reporting-filter-tree.test.mjs",
     "reporting:starter-views:test": "node scripts/reporting-starter-views.test.mjs",

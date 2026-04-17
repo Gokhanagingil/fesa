@@ -32,3 +32,11 @@ export function buildReportBuilderLink(preset: DeepLinkPreset): string {
 export function buildStarterLink(starterId: string): string {
   return `/app/report-builder?starter=${encodeURIComponent(starterId)}`;
 }
+
+export function buildSavedViewLink(savedViewId: string): string {
+  return `/app/report-builder?savedView=${encodeURIComponent(savedViewId)}`;
+}
+
+export function decodeReportBuilderPreset(encoded: string): DeepLinkPreset {
+  return JSON.parse(decodeURIComponent(escape(window.atob(encoded)))) as DeepLinkPreset;
+}

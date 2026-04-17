@@ -10,6 +10,59 @@ Everything in v2 sits inside the same files / endpoints / persistence layer
 introduced in v1. There is no parallel module, no v2 catalog, and no new
 saved-view table.
 
+## Wave 12.1 — Reporting Experience Pack v2 Closure
+
+The closure sprint intentionally stays inside the same reporting foundation and
+polishes the product entry points instead of creating another reporting layer.
+
+### What the closure sprint tightens
+
+| Area | Closure change |
+|------|----------------|
+| **Frontend smoke protection** | `@amateur/web` now ships a lightweight Vitest + Testing Library smoke layer for reporting journeys. |
+| **Reports page actionability** | The page now leads with "continue / open / group / save" actions instead of passive definition cards. |
+| **Dashboard cohesion** | Selected dashboard stat cards and CTAs now land in reporting contexts where that helps staff investigate a signal quickly. |
+| **Finance discoverability** | Finance now presents the reporting entry as a friendly finance explorer with starter shortcuts and calmer framing. |
+| **Saved-view entry consistency** | Report Builder now hydrates starter links, preset links, and saved-view links from the same surface. |
+
+### Frontend reporting smoke coverage
+
+The web workspace now includes a lightweight smoke runner:
+
+```bash
+npm run frontend:smoke
+```
+
+That command runs `vitest` against `src/**/*.smoke.test.tsx` inside
+`apps/web` and currently protects these reporting journeys:
+
+- Report Builder landing renders.
+- Curated starter panel loads and a starter can be opened.
+- Grouping can be enabled and grouped results render.
+- Saved-view flows cover save-as-new, duplicate-from-starter, and delete of an
+  existing view.
+- Dashboard drill-down links still point to the intended reporting context.
+
+This is intentionally **not** a heavyweight browser E2E layer. The repo keeps:
+
+- API / contract smoke in `scripts/reporting-smoke.mjs`
+- UI / route smoke in `apps/web` via Vitest + Testing Library
+
+so coverage stays fast and maintainable.
+
+### Entry-flow notes
+
+- `ReportsPage` now acts as a reporting launchpad: continue a saved view, open a
+  starter, jump straight to grouped summaries, or enter the builder with a
+  useful intent.
+- `DashboardPage` keeps direct operational links where they still make sense,
+  but overdue / outstanding / teamless / workload signals now more consistently
+  drop staff into the report experience.
+- `FinanceHubPage` now exposes the same reporting foundation as a "Finance
+  explorer" with starter shortcuts and calmer onboarding copy.
+- `ReportBuilderPage` now hydrates `?starter=`, `?preset=`, and
+  `?savedView=` links from the same surface.
+
 ### What v2 adds
 
 | Capability | Shape |

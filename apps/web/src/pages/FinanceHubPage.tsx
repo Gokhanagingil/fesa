@@ -9,6 +9,7 @@ import { apiGet } from '../lib/api';
 import { getLessonStatusLabel, getPersonName } from '../lib/display';
 import type { TrainingSessionStatus } from '../lib/domain-types';
 import { useTenant } from '../lib/tenant-hooks';
+import { buildStarterLink } from '../lib/report-deep-link';
 
 type FinanceSummaryResponse = {
   totals: {
@@ -74,15 +75,72 @@ export function FinanceHubPage() {
   return (
     <div>
       <PageHeader title={t('pages.finance.title')} subtitle={t('pages.finance.subtitle')} />
-      <details className="mb-6 rounded-2xl border border-amateur-border bg-amateur-surface p-4 shadow-sm">
-        <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
-          {t('pages.finance.advancedExplorer')}
-        </summary>
-        <p className="mt-1 text-xs text-amateur-muted">{t('pages.finance.advancedExplorerHint')}</p>
-        <div className="mt-3">
-          {tenantId ? <DataExplorer entity="finance_charges" embed /> : null}
+      <section className="mb-6 rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-accent">
+              {t('pages.finance.reportingEyebrow')}
+            </p>
+            <h2 className="mt-2 font-display text-xl font-semibold text-amateur-ink">
+              {t('pages.finance.reportingTitle')}
+            </h2>
+            <p className="mt-2 text-sm text-amateur-muted">{t('pages.finance.reportingBody')}</p>
+          </div>
+          <Link
+            to="/app/reports"
+            className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-2 text-sm font-semibold text-amateur-accent shadow-sm hover:bg-white"
+          >
+            {t('pages.finance.reportingOpenHub')}
+          </Link>
         </div>
-      </details>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <Link
+            to={buildStarterLink('finance.overdue')}
+            className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4 shadow-sm transition hover:border-amateur-accent/40"
+          >
+            <p className="text-sm font-semibold text-amateur-ink">{t('pages.finance.reportingCards.overdueTitle')}</p>
+            <p className="mt-1 text-sm text-amateur-muted">{t('pages.finance.reportingCards.overdueBody')}</p>
+            <p className="mt-3 text-sm font-semibold text-amateur-accent">
+              {t('pages.finance.reportingCards.openAction')} →
+            </p>
+          </Link>
+          <Link
+            to={buildStarterLink('finance.outstandingByItem')}
+            className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4 shadow-sm transition hover:border-amateur-accent/40"
+          >
+            <p className="text-sm font-semibold text-amateur-ink">
+              {t('pages.finance.reportingCards.byItemTitle')}
+            </p>
+            <p className="mt-1 text-sm text-amateur-muted">{t('pages.finance.reportingCards.byItemBody')}</p>
+            <p className="mt-3 text-sm font-semibold text-amateur-accent">
+              {t('pages.finance.reportingCards.openAction')} →
+            </p>
+          </Link>
+          <Link
+            to={buildStarterLink('finance.overdueByCategory')}
+            className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4 shadow-sm transition hover:border-amateur-accent/40"
+          >
+            <p className="text-sm font-semibold text-amateur-ink">
+              {t('pages.finance.reportingCards.byCategoryTitle')}
+            </p>
+            <p className="mt-1 text-sm text-amateur-muted">
+              {t('pages.finance.reportingCards.byCategoryBody')}
+            </p>
+            <p className="mt-3 text-sm font-semibold text-amateur-accent">
+              {t('pages.finance.reportingCards.openAction')} →
+            </p>
+          </Link>
+        </div>
+        <details className="mt-4 rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
+            {t('pages.finance.advancedExplorer')}
+          </summary>
+          <p className="mt-1 text-xs text-amateur-muted">{t('pages.finance.advancedExplorerHint')}</p>
+          <div className="mt-3">
+            {tenantId ? <DataExplorer entity="finance_charges" embed /> : null}
+          </div>
+        </details>
+      </section>
       {!tenantId && !tenantLoading ? (
         <InlineAlert tone="info" className="mb-6">
           {t('app.errors.needTenant')}
