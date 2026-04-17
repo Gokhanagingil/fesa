@@ -178,6 +178,133 @@ async function main() {
   if (csv.status !== 200) failures.push(`export ${csv.status}`);
   if (typeof csv.body !== 'string' || csv.body.length < 5) failures.push('export body too small');
 
+  // ---- v2 ----------------------------------------------------------------
+
+  // Starter view listing
+  const starterList = await request('GET', '/api/reporting/starter-views', undefined, tenant.id);
+  if (starterList.status !== 200) failures.push(`starter-views list ${starterList.status}`);
+  if (!Array.isArray(starterList.body?.items) || starterList.body.items.length === 0) {
+    failures.push('starter-views list has no items');
+  } else {
+    const sample = starterList.body.items.find((view) => view.entity === 'athletes');
+    if (!sample) failures.push('starter-views list missing athletes entity');
+  }
+
+  // Specific starter view fetch
+  const starterFetch = await request(
+    'GET',
+    '/api/reporting/starter-views/finance.overdue',
+    undefined,
+    tenant.id,
+  );
+  if (starterFetch.status !== 200) failures.push(`starter-views fetch ${starterFetch.status}`);
+  if (starterFetch.body?.id !== 'finance.overdue') failures.push('starter-views fetch wrong id');
+  if (starterFetch.body?.entity !== 'finance_charges') failures.push('starter-views fetch wrong entity');
+
+  // Tenant isolation: starter-views are catalog metadata, must work for every tenant
+  for (const isolationTenant of tenants) {
+    const isolationStarters = await request(
+      'GET',
+      '/api/reporting/starter-views?entity=athletes',
+      undefined,
+      isolationTenant.id,
+    );
+    if (isolationStarters.status !== 200) {
+      failures.push(`starter-views tenant ${isolationTenant.slug} ${isolationStarters.status}`);
+    }
+  }
+
+  // Grouped run: athletes by primary group
+  const grouped = await request(
+    'POST',
+    '/api/reporting/run',
+    {
+      entity: 'athletes',
+      groupBy: {
+        field: 'athlete.primaryGroupName',
+        measures: [{ op: 'count', alias: 'athleteCount' }],
+        sort: { alias: 'athleteCount', direction: 'desc' },
+        limit: 25,
+      },
+    },
+    tenant.id,
+  );
+  if (grouped.status !== 200) failures.push(`grouped run ${grouped.status}: ${JSON.stringify(grouped.body)}`);
+  if (!Array.isArray(grouped.body?.rows)) failures.push('grouped run rows missing');
+  if (!grouped.body?.groupBy) failures.push('grouped response should echo groupBy');
+  if (!Array.isArray(grouped.body?.columnLabels)) failures.push('grouped response missing columnLabels');
+
+  // Grouped run with a sum measure should reject ungroupable / non-aggregatable combos
+  const badGroup = await request(
+    'POST',
+    '/api/reporting/run',
+    {
+      entity: 'athletes',
+      groupBy: {
+        field: 'athlete.firstName',
+        measures: [{ op: 'count', alias: 'count' }],
+      },
+    },
+    tenant.id,
+  );
+  if (badGroup.status === 200) failures.push('grouped run accepted non-groupable field');
+
+  // Save a grouped view and round-trip
+  const groupedView = await request(
+    'POST',
+    '/api/reporting/saved-views',
+    {
+      entity: 'athletes',
+      name: 'Smoke grouped view',
+      visibility: 'private',
+      groupBy: {
+        field: 'athlete.primaryGroupName',
+        measures: [
+          { op: 'count', alias: 'athleteCount' },
+          { op: 'sum', field: 'athlete.outstandingTotal', alias: 'outstandingSum' },
+        ],
+        sort: { alias: 'outstandingSum', direction: 'desc' },
+      },
+      derivedFromStarterId: 'athletes.outstandingByGroup',
+    },
+    tenant.id,
+  );
+  if (groupedView.status !== 200 && groupedView.status !== 201) {
+    failures.push(`grouped saved view create ${groupedView.status}: ${JSON.stringify(groupedView.body)}`);
+  } else {
+    const fetched = await request(
+      'GET',
+      `/api/reporting/saved-views/${groupedView.body.id}`,
+      undefined,
+      tenant.id,
+    );
+    if (fetched.body?.groupBy?.field !== 'athlete.primaryGroupName') {
+      failures.push('saved grouped view did not preserve groupBy');
+    }
+    if (fetched.body?.derivedFromStarterId !== 'athletes.outstandingByGroup') {
+      failures.push('saved grouped view did not preserve derivedFromStarterId');
+    }
+    await request('DELETE', `/api/reporting/saved-views/${groupedView.body.id}`, undefined, tenant.id);
+  }
+
+  // Grouped CSV export
+  const groupedCsv = await request(
+    'POST',
+    '/api/reporting/export',
+    {
+      entity: 'finance_charges',
+      groupBy: {
+        field: 'charge.itemCategory',
+        measures: [{ op: 'sum', field: 'charge.remainingAmount', alias: 'remainingSum' }],
+      },
+      limit: 50,
+    },
+    tenant.id,
+    { expectText: true },
+  );
+  if (groupedCsv.status !== 200) failures.push(`grouped export ${groupedCsv.status}`);
+  if (typeof groupedCsv.body !== 'string' || groupedCsv.body.length < 5) failures.push('grouped export body too small');
+
   if (failures.length > 0) {
     console.error('reporting-smoke failures:');
     for (const failure of failures) {
