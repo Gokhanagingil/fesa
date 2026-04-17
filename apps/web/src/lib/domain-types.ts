@@ -84,6 +84,7 @@ export type Athlete = {
   primaryGroupId: string | null;
   status: AthleteStatus;
   jerseyNumber: string | null;
+  shirtSize: string | null;
   notes: string | null;
   sportBranch?: SportBranch;
   primaryGroup?: ClubGroup | null;

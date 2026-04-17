@@ -24,6 +24,7 @@
       "finance": "Finans",
       "communications": "İletişim",
       "reports": "Raporlar",
+      "reportBuilder": "Rapor oluşturucu",
       "settings": "Ayarlar",
       "admin": "Yönetim"
     },
@@ -235,6 +236,19 @@
       "emptyOutstanding": "Açık bakiye görünmüyor.",
       "emptyGroups": "Henüz grup dağılımı görünmüyor.",
       "openCommandCenter": "Komuta merkezini aç",
+      "openReportBuilder": "Rapor oluşturucuyu aç",
+      "headline": {
+        "eyebrow": "Bugünün başlığı",
+        "attentionTitle_one": "Bugün {{count}} öğe için elle takip gerekiyor",
+        "attentionTitle_other": "Bugün {{count}} öğe için elle takip gerekiyor",
+        "attentionBody": "{{overdueTotal}} gecikmiş açık bakiye · {{collectedTotal}} bu dönem tahsil edildi · {{upcomingSessions}} yaklaşan antrenman.",
+        "calmTitle_one": "Operasyon sakin — yaklaşan {{count}} antrenman",
+        "calmTitle_other": "Operasyon sakin — yaklaşan {{count}} antrenman",
+        "calmBody": "Bu dönem {{collectedTotal}} tahsil edildi ve bugün yalnızca {{todayCount}} öğe için aksiyon var.",
+        "openOverdue": "Gecikmiş bakiyeleri gör",
+        "openQueue": "Aksiyon merkezini aç",
+        "openBuilder": "Rapor oluştur"
+      },
       "commandCenterTitle": "Komuta merkezi",
       "commandCenterHint": "Koçluk, planlama ve finans takibini tek operasyon görünümünde tutun.",
       "collectionsTitle": "Tahsilat görünümü",
@@ -318,6 +332,12 @@
       "preferredName": "Tercih edilen ad",
       "birthDate": "Doğum tarihi",
       "gender": "Cinsiyet",
+      "genders": {
+        "female": "Kadın",
+        "male": "Erkek",
+        "non_binary": "Belirtmek istemiyor",
+        "unspecified": "Belirtilmemiş"
+      },
       "branch": "Spor branşı",
       "primaryGroup": "Birincil grup",
       "primaryGroupHint": "Bir sporcu takım olmadan da yalnızca grupta yer alabilir.",
@@ -717,6 +737,8 @@
     "finance": {
       "title": "Finans",
       "subtitle": "Atamadan tahsilata, bakiyeden önceliklendirmeye kadar kulübün tahsilat komuta yüzeyi.",
+      "advancedExplorer": "Gelişmiş finans gezgini",
+      "advancedExplorerHint": "Ücretleri Rapor oluşturucu ile aynı gelişmiş yapı ile filtreleyin, sıralayın ve dışa aktarın.",
       "hubTitle": "Ücretler",
       "hubBody": "Önce tekrar kullanılabilir ücret türlerini tanımlayın, ardından sporculara ücret atayın, tahsilat kaydedin ve açık bakiyeyi takip edin.",
       "chargeItemsLink": "Ücret kalemleri",
@@ -964,7 +986,164 @@
         "total": "Toplam aktif",
         "empty": "Aktif aksiyon kaydı yok.",
         "emptyHint": "Yeni yüksek değerli işler burada görünecek."
+      },
+      "viewToggle": {
+        "list": "Standart görünüm",
+        "advanced": "Gelişmiş filtre"
+      },
+      "entities": {
+        "athletes": "Sporcular",
+        "guardians": "Veliler",
+        "privateLessons": "Özel dersler",
+        "finance": "Finans"
+      },
+      "operators": {
+        "is": "eşittir",
+        "isNot": "eşit değil",
+        "in": "şunlardan biri",
+        "notIn": "şunların hiçbiri",
+        "contains": "içerir",
+        "notContains": "içermez",
+        "startsWith": "ile başlar",
+        "endsWith": "ile biter",
+        "gt": "büyüktür",
+        "gte": "büyük veya eşit",
+        "lt": "küçüktür",
+        "lte": "küçük veya eşit",
+        "between": "aralığında",
+        "isEmpty": "boş",
+        "isNotEmpty": "dolu",
+        "exists": "en az biri var",
+        "notExists": "hiç yok"
+      },
+      "values": {
+        "unbilled": "Henüz faturalanmamış"
+      },
+      "builder": {
+        "title": "Gelişmiş filtre",
+        "subtitle": "Basit koşulları birleştirerek çok özel listeler oluşturun. Hepsini, herhangi birini eşle veya hariç tut.",
+        "addCondition": "Koşul ekle",
+        "addGroup": "Grup ekle",
+        "removeCondition": "Kaldır",
+        "removeGroup": "Grubu kaldır",
+        "notGroup": "Bu grubu hariç tut",
+        "clear": "Tümünü temizle",
+        "empty": "Henüz koşul yok — listeyi daraltmak için bir tane ekleyin.",
+        "emptyGroup": "Boş grup — bir koşul ekleyin.",
+        "field": "Alan",
+        "operator": "Operatör",
+        "value": "Değer",
+        "noValue": "Bu operatör değer almaz.",
+        "selectValue": "Seçin…",
+        "boolTrue": "Evet",
+        "boolFalse": "Hayır",
+        "placeholder": "Bir değer girin",
+        "listPlaceholder": "Virgülle ayrılmış değerler",
+        "combinator": {
+          "and": "Tüm koşullar",
+          "or": "Herhangi koşul"
+        }
+      },
+      "explorer": {
+        "searchPlaceholder": "Hızlı arama",
+        "showFilters": "Filtreleri göster",
+        "hideFilters": "Filtreleri gizle",
+        "columns": "Sütunlar",
+        "columnsTitle": "Sütunları seçin",
+        "columnsHint": "Tabloda ve CSV dışa aktarımda hangi sütunların görüneceğini seçin.",
+        "resetColumns": "Varsayılana dön",
+        "reset": "Sıfırla",
+        "save": "Görünümü kaydet",
+        "exportCsv": "CSV dışa aktar",
+        "exporting": "Dışa aktarılıyor…",
+        "summary_one": "{{count}} eşleşen kayıt",
+        "summary_other": "{{count}} eşleşen kayıt",
+        "empty": "Bu filtrelerle eşleşen kayıt yok.",
+        "emptyHint": "Bir filtreyi gevşetin veya tamamen temizleyin."
+      },
+      "savedViews": {
+        "title": "Kaydedilen görünümler",
+        "shared": "Paylaşılan",
+        "private": "Sadece kişisel",
+        "applied": "Görünüm yüklendi: {{name}}",
+        "saved": "Görünüm kaydedildi: {{name}}",
+        "delete": "Görünümü sil",
+        "dialogTitle": "Rapor görünümünü kaydet",
+        "name": "Ad",
+        "description": "Açıklama",
+        "visibility": "Görünürlük",
+        "mode": {
+          "create": "Yeni olarak kaydet",
+          "update": "Mevcut görünümü güncelle"
+        }
+      },
+      "fields": {
+        "athlete": {
+          "id": "ID",
+          "firstName": "Ad",
+          "lastName": "Soyad",
+          "preferredName": "Tercih edilen ad",
+          "gender": "Cinsiyet",
+          "shirtSize": "Forma bedeni",
+          "status": "Durum",
+          "birthDate": "Doğum tarihi",
+          "birthYear": "Doğum yılı",
+          "jerseyNumber": "Forma #",
+          "sportBranch": "Spor branşı",
+          "primaryGroup": "Ana grup",
+          "primaryGroupId": "Ana grup (ID)",
+          "teamId": "Takım",
+          "teamIdHint": "Takım UUID'si ile eşleştirmek için 'eşittir' kullanın; takım dışındakiler için 'eşit değil' kullanın.",
+          "guardiansExist": "Velisi var",
+          "privateLessonsExist": "Özel dersi var",
+          "unpaidChargesExist": "Ödenmemiş bakiye var",
+          "unpaidPrivateLessonChargesExist": "Ödenmemiş özel ders ücreti var",
+          "outstandingTotal": "Açık bakiye",
+          "guardianCount": "Veli sayısı",
+          "teamCount": "Aktif takımlar"
+        },
+        "guardian": {
+          "id": "ID",
+          "firstName": "Ad",
+          "lastName": "Soyad",
+          "email": "E-posta",
+          "phone": "Telefon",
+          "athleteCount": "Bağlı sporcular",
+          "athletesExist": "Bağlı sporcusu var",
+          "contactComplete": "İletişim bilgileri tam"
+        },
+        "lesson": {
+          "id": "ID",
+          "athleteName": "Sporcu",
+          "coachName": "Antrenör",
+          "scheduledStart": "Planlanan tarih",
+          "status": "Durum",
+          "attendanceStatus": "Katılım",
+          "focus": "Odak",
+          "location": "Konum",
+          "chargeStatus": "Faturalama",
+          "chargeOverdue": "Faturalama gecikmiş",
+          "chargeRemaining": "Kalan"
+        },
+        "charge": {
+          "id": "ID",
+          "athleteName": "Sporcu",
+          "itemName": "Ücret kalemi",
+          "itemCategory": "Kategori",
+          "amount": "Tutar",
+          "allocatedAmount": "Tahsil edilen",
+          "remainingAmount": "Kalan",
+          "dueDate": "Vade",
+          "status": "Durum",
+          "isOverdue": "Gecikmiş",
+          "fromPrivateLesson": "Özel dersten",
+          "billingPeriodLabel": "Dönem"
+        }
       }
+    },
+    "reportBuilder": {
+      "title": "Rapor oluşturucu",
+      "subtitle": "Sporcu, veli, özel ders ve finans alanlarında gelişmiş raporlar oluşturun, kaydedin ve dışa aktarın."
     },
     "actionCenter": {
       "title": "Aksiyon merkezi",

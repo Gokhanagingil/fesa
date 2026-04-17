@@ -115,3 +115,27 @@ npm run dashboard:smoke
 ```
 
 Override `API_BASE`, `ADMIN_EMAIL`, or `ADMIN_PASSWORD` to point the smoke test at a different environment. The script logs in as the global admin, walks every accessible tenant, and asserts that the `/api/reporting/command-center` payload still has the `stats`, `attendance`, `actionCenter`, and `familyWorkflow` blocks the dashboard expects.
+
+## Reporting Foundation v1 smoke
+
+Wave 11 adds two complementary smoke checks for the new reporting spine:
+
+```bash
+npm run reporting:filter-tree:test   # pure-Node validator unit smoke
+npm run reporting:smoke              # live API smoke (catalog, run, export, saved views)
+```
+
+`reporting:filter-tree:test` runs in any environment after `npm run build` and
+exercises the validator without a database. `reporting:smoke` requires the API
+running locally (or `API_BASE` set) and validates that catalog metadata,
+filter-tree validation, tenant-isolated `run`, saved view CRUD, and CSV export
+all behave correctly across every accessible tenant.
+
+## Demo athlete fields
+
+The expansion seed also fills `Athlete.shirtSize` deterministically per athlete
+(based on age + gender). This makes the Reporting Foundation v1 demo
+interesting on day one — for example, the catalog instantly supports queries
+like _"female athletes with shirt size M, not in Team A, who have guardians,
+who take private lessons, and whose related fees are unpaid"_ against the
+default seed.

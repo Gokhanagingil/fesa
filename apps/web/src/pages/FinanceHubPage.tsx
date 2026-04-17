@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { InlineAlert } from '../components/ui/InlineAlert';
+import { DataExplorer } from '../components/reporting/DataExplorer';
 import { apiGet } from '../lib/api';
 import { getLessonStatusLabel, getPersonName } from '../lib/display';
 import type { TrainingSessionStatus } from '../lib/domain-types';
@@ -73,6 +74,15 @@ export function FinanceHubPage() {
   return (
     <div>
       <PageHeader title={t('pages.finance.title')} subtitle={t('pages.finance.subtitle')} />
+      <details className="mb-6 rounded-2xl border border-amateur-border bg-amateur-surface p-4 shadow-sm">
+        <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
+          {t('pages.finance.advancedExplorer')}
+        </summary>
+        <p className="mt-1 text-xs text-amateur-muted">{t('pages.finance.advancedExplorerHint')}</p>
+        <div className="mt-3">
+          {tenantId ? <DataExplorer entity="finance_charges" embed /> : null}
+        </div>
+      </details>
       {!tenantId && !tenantLoading ? (
         <InlineAlert tone="info" className="mb-6">
           {t('app.errors.needTenant')}

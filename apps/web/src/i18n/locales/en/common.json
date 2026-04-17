@@ -15,6 +15,7 @@
       "communications": "Communications",
       "finance": "Finance",
       "reports": "Reports",
+      "reportBuilder": "Report builder",
       "settings": "Settings"
     },
     "actions": {
@@ -231,6 +232,19 @@
       "openTraining": "Open training board",
       "openFinance": "Open collections",
       "openCommandCenter": "Open command center",
+      "openReportBuilder": "Open report builder",
+      "headline": {
+        "eyebrow": "Today's headline",
+        "attentionTitle_one": "{{count}} item needs hands-on follow-up today",
+        "attentionTitle_other": "{{count}} items need hands-on follow-up today",
+        "attentionBody": "Open balance is {{overdueTotal}} overdue · {{collectedTotal}} collected so far · {{upcomingSessions}} upcoming sessions to keep on track.",
+        "calmTitle_one": "Operations are calm — {{count}} session ahead",
+        "calmTitle_other": "Operations are calm — {{count}} sessions ahead",
+        "calmBody": "Collected {{collectedTotal}} this period and only {{todayCount}} items are due today.",
+        "openOverdue": "Review overdue balances",
+        "openQueue": "Open action center",
+        "openBuilder": "Build a report"
+      },
       "commandCenterTitle": "Command center",
       "commandCenterHint": "Keep coaching, scheduling, and finance follow-up in one operational overview.",
       "collectionsTitle": "Collections overview",
@@ -314,6 +328,12 @@
       "preferredName": "Preferred name",
       "birthDate": "Birth date",
       "gender": "Gender",
+      "genders": {
+        "female": "Female",
+        "male": "Male",
+        "non_binary": "Non-binary",
+        "unspecified": "Unspecified"
+      },
       "branch": "Sport branch",
       "primaryGroup": "Primary group",
       "status": "Status",
@@ -737,6 +757,8 @@
     "finance": {
       "title": "Finance",
       "subtitle": "Collections, balances, and club-side fee operations in one clear workspace.",
+      "advancedExplorer": "Advanced finance explorer",
+      "advancedExplorerHint": "Filter, sort, and export charges with the same advanced builder used in the Report builder.",
       "hubTitle": "Money & fees",
       "hubBody": "Define reusable fee types, assign charges, then record collections against the right athlete balances.",
       "chargeItemsLink": "Charge items",
@@ -991,7 +1013,164 @@
         "total": "Active items",
         "empty": "No active action-center items right now.",
         "emptyHint": "As follow-up signals appear, they will be grouped here."
+      },
+      "viewToggle": {
+        "list": "Standard view",
+        "advanced": "Advanced filtering"
+      },
+      "entities": {
+        "athletes": "Athletes",
+        "guardians": "Guardians",
+        "privateLessons": "Private lessons",
+        "finance": "Finance"
+      },
+      "operators": {
+        "is": "is",
+        "isNot": "is not",
+        "in": "is one of",
+        "notIn": "is none of",
+        "contains": "contains",
+        "notContains": "does not contain",
+        "startsWith": "starts with",
+        "endsWith": "ends with",
+        "gt": "greater than",
+        "gte": "greater than or equal",
+        "lt": "less than",
+        "lte": "less than or equal",
+        "between": "between",
+        "isEmpty": "is empty",
+        "isNotEmpty": "is not empty",
+        "exists": "has at least one",
+        "notExists": "has none"
+      },
+      "values": {
+        "unbilled": "Not yet billed"
+      },
+      "builder": {
+        "title": "Advanced filter",
+        "subtitle": "Combine simple conditions to build very specific lists. Match all, match any, or exclude.",
+        "addCondition": "Add condition",
+        "addGroup": "Add group",
+        "removeCondition": "Remove",
+        "removeGroup": "Remove group",
+        "notGroup": "Exclude this group",
+        "clear": "Clear all",
+        "empty": "No conditions yet — add one to refine the list.",
+        "emptyGroup": "Empty group — add a condition.",
+        "field": "Field",
+        "operator": "Operator",
+        "value": "Value",
+        "noValue": "No value needed.",
+        "selectValue": "Select…",
+        "boolTrue": "Yes",
+        "boolFalse": "No",
+        "placeholder": "Type a value",
+        "listPlaceholder": "Comma separated values",
+        "combinator": {
+          "and": "All conditions",
+          "or": "Any condition"
+        }
+      },
+      "explorer": {
+        "searchPlaceholder": "Quick search",
+        "showFilters": "Show filters",
+        "hideFilters": "Hide filters",
+        "columns": "Columns",
+        "columnsTitle": "Choose columns",
+        "columnsHint": "Pick which columns appear in the table and CSV export.",
+        "resetColumns": "Reset to defaults",
+        "reset": "Reset",
+        "save": "Save view",
+        "exportCsv": "Export CSV",
+        "exporting": "Exporting…",
+        "summary_one": "{{count}} matching record",
+        "summary_other": "{{count}} matching records",
+        "empty": "No records match these filters.",
+        "emptyHint": "Loosen a filter or clear it entirely to broaden the list."
+      },
+      "savedViews": {
+        "title": "Saved views",
+        "shared": "Shared",
+        "private": "Private only",
+        "applied": "Loaded view: {{name}}",
+        "saved": "View saved: {{name}}",
+        "delete": "Delete view",
+        "dialogTitle": "Save report view",
+        "name": "Name",
+        "description": "Description",
+        "visibility": "Visibility",
+        "mode": {
+          "create": "Save as new",
+          "update": "Update current"
+        }
+      },
+      "fields": {
+        "athlete": {
+          "id": "ID",
+          "firstName": "First name",
+          "lastName": "Last name",
+          "preferredName": "Preferred name",
+          "gender": "Gender",
+          "shirtSize": "Shirt size",
+          "status": "Status",
+          "birthDate": "Birth date",
+          "birthYear": "Birth year",
+          "jerseyNumber": "Jersey #",
+          "sportBranch": "Sport branch",
+          "primaryGroup": "Primary group",
+          "primaryGroupId": "Primary group (ID)",
+          "teamId": "Team",
+          "teamIdHint": "Use 'is' to match the team UUID, or 'isNot' to find athletes outside that team.",
+          "guardiansExist": "Has guardians",
+          "privateLessonsExist": "Has private lessons",
+          "unpaidChargesExist": "Has unpaid balance",
+          "unpaidPrivateLessonChargesExist": "Has unpaid private lesson fees",
+          "outstandingTotal": "Outstanding total",
+          "guardianCount": "Guardians",
+          "teamCount": "Active teams"
+        },
+        "guardian": {
+          "id": "ID",
+          "firstName": "First name",
+          "lastName": "Last name",
+          "email": "Email",
+          "phone": "Phone",
+          "athleteCount": "Linked athletes",
+          "athletesExist": "Has linked athletes",
+          "contactComplete": "Contact info complete"
+        },
+        "lesson": {
+          "id": "ID",
+          "athleteName": "Athlete",
+          "coachName": "Coach",
+          "scheduledStart": "Scheduled at",
+          "status": "Status",
+          "attendanceStatus": "Attendance",
+          "focus": "Focus",
+          "location": "Location",
+          "chargeStatus": "Billing status",
+          "chargeOverdue": "Overdue billing",
+          "chargeRemaining": "Remaining"
+        },
+        "charge": {
+          "id": "ID",
+          "athleteName": "Athlete",
+          "itemName": "Charge item",
+          "itemCategory": "Category",
+          "amount": "Amount",
+          "allocatedAmount": "Collected",
+          "remainingAmount": "Remaining",
+          "dueDate": "Due date",
+          "status": "Status",
+          "isOverdue": "Overdue",
+          "fromPrivateLesson": "From private lesson",
+          "billingPeriodLabel": "Billing period"
+        }
       }
+    },
+    "reportBuilder": {
+      "title": "Report builder",
+      "subtitle": "Build, save, and export advanced reports across athletes, guardians, private lessons, and finance."
     },
     "actionCenter": {
       "title": "Action center",

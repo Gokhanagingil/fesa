@@ -48,6 +48,22 @@ npm workspaces unite `apps/*` and `packages/*`. Shared code lives in packages; a
 - Dashboard, reports, communications, and action-center summaries now degrade gracefully when optional/supporting reporting tables are unavailable during a partial staging migration state.
 - This keeps critical overview pages available instead of allowing one missing support relation to crash the whole command-center surface.
 
+## Reporting Foundation v1 (Wave 11)
+
+The reporting subsystem now exposes a reusable, metadata-driven filtering layer
+that can be reused across list pages, the report builder, and CSV export
+without duplicating per-page logic. See [reporting.md](./reporting.md) for the
+field catalog, filter tree grammar, and saved-view persistence model.
+
+Key invariants:
+
+- Tenant isolation is enforced inside the query compiler (and inside every
+  relation subquery), never as part of the user-supplied filter tree.
+- Relation traversal is **explicit**: only joins declared in the catalog can be
+  reached, no arbitrary path traversal.
+- Saved views live in the existing `saved_filter_presets` table to avoid
+  duplicate persistence.
+
 ## Docker / deployment
 
 - Not required in wave one; PostgreSQL is expected locally or via Docker.

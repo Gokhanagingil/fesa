@@ -97,6 +97,22 @@ npm run build
 npm run lint
 ```
 
+### Reporting Foundation v1
+
+The new advanced filtering and Report Builder spine is documented in
+[docs/reporting.md](docs/reporting.md). After `npm run build`, you can
+exercise the validator without a database:
+
+```bash
+npm run reporting:filter-tree:test
+```
+
+With the API running, exercise catalog / run / export / saved views end to end:
+
+```bash
+npm run reporting:smoke
+```
+
 ## Continuous integration (GitHub Actions)
 
 CI validates the monorepo on **pull requests** and **pushes to `main`**. There is no deployment or artifact publish in CI, but the reusable validation now includes a disposable PostgreSQL-backed migration check, repeatable demo-seed validation, and an API boot smoke before staging.

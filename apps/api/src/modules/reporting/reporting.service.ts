@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import type {
+  ReportCatalogResponse,
+  ReportRunRequest,
+  ReportRunResponse,
+} from '@amateur/shared-types';
 import { ReportDefinition } from '../../database/entities/report-definition.entity';
 import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.entity';
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
@@ -10,6 +16,8 @@ import { ActionCenterService } from '../action-center/action-center.service';
 import { FamilyActionService } from '../family-action/family-action.service';
 import { FinanceService } from '../finance/finance.service';
 import { isMissingRelationError } from '../core/database-error.util';
+import { listCatalogEntities } from './catalog';
+import { ReportingQueryCompiler } from './query-compiler';
 
 type FinanceSummary = Awaited<ReturnType<FinanceService['listAthleteFinanceSummaries']>>;
 type CommunicationAudience = Awaited<ReturnType<CommunicationService['listAudience']>>;
@@ -18,6 +26,8 @@ type ActionSummary = Awaited<ReturnType<ActionCenterService['listItems']>>;
 
 @Injectable()
 export class ReportingService {
+  private readonly compiler: ReportingQueryCompiler;
+
   constructor(
     @InjectRepository(ReportDefinition)
     private readonly reportDefinitions: Repository<ReportDefinition>,
@@ -29,7 +39,10 @@ export class ReportingService {
     private readonly communications: CommunicationService,
     private readonly actionCenter: ActionCenterService,
     private readonly familyActions: FamilyActionService,
-  ) {}
+    private readonly dataSource: DataSource,
+  ) {
+    this.compiler = new ReportingQueryCompiler(dataSource);
+  }
 
   async definitions(tenantId: string) {
     const items = [
@@ -62,7 +75,9 @@ export class ReportingService {
 
     let presetCount = 0;
     try {
-      presetCount = await this.savedFilterPresets.count({ where: { tenantId } });
+      presetCount = await this.savedFilterPresets.count({
+        where: { tenantId },
+      });
     } catch (error) {
       if (!isMissingRelationError(error)) {
         throw error;
@@ -74,6 +89,14 @@ export class ReportingService {
       presetCount,
       messageKey: 'pages.reports.readyHint',
     };
+  }
+
+  catalog(): ReportCatalogResponse {
+    return { entities: listCatalogEntities() };
+  }
+
+  async run(tenantId: string, request: ReportRunRequest): Promise<ReportRunResponse> {
+    return this.compiler.run(request, { tenantId });
   }
 
   async commandCenter(tenantId: string, staffUserId: string) {

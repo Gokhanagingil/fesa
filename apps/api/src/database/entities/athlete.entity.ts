@@ -72,6 +72,13 @@ export class Athlete {
   @Column({ type: 'varchar', length: 8, nullable: true })
   jerseyNumber!: string | null;
 
+  /**
+   * Lightweight wardrobe metadata used by reporting (e.g. "M", "L", "XL").
+   * Free-form to support club-specific size labels without enum churn.
+   */
+  @Column({ type: 'varchar', length: 16, nullable: true })
+  shirtSize!: string | null;
+
   @Column({ type: 'varchar', length: 500, nullable: true })
   notes!: string | null;
 

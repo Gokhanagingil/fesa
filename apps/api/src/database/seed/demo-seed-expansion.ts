@@ -26,6 +26,16 @@
 
 import { createHash } from 'crypto';
 import { DataSource, Repository } from 'typeorm';
+
+function expansionShirtSize(gender: 'male' | 'female', birthDate: Date): string {
+  const ageYears = Math.max(6, Math.min(40, new Date(2026, 0, 1).getUTCFullYear() - birthDate.getUTCFullYear()));
+  if (ageYears <= 9) return 'XS';
+  if (ageYears <= 12) return 'S';
+  if (ageYears <= 15) return gender === 'male' ? 'L' : 'M';
+  if (ageYears <= 18) return gender === 'male' ? 'XL' : 'M';
+  return gender === 'male' ? 'XL' : 'L';
+}
+
 import {
   AgeGroup,
   Athlete,
@@ -1013,6 +1023,7 @@ async function ensureExpansionAthletes(
     row.gender = seed.gender;
     row.status = seed.status;
     row.jerseyNumber = seed.jerseyNumber;
+    row.shirtSize = expansionShirtSize(seed.gender, seed.birthDate);
     row.primaryGroupId = groupIds.get(seed.groupKey) ?? null;
     row.notes = seed.notes;
     await athletes.save(row);

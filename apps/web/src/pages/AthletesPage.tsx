@@ -6,6 +6,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
+import { DataExplorer } from '../components/reporting/DataExplorer';
 import { apiGet, apiPatch } from '../lib/api';
 import { getAthleteStatusLabel, getFamilyReadinessStatusLabel, getPersonName } from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
@@ -205,9 +206,42 @@ export function AthletesPage() {
     }
   }
 
+  const view = (searchParams.get('view') as 'list' | 'advanced') ?? 'list';
+
   return (
     <div>
       <PageHeader title={t('pages.athletes.title')} subtitle={t('pages.athletes.subtitle')} />
+      <div className="mb-3 inline-flex overflow-hidden rounded-xl border border-amateur-border bg-amateur-surface text-xs">
+        {(['list', 'advanced'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              if (option === 'list') {
+                next.delete('view');
+              } else {
+                next.set('view', option);
+              }
+              setSearchParams(next, { replace: true });
+            }}
+            className={`px-4 py-2 font-semibold uppercase tracking-wide ${
+              view === option ? 'bg-amateur-accent text-white' : 'text-amateur-muted hover:text-amateur-ink'
+            }`}
+          >
+            {t(`pages.reports.viewToggle.${option}`)}
+          </button>
+        ))}
+      </div>
+      {view === 'advanced' ? (
+        <ListPageFrame>
+          {!tenantId && !tenantLoading ? (
+            <p className="text-sm text-amateur-muted">{t('app.errors.needTenant')}</p>
+          ) : (
+            <DataExplorer entity="athletes" embed />
+          )}
+        </ListPageFrame>
+      ) : (
       <ListPageFrame
         search={{ value: q, onChange: setQ, disabled: !tenantId || tenantLoading }}
         toolbar={
@@ -439,6 +473,7 @@ export function AthletesPage() {
           </div>
         )}
       </ListPageFrame>
+      )}
     </div>
   );
 }

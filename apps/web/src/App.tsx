@@ -21,6 +21,7 @@ import { PrivateLessonsPage } from './pages/PrivateLessonsPage';
 import { CommunicationsPage } from './pages/CommunicationsPage';
 import { ActionCenterPage } from './pages/ActionCenterPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { ReportBuilderPage } from './pages/ReportBuilderPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PortalShell } from './components/layout/PortalShell';
 import { GuardianPortalLoginPage } from './pages/GuardianPortalLoginPage';
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="/app/finance/athlete-charges" element={<AthleteChargesPage />} />
             <Route path="/app/finance" element={<FinanceHubPage />} />
             <Route path="/app/reports" element={<ReportsPage />} />
+            <Route path="/app/report-builder" element={<ReportBuilderPage />} />
             <Route path="/app/settings" element={<SettingsPage />} />
           </Route>
         </Route>

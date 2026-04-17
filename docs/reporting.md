@@ -1,74 +1,184 @@
 # Reporting and command center
 
-## What Wave 10 hardens
+## Wave 11 — Executive Demo & Reporting Foundation Pack v1
 
-Wave 10 keeps the existing reporting and command-center backbone, then hardens it into a more trustworthy daily-operating surface:
+Wave 11 turns the amateur platform's operational backbone into a real reporting
+foundation while sharpening the executive demo on the dashboard.
 
-- `/api/reporting/definitions` still returns stable live report cards with i18n keys.
-- `/api/reporting/command-center` now combines:
-  - finance command-center data,
-  - private-lesson follow-up visibility,
-  - communication-readiness counts,
-  - family workflow counts and recent family-action items,
-  - **action-center counts and top priority items** for immediate staff follow-through, using the requesting staff member's own read state.
-- `/api/action-center/items` now exposes the shared operational backlog used by:
-  - the header notification center,
-  - the dedicated staff work queue page,
-  - dashboard and report action summaries.
-- `/api/auth/platform-overview` now adds a lightweight cross-club action snapshot for global admins so they can see which clubs have unread, overdue, or follow-up-heavy operational load before switching context.
+The platform now ships a single, reusable filtering / reporting spine:
 
-## Action center model
+- **Reportable Field Catalog** — metadata-driven definitions of every field that
+  can be filtered, selected, sorted, or exported. One file, one source of truth:
+  `apps/api/src/modules/reporting/catalog.ts`.
+- **Filter Tree Grammar** — a JSON tree with AND / OR groups, NOT, leaf
+  conditions, and explicit relation existence/non-existence checks. Validated
+  per entity by `apps/api/src/modules/reporting/filter-tree.ts`.
+- **Safe Query Compiler** — translates the validated tree into TypeORM
+  `SelectQueryBuilder` SQL, always tenant-scoped and always parameterised:
+  `apps/api/src/modules/reporting/query-compiler.ts`.
+- **Saved views** — persisted in the existing `saved_filter_presets` table
+  (`surface = 'report:<entity>'`) so we don't introduce a parallel persistence
+  layer. Owned by a staff user, optionally `shared` with the rest of the club.
+- **CSV export** — `/api/reporting/export` honours the same filter/sort/columns
+  payload, scoped by tenant and capped per-entity by `exportRowLimit`.
 
-Wave 10 still intentionally does **not** introduce a parallel workflow engine.
+Both the existing report cards (`/api/reporting/definitions`) and the
+command-center summary (`/api/reporting/command-center`) keep their existing
+behaviour. The new endpoints sit alongside them; nothing was rebuilt from
+scratch.
 
-Instead, it derives actionable items from current operational truth:
+### v1 entities
 
-- overdue or near-due finance follow-up,
-- family requests awaiting guardian response,
-- family requests awaiting staff review,
-- readiness gaps that block clean operations,
-- upcoming private lessons missing prep details,
-- upcoming training sessions missing prep details,
-- recently finished sessions with no attendance recorded.
+| Entity key            | What it represents                                               |
+|-----------------------|------------------------------------------------------------------|
+| `athletes`            | Athlete roster, with derived guardian / team / charge metadata.  |
+| `guardians`           | Guardian directory, with athlete count and contact completeness. |
+| `private_lessons`     | Private lessons joined to coach / athlete / charge.              |
+| `finance_charges`     | Athlete charges joined to charge item / payments / overdue.      |
 
-Each active item carries:
+Each entity exposes:
 
-- a tenant-safe stable `itemKey`,
-- a derived `snapshotToken` so read/dismiss state only applies to the current operational condition,
-- a category, type, urgency, deep link, and optional communication pivot,
-- lightweight persisted state (`read`, `dismissed`, `completed`, `snoozedUntil`) in `action_center_item_states`.
+- selectable + sortable columns,
+- relation existence checks (e.g. `athlete.guardiansExist`,
+  `athlete.unpaidPrivateLessonChargesExist`),
+- enum / number / date / currency / boolean operators,
+- safe joins (no arbitrary path traversal — joins are explicit per field).
 
-Wave 10 also makes that persisted state **staff-specific**:
+### Filter tree shape
 
-- read / snoozed / dismissed items now belong to the current staff user instead of becoming tenant-wide hidden state,
-- one staff user's cleanup no longer silently clears another staff member's queue,
-- snapshot behavior still ensures materially changed issues can resurface instead of remaining hidden.
+```jsonc
+{
+  "type": "group",
+  "combinator": "and",
+  "children": [
+    { "type": "condition", "field": "athlete.gender", "operator": "is", "value": "female" },
+    { "type": "condition", "field": "athlete.shirtSize", "operator": "is", "value": "M" },
+    { "type": "condition", "field": "athlete.teamId", "operator": "isNot", "value": "<team-uuid>" },
+    { "type": "condition", "field": "athlete.guardiansExist", "operator": "exists" },
+    { "type": "condition", "field": "athlete.privateLessonsExist", "operator": "exists" },
+    { "type": "condition", "field": "athlete.unpaidPrivateLessonChargesExist", "operator": "exists" }
+  ]
+}
+```
 
-That keeps the queue trustworthy: if the underlying issue changes materially, the item can resurface instead of remaining silently hidden.
+The combinator is `and` / `or`; groups can be inverted with `not: true` to
+express "athletes whose entire group of conditions fails". Nesting is capped at
+6 levels and 64 nodes total.
 
-## Command center conventions
+### Operator catalog
 
-- **One operational truth:** reporting, dashboard, action center, finance, family workflows, and communications all build from the same current modules.
-- **No notification vanity:** items only exist when they represent clear staff action, not passive system noise.
-- **Deep-link first:** queue items land on the exact workflow surface (`finance`, `athlete detail`, `training`, `private lessons`, `communications`) rather than vague landing pages.
-- **Bulk actions stay pragmatic:** mark read, dismiss, complete, and snooze are route-level actions on the action-center API, not a generic async command bus.
-- **Global admin visibility stays intentional:** cross-club visibility appears in admin-oriented overview surfaces, while club-scoped operational APIs remain tenant-resolved through the existing guard path.
+| Operator          | Notes                                                               |
+|-------------------|---------------------------------------------------------------------|
+| `is` / `isNot`    | Equality (uses `IS DISTINCT FROM` to handle NULLs).                 |
+| `in` / `notIn`    | Array membership; `notIn` also matches NULL rows.                   |
+| `contains` / etc. | Case-insensitive substring matches for `string` fields.             |
+| `gt`/`gte`/`lt`/`lte` / `between` | Number, currency, date, datetime fields.            |
+| `isEmpty` / `isNotEmpty` | NULL / empty-string checks.                                  |
+| `exists` / `notExists` | Relation existence (e.g. has guardians, has unpaid charges).    |
 
-## Communication follow-through
+Invalid operator/field combinations short-circuit with a `400 Bad Request` and
+a descriptive message; the frontend surfaces the same message inline.
 
-Wave 10 keeps communications in the “preparation and targeting” lane while preserving guardian-portal follow-through targeting:
+### Tenant safety
 
-- action-center items can pivot into `/app/communications` with prefilled filters,
-- audience reasons still explain why the athlete or family is included,
-- reporting can now show both the backlog and the size of the likely outreach population.
+Tenant isolation is enforced unconditionally inside
+`ReportingQueryCompiler.buildBaseQuery`. The base alias's `tenantId` is the
+first WHERE clause and the same `tenantId` is propagated into every relation
+subquery (e.g. `EXISTS (SELECT 1 FROM athlete_guardians ag_sub WHERE
+ag_sub."tenantId" = a."tenantId")`). The filter tree itself is not allowed to
+mention `tenantId`.
 
-This keeps follow-through operational without drifting into a full outbound messaging platform.
+The `TenantGuard` middleware still resolves the active club; `req.tenantId` is
+required for every reporting endpoint.
+
+### API endpoints
+
+| Method | Path                                  | Purpose                                                         |
+|--------|---------------------------------------|-----------------------------------------------------------------|
+| `GET`  | `/api/reporting/definitions`          | (Existing) Live "report cards" with i18n keys.                  |
+| `GET`  | `/api/reporting/command-center`       | (Existing) Manager dashboard summary.                           |
+| `GET`  | `/api/reporting/catalog`              | New. Returns the Reportable Field Catalog.                      |
+| `POST` | `/api/reporting/run`                  | New. Runs a filter tree, returns rows + total + paging.         |
+| `POST` | `/api/reporting/export`               | New. CSV export of the same payload (UTF-8 BOM for Excel).      |
+| `GET`  | `/api/reporting/saved-views`          | New. Lists saved views (own + shared in this tenant).           |
+| `POST` | `/api/reporting/saved-views`          | New. Creates a saved view.                                      |
+| `GET`  | `/api/reporting/saved-views/:id`      | New. Reads a saved view (scoped by visibility).                 |
+| `PATCH`| `/api/reporting/saved-views/:id`      | New. Updates the view (owner only).                             |
+| `DELETE`| `/api/reporting/saved-views/:id`     | New. Removes the view (owner only).                             |
+
+### Adding a new reportable field
+
+1. Add a `ReportFieldDefinition` to `ATHLETES` / `GUARDIANS` / `PRIVATE_LESSONS` /
+   `FINANCE` in `apps/api/src/modules/reporting/catalog.ts`.
+2. Add a SQL projection in `query-compiler.ts` (`FIELD_TABLE`).
+3. If the field requires a join, register it in `JOIN_DEFS` and reference it in
+   the field's `joins` array.
+4. If the field is a relation existence check, add a subquery in
+   `RELATION_EXISTS` and set `relationCheck: true` in the catalog entry.
+5. (Optional) add an i18n label under `pages.reports.fields.*` in both `en` and
+   `tr` locales.
+
+### Saved views (persistence)
+
+The existing `saved_filter_presets` table now also stores Reporting v1 saved
+views. Wave 11 adds:
+
+- `entity` (varchar 64) — logical entity key (`athletes` etc.).
+- `description` (varchar 500) — optional manager-facing context.
+- `filterTree` (jsonb) — full validated filter tree.
+- `columns` (jsonb) — selected column keys.
+- `sort` (jsonb) — `[{ field, direction }]`.
+- `visibility` (varchar 16) — `private` (owner only) or `shared` (club-wide).
+- `ownerStaffUserId` (uuid) — owning staff user; FK to `staff_users`.
+
+Legacy "communications" presets continue to work via the existing `payload`
+column; the surface name discriminates rows.
+
+### Export
+
+Wave 11 standardises on **CSV with a UTF-8 BOM**:
+
+- The BOM makes Turkish characters render correctly when the file opens in
+  Excel without forcing the operator to import or change encoding.
+- CSV avoids a heavy dependency (no XLSX writer in the API) and remains
+  trivially diffable / scriptable.
+- Excel can still save back to XLSX; clubs that need spreadsheet workflows lose
+  nothing while we keep the API thin.
+
+Operators see "Export CSV" in the explorer and the Report Builder; the
+generated file is named `amateur-<entity>-YYYY-MM-DD.csv`.
+
+### Frontend surfaces
+
+- `/app/report-builder` — entity-pickable explorer (the Report Builder v1).
+- `/app/athletes?view=advanced`, `/app/guardians?view=advanced`,
+  `/app/private-lessons?view=advanced`, and `/app/finance` (collapsible card)
+  embed the same `DataExplorer` so operators get one consistent advanced
+  filtering experience.
+- The Dashboard now renders an "Today's headline" card that interprets the
+  current state (overdue → attention, calm → green) and links into the
+  builder, action center, and overdue queue.
+
+### Validation
+
+- `npm run reporting:filter-tree:test` runs a Node smoke for the validator
+  (no DB required).
+- `npm run reporting:smoke` exercises the catalog, run, export, and saved-view
+  endpoints against a running API across every accessible tenant.
+- The existing `npm run dashboard:smoke` still covers the original sidebar
+  endpoints (including `/api/reporting/command-center`).
+
+## Wave 10 conventions still apply
+
+(unchanged)
+
+The single-truth, deep-link-first, no-vanity-notification conventions from
+Wave 10 still govern the dashboard, command center, action center, and
+communications surfaces.
 
 ## Intentionally still deferred
 
-- CSV / Excel export workflows
-- scheduled report delivery
-- saved report presets beyond communication-targeting use cases
-- background bulk job orchestration and audit dashboards
-- email / SMS / WhatsApp delivery infrastructure
-- full outbound delivery infrastructure for the guardian portal (email / SMS / WhatsApp sends still stay outside this wave)
+- Scheduled report delivery (CSV is on-demand only).
+- Pivot tables / charts — Report Builder v1 is rows + columns only.
+- Custom user-defined fields beyond the catalog.
+- Email / SMS / WhatsApp delivery infrastructure.

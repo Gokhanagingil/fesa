@@ -65,6 +65,19 @@ function hashPassword(password: string, salt: string): string {
   return pbkdf2Sync(password, salt, 120_000, 64, 'sha512').toString('hex');
 }
 
+/**
+ * Stable, demo-friendly shirt size for athletes that don't carry an explicit override.
+ * Drives the reportable "shirt size" filter in the Reporting Foundation v1 demo.
+ */
+function defaultShirtSize(gender: string, birthDate: Date): string {
+  const ageYears = Math.max(6, Math.min(40, new Date(2026, 0, 1).getUTCFullYear() - birthDate.getUTCFullYear()));
+  if (ageYears <= 9) return 'XS';
+  if (ageYears <= 12) return 'S';
+  if (ageYears <= 15) return gender === 'male' ? 'L' : 'M';
+  if (ageYears <= 18) return gender === 'male' ? 'XL' : 'M';
+  return gender === 'male' ? 'XL' : 'L';
+}
+
 type SeedStaffUser = Pick<
   StaffUser,
   'id' | 'email' | 'firstName' | 'lastName' | 'preferredName' | 'passwordSalt' | 'passwordHash' | 'platformRole' | 'status' | 'lastLoginAt'
@@ -139,6 +152,7 @@ type DemoClubSeed = {
     gender: string;
     status: AthleteStatus;
     jerseyNumber: string | null;
+    shirtSize?: string | null;
     primaryGroupKey: string;
     notes: string | null;
     guardians: Array<{
@@ -1636,6 +1650,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
         row.gender = item.gender;
         row.status = item.status;
         row.jerseyNumber = item.jerseyNumber;
+        row.shirtSize = item.shirtSize ?? defaultShirtSize(item.gender, item.birthDate);
         row.primaryGroupId = groupIds.get(item.primaryGroupKey) ?? null;
         row.notes = item.notes;
         await athletes.save(row);
