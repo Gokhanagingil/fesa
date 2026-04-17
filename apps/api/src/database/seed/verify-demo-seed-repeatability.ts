@@ -19,6 +19,7 @@ import {
   GLOBAL_ADMIN_EMAIL,
 } from './constants';
 import { runDemoSeed } from './demo-seed';
+import { runDemoSeedExpansion } from './demo-seed-expansion';
 
 async function main(): Promise<void> {
   if (!process.env.DATABASE_URL) {
@@ -32,9 +33,11 @@ async function main(): Promise<void> {
   try {
     console.log('Demo seed verification: pass 1');
     await runDemoSeed(AppDataSource);
+    await runDemoSeedExpansion(AppDataSource);
 
     console.log('Demo seed verification: pass 2');
     await runDemoSeed(AppDataSource);
+    await runDemoSeedExpansion(AppDataSource);
 
     const tenants = AppDataSource.getRepository(Tenant);
     const staffUsers = AppDataSource.getRepository(StaffUser);
@@ -70,13 +73,16 @@ async function main(): Promise<void> {
         portalAccess: await guardianPortalAccesses.countBy({ tenantId: tenant.id }),
       };
 
+      // Minimums are intentionally larger than the base seed so we catch
+      // regressions in the expansion seed too. The expansion grows each demo
+      // tenant to a believable staging-walkthrough footprint.
       const minimums = {
-        athletes: 3,
-        guardians: 2,
-        groups: 2,
+        athletes: 18,
+        guardians: 12,
+        groups: 3,
         teams: 1,
-        sessions: 3,
-        charges: 3,
+        sessions: 8,
+        charges: 20,
         familyActions: 1,
         portalAccess: 1,
       };
