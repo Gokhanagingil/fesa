@@ -109,6 +109,8 @@ export class FinanceService {
       const allocatedAmount = allocationMap.get(charge.id) ?? 0;
       const remainingAmount = this.getChargeRemaining(charge.amount, allocatedAmount);
       const derivedStatus = this.deriveChargeStatus(charge, allocatedAmount);
+      // PostgreSQL `date` columns are returned as strings by node-postgres. Coerce to a real
+      // Date so downstream consumers (action-center urgency, reporting) can call .getTime().
       const dueDate = charge.dueDate ? new Date(charge.dueDate) : null;
       const isOverdue =
         derivedStatus !== AthleteChargeStatus.PAID &&
@@ -118,6 +120,7 @@ export class FinanceService {
 
       return {
         ...charge,
+        dueDate,
         allocatedAmount: allocatedAmount.toFixed(2),
         remainingAmount: remainingAmount.toFixed(2),
         derivedStatus,
