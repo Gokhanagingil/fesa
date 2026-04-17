@@ -1,0 +1,198 @@
+{
+  "pages": {
+    "dashboard": {
+      "drilldown": {
+        "attendanceEyebrow": "Attendance",
+        "attendanceTitle": "Athletes who may need a nudge",
+        "attendanceBody": "One calm watchlist for falling attendance, repeat absences, and quiet check-ins.",
+        "trainingGroupsEyebrow": "Training groups",
+        "trainingGroupsTitle": "Groups with the softest attendance",
+        "trainingGroupsBody": "A quick grouped view of where session energy is dipping.",
+        "trainingCoachEyebrow": "Coach load",
+        "trainingCoachTitle": "Coach session load",
+        "trainingCoachBody": "See who is carrying the heaviest recent training rhythm."
+      },
+      "trainingPulse": {
+        "eyebrow": "Training pulse",
+        "title": "Attendance is easier to read now.",
+        "subtitle": "A {{recentDays}}-day view for managers who want to spot quiet drop-offs, engaged trial athletes, and sessions that still need follow-through.",
+        "openWatchlist": "Open attendance watchlist",
+        "openAttendanceQueue": "Open attendance follow-up",
+        "watchlist": "Needs a closer look",
+        "watchlistHint": "Built from recent decline, repeat absences, or {{followUpDays}}+ days without a present check-in.",
+        "trialMomentum": "Strong trial momentum",
+        "trialMomentumHint": "Trial athletes with {{recentDays}}-day attendance holding at {{threshold}}% or better.",
+        "followUp": "Quiet lately",
+        "followUpHint": "Athletes without a recent present check-in for {{days}}+ days.",
+        "attendancePending": "Sessions missing attendance",
+        "attendancePendingHint": "Finished sessions that still need attendance recorded.",
+        "upcomingAttention": "Upcoming setup checks",
+        "upcomingAttentionHint": "Planned sessions in the next two days that still need a coach or location check.",
+        "watchlistTitle": "Who may need a gentle follow-up?",
+        "watchlistBody": "This short list keeps the story human: attendance softening, not enough recent check-ins, or repeated absences.",
+        "watchlistBadge": "Watchlist",
+        "watchlistMeta": "{{group}} · {{rate}}% recent attendance · {{delta}} pts vs. the previous window",
+        "emptyWatchlist": "Attendance looks steady right now.",
+        "groupSnapshotTitle": "Groups to steady first",
+        "groupSnapshotBody": "Grouped summaries keep the focus on which cohorts need a little extra attention, not on chart noise.",
+        "groupSnapshotMeta": "{{count}} sessions with attendance recorded",
+        "groupSnapshotEmpty": "No group attendance summaries yet.",
+        "coachSnapshotTitle": "Coach rhythm snapshot",
+        "coachSnapshotBody": "A small workload check helps you see concentration before the week feels lopsided.",
+        "coachSnapshotMeta": "Average roster size {{avgRoster}}",
+        "coachSnapshotEmpty": "Coach load will appear as soon as recent sessions are in view.",
+        "rateValue": "{{value}}%",
+        "sessionValue": "{{count}} sessions"
+      }
+    },
+    "training": {
+      "attendanceFlowTitle": "Mark only what you know.",
+      "attendanceFlowBody": "Unmarked athletes stay clearly visible until you choose a status, so the session is easy to review before saving.",
+      "clearMarkedStatuses": "Clear visible marks",
+      "unmarkedAttendance": "Still unmarked",
+      "unmarkedAttendanceHint_one": "{{count}} athlete still needs a status before this list is fully reviewed.",
+      "unmarkedAttendanceHint_other": "{{count}} athletes still need a status before this list is fully reviewed.",
+      "attendanceReadyHint": "Every visible athlete has a status. Save when the session looks right.",
+      "recordedBadge": "Recorded",
+      "unmarkedBadge": "Needs a mark",
+      "attendanceUnset": "Not marked yet"
+    },
+    "reports": {
+      "subtitle": "Operational visibility for attendance, training rhythm, and club follow-up.",
+      "readyHint": "These report surfaces now help staff move from attendance signal to next action without feeling like a BI tool.",
+      "cards": {
+        "scheduling": {
+          "body": "See attendance follow-up, coach load, and groups that may need steadier training rhythm."
+        }
+      },
+      "entities": {
+        "trainingSessions": "Training sessions"
+      },
+      "launch": {
+        "attendanceStarterTitle": "Open the attendance watchlist",
+        "attendanceStarterBody": "Start with the warmest attendance story: who may need a nudge, which trial athletes are engaged, and where a coach might want to look closer.",
+        "attendanceStarterAction": "Open attendance starter"
+      },
+      "attendancePulse": {
+        "eyebrow": "Attendance & training pulse",
+        "title": "The club's training rhythm in one calm view.",
+        "subtitle": "Signals stay explainable: a {{recentDays}}-day attendance watchlist, trial momentum, quiet check-ins, and the sessions or groups that need follow-through.",
+        "openWatchlist": "Open the watchlist",
+        "watchlist": "Needs a closer look",
+        "trialMomentum": "Strong trial momentum",
+        "followUp": "Quiet lately",
+        "pendingSessions": "Attendance still missing",
+        "prepAttention": "Upcoming setup checks",
+        "watchlistTitle": "Attendance watchlist",
+        "watchlistHint": "A short, operator-friendly list of athletes whose recent pattern says 'check in soon.'",
+        "watchlistMeta": "{{groupName}} · {{rate}}% recent attendance · {{delta}} pts vs. the previous window",
+        "watchlistEmpty": "No athletes are standing out for follow-up right now.",
+        "watchlistEmptyHint": "As attendance patterns diverge, this watchlist will keep the strongest follow-up stories near the top.",
+        "groupSnapshotTitle": "Groups that may need steadier rhythm",
+        "groupSnapshotHint": "Grouped attendance gives managers a fast sense of where a cohort may need help, without opening a dense report first.",
+        "groupSnapshotMeta": "{{count}} sessions with attendance recorded",
+        "groupSnapshotEmpty": "Group attendance summaries will appear once attendance is recorded across more sessions.",
+        "groupSnapshotEmptyHint": "Record a few sessions and this grouped view becomes a quick management scan.",
+        "coachSnapshotTitle": "Coach load snapshot",
+        "coachSnapshotHint": "Use session load as a gentle balancing signal, not a scorecard.",
+        "coachSnapshotMeta": "Average roster size {{avgRoster}}",
+        "coachSnapshotEmpty": "Coach load will appear when recent sessions are available.",
+        "coachSnapshotEmptyHint": "As soon as the recent training window fills out, this grouped snapshot helps distribute attention more evenly."
+      },
+      "starter": {
+        "categories": {
+          "attendance": "Attendance"
+        },
+        "athletes": {
+          "decliningAttendance": {
+            "title": "Athletes with falling recent attendance",
+            "description": "Recent attendance has dropped compared with the previous window, with enough marked sessions to trust the signal."
+          },
+          "trialHighEngagement": {
+            "title": "Trial athletes showing strong momentum",
+            "description": "Trial athletes who are showing up consistently and may be ready for a confident next step."
+          },
+          "regularWithoutTeam": {
+            "title": "Regular attendees without a team",
+            "description": "Active athletes training consistently even though they are still group-only."
+          },
+          "recentAbsences": {
+            "title": "Athletes absent multiple times recently",
+            "description": "A simple absence-based follow-up list for coordinators and coaches."
+          },
+          "noRecentCheckIn": {
+            "title": "Athletes without a recent check-in",
+            "description": "Athletes who have gone quiet and may need a human follow-up."
+          },
+          "attendanceWatchlist": {
+            "title": "Attendance watchlist",
+            "description": "One friendly list that combines the strongest recent attendance follow-up signals."
+          }
+        },
+        "trainingSessions": {
+          "attendancePending": {
+            "title": "Sessions still missing attendance",
+            "description": "Finished sessions that still need attendance recorded before the day is really closed."
+          },
+          "upcomingNeedsAttention": {
+            "title": "Upcoming sessions needing setup attention",
+            "description": "Planned sessions in the near window that still need a coach or location check."
+          },
+          "notableAbsence": {
+            "title": "Sessions with notable absence levels",
+            "description": "Sessions where absence concentration stands out enough to deserve a closer look."
+          },
+          "lowAttendanceGroups": {
+            "title": "Groups with the lowest attendance rhythm",
+            "description": "Grouped view of which cohorts are seeing the softest attendance lately."
+          },
+          "coachLoad": {
+            "title": "Coach training load",
+            "description": "Recent session count by coach, with average roster size to help balance the work."
+          }
+        }
+      },
+      "fields": {
+        "athlete": {
+          "recordedAttendanceCount30d": "Recorded sessions (30 days)",
+          "attendedCount30d": "Attended sessions (30 days)",
+          "absentCount30d": "Absent sessions (30 days)",
+          "excusedCount30d": "Excused sessions (30 days)",
+          "attendanceRate30d": "Attendance rate (30 days)",
+          "attendanceRateDelta30d": "Attendance change vs prior window",
+          "lastPresentAt": "Last present check-in",
+          "daysSinceLastPresent": "Days since last present check-in"
+        },
+        "session": {
+          "id": "ID",
+          "title": "Session",
+          "scheduledStart": "Starts at",
+          "scheduledDate": "Session date",
+          "status": "Status",
+          "branchName": "Branch",
+          "groupName": "Group",
+          "teamName": "Team",
+          "coachName": "Coach",
+          "location": "Location",
+          "missingCoach": "Coach still missing",
+          "missingLocation": "Location still missing",
+          "hoursUntilStart": "Hours until start",
+          "rosterSize": "Expected roster",
+          "attendanceRecordedCount": "Attendance recorded",
+          "attendedCount": "Attended",
+          "absentCount": "Absent",
+          "excusedCount": "Excused",
+          "lateCount": "Late",
+          "attendanceRate": "Attendance rate",
+          "absenceRate": "Absence rate",
+          "attendancePending": "Attendance still missing"
+        }
+      }
+    },
+    "reportBuilder": {
+      "subtitle": "Build, save, and export calm operational reports across athletes, training sessions, private lessons, and finance.",
+      "welcomeBody": "Open a curated starter, adjust filters or grouping, then save the view or export to CSV. Attendance and training now live in the same workspace instead of a separate analytics tool.",
+      "tipPickEntity": "Pick what you want to look at — athletes, training sessions, guardians, private lessons, or finance."
+    }
+  }
+}

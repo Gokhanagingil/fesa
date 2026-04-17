@@ -125,16 +125,16 @@ export function ReportsPage() {
   const reportLaunchCards = useMemo(
     () => [
       {
-        title: t('pages.reports.launch.openStarterTitle'),
-        body: t('pages.reports.launch.openStarterBody'),
-        action: t('pages.reports.launch.openStarterAction'),
-        href: buildStarterLink('finance.overdue'),
+        title: t('pages.reports.launch.attendanceStarterTitle'),
+        body: t('pages.reports.launch.attendanceStarterBody'),
+        action: t('pages.reports.launch.attendanceStarterAction'),
+        href: buildStarterLink('athletes.attendanceWatchlist'),
       },
       {
         title: t('pages.reports.launch.openGroupedTitle'),
         body: t('pages.reports.launch.openGroupedBody'),
         action: t('pages.reports.launch.openGroupedAction'),
-        href: buildStarterLink('athletes.outstandingByGroup'),
+        href: buildStarterLink('training_sessions.lowAttendanceGroups'),
       },
       {
         title: t('pages.reports.launch.openBuilderTitle'),
@@ -192,7 +192,7 @@ export function ReportsPage() {
                 ))}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Link to={buildStarterLink('finance.overdue')}>
+                <Link to={buildStarterLink('athletes.attendanceWatchlist')}>
                   <Button type="button">{t('pages.reports.launch.primaryAction')}</Button>
                 </Link>
                 <Link to="/app/report-builder">
@@ -284,6 +284,208 @@ export function ReportsPage() {
               subtitle={t('pages.reports.management.subtitle')}
               onApply={(view) => navigate(buildStarterLink(view.id))}
             />
+
+            <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-accent">
+                    {t('pages.reports.attendancePulse.eyebrow')}
+                  </p>
+                  <h2 className="mt-1 font-display text-lg font-semibold text-amateur-ink">
+                    {t('pages.reports.attendancePulse.title')}
+                  </h2>
+                  <p className="mt-1 max-w-3xl text-sm text-amateur-muted">
+                    {t('pages.reports.attendancePulse.subtitle', {
+                      recentDays: report.attendanceIntelligence?.windows.recentDays ?? 30,
+                    })}
+                  </p>
+                </div>
+                <Link
+                  to={buildStarterLink('athletes.attendanceWatchlist')}
+                  className="text-sm font-medium text-amateur-accent hover:underline"
+                >
+                  {t('pages.reports.attendancePulse.openWatchlist')} →
+                </Link>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-5">
+                <StatCard
+                  label={t('pages.reports.attendancePulse.watchlist')}
+                  value={report.attendanceIntelligence?.counts.watchlist ?? 0}
+                  compact
+                  tone={(report.attendanceIntelligence?.counts.watchlist ?? 0) > 0 ? 'danger' : 'default'}
+                />
+                <StatCard
+                  label={t('pages.reports.attendancePulse.trialMomentum')}
+                  value={report.attendanceIntelligence?.counts.trialMomentum ?? 0}
+                  compact
+                />
+                <StatCard
+                  label={t('pages.reports.attendancePulse.followUp')}
+                  value={report.attendanceIntelligence?.counts.followUp ?? 0}
+                  compact
+                  tone={(report.attendanceIntelligence?.counts.followUp ?? 0) > 0 ? 'danger' : 'default'}
+                />
+                <StatCard
+                  label={t('pages.reports.attendancePulse.pendingSessions')}
+                  value={report.attendanceIntelligence?.counts.attendancePending ?? 0}
+                  compact
+                  tone={(report.attendanceIntelligence?.counts.attendancePending ?? 0) > 0 ? 'danger' : 'default'}
+                />
+                <StatCard
+                  label={t('pages.reports.attendancePulse.prepAttention')}
+                  value={report.attendanceIntelligence?.counts.upcomingAttention ?? 0}
+                  compact
+                />
+              </div>
+              <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+                <div className="rounded-2xl border border-amateur-border bg-amateur-surface px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-display text-base font-semibold text-amateur-ink">
+                        {t('pages.reports.attendancePulse.watchlistTitle')}
+                      </h3>
+                      <p className="mt-1 text-sm text-amateur-muted">
+                        {t('pages.reports.attendancePulse.watchlistHint')}
+                      </p>
+                    </div>
+                    <Link
+                      to={buildStarterLink('athletes.attendanceWatchlist')}
+                      className="text-sm font-medium text-amateur-accent hover:underline"
+                    >
+                      {t('pages.reports.definitionActions.openStarter')} →
+                    </Link>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {(report.attendanceIntelligence?.watchlist ?? []).length === 0 ? (
+                      <EmptyState
+                        title={t('pages.reports.attendancePulse.watchlistEmpty')}
+                        hint={t('pages.reports.attendancePulse.watchlistEmptyHint')}
+                      />
+                    ) : (
+                      (report.attendanceIntelligence?.watchlist ?? []).map((row, index) => (
+                        <div
+                          key={`attendance-watchlist-${index}`}
+                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-medium text-amateur-ink">
+                                {[row['athlete.firstName'], row['athlete.lastName']].filter(Boolean).join(' ')}
+                              </p>
+                              <p className="mt-1 text-xs text-amateur-muted">
+                                {t('pages.reports.attendancePulse.watchlistMeta', {
+                                  groupName: row['athlete.primaryGroupName'] ?? t('pages.training.unknownGroup'),
+                                  rate: row['athlete.attendanceRate30d'] ?? '—',
+                                  delta: row['athlete.attendanceRateDelta30d'] ?? '—',
+                                  absentCount: row['athlete.absentCount30d'] ?? 0,
+                                })}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold text-rose-700">
+                              {row['athlete.daysSinceLastPresent'] ?? '—'}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-amateur-border bg-amateur-surface px-4 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="font-display text-base font-semibold text-amateur-ink">
+                          {t('pages.reports.attendancePulse.groupSnapshotTitle')}
+                        </h3>
+                        <p className="mt-1 text-sm text-amateur-muted">
+                          {t('pages.reports.attendancePulse.groupSnapshotHint')}
+                        </p>
+                      </div>
+                      <Link
+                        to={buildStarterLink('training_sessions.lowAttendanceGroups')}
+                        className="text-sm font-medium text-amateur-accent hover:underline"
+                      >
+                        {t('pages.reports.definitionActions.openGrouped')} →
+                      </Link>
+                    </div>
+                    <div className="mt-4 space-y-3">
+                      {(report.attendanceIntelligence?.lowAttendanceGroups ?? []).length === 0 ? (
+                        <EmptyState
+                          title={t('pages.reports.attendancePulse.groupSnapshotEmpty')}
+                          hint={t('pages.reports.attendancePulse.groupSnapshotEmptyHint')}
+                        />
+                      ) : (
+                        (report.attendanceIntelligence?.lowAttendanceGroups ?? []).map((row, index) => (
+                          <div
+                            key={`attendance-groups-${index}`}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3"
+                          >
+                            <div>
+                              <p className="font-medium text-amateur-ink">{row.dim_session_groupName ?? '—'}</p>
+                              <p className="mt-1 text-xs text-amateur-muted">
+                                {t('pages.reports.attendancePulse.groupSnapshotMeta', {
+                                  sessionCount: row.sessionCount ?? 0,
+                                })}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold text-amateur-ink">
+                              {row.avgAttendanceRate ?? '—'}%
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-amateur-border bg-amateur-surface px-4 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="font-display text-base font-semibold text-amateur-ink">
+                          {t('pages.reports.attendancePulse.coachSnapshotTitle')}
+                        </h3>
+                        <p className="mt-1 text-sm text-amateur-muted">
+                          {t('pages.reports.attendancePulse.coachSnapshotHint')}
+                        </p>
+                      </div>
+                      <Link
+                        to={buildStarterLink('training_sessions.coachLoad')}
+                        className="text-sm font-medium text-amateur-accent hover:underline"
+                      >
+                        {t('pages.reports.definitionActions.openGrouped')} →
+                      </Link>
+                    </div>
+                    <div className="mt-4 space-y-3">
+                      {(report.attendanceIntelligence?.coachLoad ?? []).length === 0 ? (
+                        <EmptyState
+                          title={t('pages.reports.attendancePulse.coachSnapshotEmpty')}
+                          hint={t('pages.reports.attendancePulse.coachSnapshotEmptyHint')}
+                        />
+                      ) : (
+                        (report.attendanceIntelligence?.coachLoad ?? []).map((row, index) => (
+                          <div
+                            key={`attendance-coaches-${index}`}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3"
+                          >
+                            <div>
+                              <p className="font-medium text-amateur-ink">{row.dim_session_coachName ?? '—'}</p>
+                              <p className="mt-1 text-xs text-amateur-muted">
+                                {t('pages.reports.attendancePulse.coachSnapshotMeta', {
+                                  avgRosterSize: row.avgRosterSize ?? 0,
+                                })}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold text-amateur-ink">
+                              {row.sessionCount ?? 0}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
 
             <section className="grid gap-4 md:grid-cols-3">
               <StatCard
@@ -706,10 +908,14 @@ export function ReportsPage() {
   );
 }
 
-function categoryForEntity(entity: SavedReportView['entity']): 'roster' | 'finance' | 'scheduling' | 'contact' {
+function categoryForEntity(
+  entity: SavedReportView['entity'],
+): 'roster' | 'finance' | 'scheduling' | 'contact' | 'attendance' {
   switch (entity) {
     case 'finance_charges':
       return 'finance';
+    case 'training_sessions':
+      return 'attendance';
     case 'private_lessons':
       return 'scheduling';
     case 'guardians':

@@ -84,6 +84,8 @@ export function DashboardPage() {
     [summary, t],
   );
 
+  const attendancePulse = summary?.attendanceIntelligence ?? null;
+
   const activeTenantName = useMemo(
     () => tenants.find((tenant) => tenant.id === tenantId)?.name ?? null,
     [tenantId, tenants],
@@ -158,7 +160,7 @@ export function DashboardPage() {
       key: 'sessions',
       label: t('pages.dashboard.stats.upcomingSessions'),
       value: summary?.stats.upcomingSessions ?? 0,
-      href: buildStarterLink('lessons.upcoming'),
+      href: buildStarterLink('training_sessions.upcomingNeedsAttention'),
     },
     {
       key: 'overdue',
@@ -333,27 +335,242 @@ export function DashboardPage() {
             body={t('pages.dashboard.drilldown.teamlessBody')}
           />
           <DrillDownCard
-            to={buildStarterLink('lessons.upcoming')}
-            eyebrow={t('pages.dashboard.drilldown.lessonsEyebrow')}
-            title={t('pages.dashboard.drilldown.lessonsTitle')}
-            body={t('pages.dashboard.drilldown.lessonsBody')}
+            to={buildStarterLink('athletes.attendanceWatchlist')}
+            eyebrow={t('pages.dashboard.drilldown.attendanceEyebrow')}
+            title={t('pages.dashboard.drilldown.attendanceTitle')}
+            body={t('pages.dashboard.drilldown.attendanceBody')}
           />
           <DrillDownCard
-            to={buildStarterLink('athletes.outstandingByGroup')}
-            eyebrow={t('pages.dashboard.drilldown.byGroupEyebrow')}
-            title={t('pages.dashboard.drilldown.byGroupTitle')}
-            body={t('pages.dashboard.drilldown.byGroupBody')}
+            to={buildStarterLink('training_sessions.lowAttendanceGroups')}
+            eyebrow={t('pages.dashboard.drilldown.trainingGroupsEyebrow')}
+            title={t('pages.dashboard.drilldown.trainingGroupsTitle')}
+            body={t('pages.dashboard.drilldown.trainingGroupsBody')}
             badge={t('pages.dashboard.drilldown.groupedBadge')}
           />
           <DrillDownCard
-            to={buildStarterLink('lessons.byCoach')}
-            eyebrow={t('pages.dashboard.drilldown.byCoachEyebrow')}
-            title={t('pages.dashboard.drilldown.byCoachTitle')}
-            body={t('pages.dashboard.drilldown.byCoachBody')}
+            to={buildStarterLink('training_sessions.coachLoad')}
+            eyebrow={t('pages.dashboard.drilldown.trainingCoachEyebrow')}
+            title={t('pages.dashboard.drilldown.trainingCoachTitle')}
+            body={t('pages.dashboard.drilldown.trainingCoachBody')}
             badge={t('pages.dashboard.drilldown.groupedBadge')}
           />
         </div>
       </section>
+      {attendancePulse ? (
+        <section className="mb-6 rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-accent">
+                {t('pages.dashboard.trainingPulse.eyebrow')}
+              </p>
+              <h2 className="mt-2 font-display text-xl font-semibold text-amateur-ink">
+                {t('pages.dashboard.trainingPulse.title')}
+              </h2>
+              <p className="mt-2 text-sm text-amateur-muted">
+                {t('pages.dashboard.trainingPulse.subtitle', {
+                  recentDays: attendancePulse.windows.recentDays,
+                  prepHours: attendancePulse.windows.prepHours,
+                })}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to={buildStarterLink('athletes.attendanceWatchlist')}
+                className="rounded-xl border border-amateur-border bg-white px-3 py-2 text-sm font-semibold text-amateur-accent shadow-sm hover:bg-amateur-canvas"
+              >
+                {t('pages.dashboard.trainingPulse.openWatchlist')}
+              </Link>
+              <Link
+                to={buildStarterLink('training_sessions.attendancePending')}
+                className="rounded-xl border border-amateur-border bg-white px-3 py-2 text-sm font-semibold text-amateur-accent shadow-sm hover:bg-amateur-canvas"
+              >
+                {t('pages.dashboard.trainingPulse.openAttendanceQueue')}
+              </Link>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <StatCard
+              label={t('pages.dashboard.trainingPulse.watchlist')}
+              value={attendancePulse.counts.watchlist}
+              helper={t('pages.dashboard.trainingPulse.watchlistHint', {
+                declinePoints: attendancePulse.thresholds.declinePoints,
+              })}
+              compact
+              tone={attendancePulse.counts.watchlist > 0 ? 'danger' : 'default'}
+            />
+            <StatCard
+              label={t('pages.dashboard.trainingPulse.trialMomentum')}
+              value={attendancePulse.counts.trialMomentum}
+              helper={t('pages.dashboard.trainingPulse.trialMomentumHint', {
+                rate: attendancePulse.thresholds.trialStrongRate,
+              })}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.trainingPulse.followUp')}
+              value={attendancePulse.counts.followUp}
+              helper={t('pages.dashboard.trainingPulse.followUpHint', {
+                days: attendancePulse.windows.followUpDays,
+              })}
+              compact
+              tone={attendancePulse.counts.followUp > 0 ? 'danger' : 'default'}
+            />
+            <StatCard
+              label={t('pages.dashboard.trainingPulse.attendancePending')}
+              value={attendancePulse.counts.attendancePending}
+              helper={t('pages.dashboard.trainingPulse.attendancePendingHint')}
+              compact
+              tone={attendancePulse.counts.attendancePending > 0 ? 'danger' : 'default'}
+            />
+            <StatCard
+              label={t('pages.dashboard.trainingPulse.upcomingAttention')}
+              value={attendancePulse.counts.upcomingAttention}
+              helper={t('pages.dashboard.trainingPulse.upcomingAttentionHint')}
+              compact
+            />
+          </div>
+          <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_0.9fr_0.9fr]">
+            <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+                    {t('pages.dashboard.trainingPulse.watchlistTitle')}
+                  </p>
+                  <p className="mt-1 text-sm text-amateur-muted">
+                    {t('pages.dashboard.trainingPulse.watchlistBody')}
+                  </p>
+                </div>
+                <Link
+                  to={buildStarterLink('athletes.attendanceWatchlist')}
+                  className="text-sm font-semibold text-amateur-accent hover:underline"
+                >
+                  {t('pages.dashboard.drilldown.openReport')}
+                </Link>
+              </div>
+              <div className="mt-4 space-y-3">
+                {attendancePulse.watchlist.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-amateur-border bg-amateur-surface/70 px-4 py-5 text-sm text-amateur-muted">
+                    {t('pages.dashboard.trainingPulse.emptyWatchlist')}
+                  </div>
+                ) : (
+                  attendancePulse.watchlist.map((row, index) => (
+                    <div key={`watchlist-${index}`} className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-amateur-ink">
+                            {[row['athlete.firstName'], row['athlete.lastName']].filter(Boolean).join(' ')}
+                          </p>
+                          <p className="mt-1 text-xs text-amateur-muted">
+                            {t('pages.dashboard.trainingPulse.watchlistMeta', {
+                              group: row['athlete.primaryGroupName'] ?? t('pages.training.unknownGroup'),
+                              rate: row['athlete.attendanceRate30d'] ?? 0,
+                              delta: row['athlete.attendanceRateDelta30d'] ?? 0,
+                              absences: row['athlete.absentCount30d'] ?? 0,
+                            })}
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700">
+                          {t('pages.dashboard.trainingPulse.watchlistBadge')}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+                    {t('pages.dashboard.trainingPulse.groupSnapshotTitle')}
+                  </p>
+                  <p className="mt-1 text-sm text-amateur-muted">
+                    {t('pages.dashboard.trainingPulse.groupSnapshotBody')}
+                  </p>
+                </div>
+                <Link
+                  to={buildStarterLink('training_sessions.lowAttendanceGroups')}
+                  className="text-sm font-semibold text-amateur-accent hover:underline"
+                >
+                  {t('pages.dashboard.drilldown.openReport')}
+                </Link>
+              </div>
+              <div className="mt-4 space-y-3">
+                {attendancePulse.lowAttendanceGroups.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-amateur-border bg-amateur-surface/70 px-4 py-5 text-sm text-amateur-muted">
+                    {t('pages.dashboard.trainingPulse.emptyGroups')}
+                  </div>
+                ) : (
+                  attendancePulse.lowAttendanceGroups.map((row, index) => (
+                    <div key={`group-${index}`} className="flex items-center justify-between gap-3 rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3">
+                      <div>
+                        <p className="font-medium text-amateur-ink">
+                          {String(row.dim_session_groupName ?? t('pages.training.unknownGroup'))}
+                        </p>
+                        <p className="mt-1 text-xs text-amateur-muted">
+                          {t('pages.dashboard.trainingPulse.groupSnapshotMeta', {
+                            sessions: row.sessionCount ?? 0,
+                          })}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-amateur-ink">
+                        {t('pages.dashboard.trainingPulse.rateValue', {
+                          rate: row.avgAttendanceRate ?? 0,
+                        })}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+                    {t('pages.dashboard.trainingPulse.coachSnapshotTitle')}
+                  </p>
+                  <p className="mt-1 text-sm text-amateur-muted">
+                    {t('pages.dashboard.trainingPulse.coachSnapshotBody')}
+                  </p>
+                </div>
+                <Link
+                  to={buildStarterLink('training_sessions.coachLoad')}
+                  className="text-sm font-semibold text-amateur-accent hover:underline"
+                >
+                  {t('pages.dashboard.drilldown.openReport')}
+                </Link>
+              </div>
+              <div className="mt-4 space-y-3">
+                {attendancePulse.coachLoad.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-amateur-border bg-amateur-surface/70 px-4 py-5 text-sm text-amateur-muted">
+                    {t('pages.dashboard.trainingPulse.emptyCoaches')}
+                  </div>
+                ) : (
+                  attendancePulse.coachLoad.map((row, index) => (
+                    <div key={`coach-${index}`} className="flex items-center justify-between gap-3 rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3">
+                      <div>
+                        <p className="font-medium text-amateur-ink">
+                          {String(row.dim_session_coachName ?? t('pages.coaches.unknownCoach'))}
+                        </p>
+                        <p className="mt-1 text-xs text-amateur-muted">
+                          {t('pages.dashboard.trainingPulse.coachSnapshotMeta', {
+                            roster: row.avgRosterSize ?? 0,
+                          })}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-amateur-ink">
+                        {t('pages.dashboard.trainingPulse.sessionValue', {
+                          count: row.sessionCount ?? 0,
+                        })}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
       <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -956,7 +1173,7 @@ export function DashboardPage() {
           <p className="mt-2 text-sm text-amateur-muted">{t('pages.dashboard.cardPeopleBody')}</p>
         </Link>
         <Link
-          to={buildStarterLink('lessons.byCoach')}
+          to={buildStarterLink('training_sessions.attendancePending')}
           className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm transition hover:border-amateur-accent/40"
         >
           <p className="text-sm font-semibold text-amateur-accent">{t('pages.dashboard.cardOps')}</p>

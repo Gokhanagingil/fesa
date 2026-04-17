@@ -460,6 +460,42 @@ export type DashboardSummary = {
   topOutstandingAthletes: AthleteFinanceAggregate[];
 };
 
+export type AttendanceIntelligenceSummary = {
+  windows: {
+    recentDays: number;
+    followUpDays: number;
+    prepHours: number;
+  };
+  thresholds: {
+    minimumMarkedSessions: number;
+    declinePoints: number;
+    repeatAbsences: number;
+    trialStrongRate: number;
+  };
+  counts: {
+    watchlist: number;
+    trialMomentum: number;
+    followUp: number;
+    attendancePending: number;
+    upcomingAttention: number;
+  };
+  watchlist: Array<Record<string, string | number | boolean | null>>;
+  trialMomentum: Array<Record<string, string | number | boolean | null>>;
+  followUp: Array<Record<string, string | number | boolean | null>>;
+  lowAttendanceGroups: Array<{
+    dim_session_groupName: string | null;
+    sessionCount: number;
+    avgAttendanceRate: number | null;
+  }>;
+  coachLoad: Array<{
+    dim_session_coachName: string | null;
+    sessionCount: number;
+    avgRosterSize: number | null;
+  }>;
+  attendancePendingSessions: Array<Record<string, string | number | boolean | null>>;
+  upcomingAttentionSessions: Array<Record<string, string | number | boolean | null>>;
+};
+
 export type ReportingDefinitionsResponse = {
   items: Array<{
     key: string;
@@ -474,6 +510,7 @@ export type CommandCenterResponse = DashboardSummary & {
   overdueCharges: AthleteCharge[];
   upcomingPrivateLessons?: PrivateLesson[];
   coachesByLoad?: Array<{ coach: Coach; upcomingCount: number; privateLessonCount: number }>;
+  attendanceIntelligence?: AttendanceIntelligenceSummary;
   communicationReadiness?: {
     audienceAthletes: number;
     reachableGuardians: number;

@@ -20,11 +20,21 @@ import { FinanceService } from '../finance/finance.service';
 import { isMissingRelationError } from '../core/database-error.util';
 import { getStarterView, listCatalogEntities, listStarterViews } from './catalog';
 import { ReportingQueryCompiler } from './query-compiler';
+import {
+  ATTENDANCE_DECLINE_POINTS,
+  ATTENDANCE_FOLLOW_UP_DAYS,
+  ATTENDANCE_MIN_MARKED_SESSIONS,
+  ATTENDANCE_RECENT_WINDOW_DAYS,
+  ATTENDANCE_REPEAT_ABSENCE_COUNT,
+  ATTENDANCE_TRIAL_RATE,
+  TRAINING_PREP_WINDOW_HOURS,
+} from './attendance-intelligence';
 
 type FinanceSummary = Awaited<ReturnType<FinanceService['listAthleteFinanceSummaries']>>;
 type CommunicationAudience = Awaited<ReturnType<CommunicationService['listAudience']>>;
 type WorkflowSummary = Awaited<ReturnType<FamilyActionService['getWorkflowSummary']>>;
 type ActionSummary = Awaited<ReturnType<ActionCenterService['listItems']>>;
+type DashboardSummary = Awaited<ReturnType<FinanceService['getDashboardSummary']>>;
 
 @Injectable()
 export class ReportingService {
@@ -109,6 +119,157 @@ export class ReportingService {
     return this.compiler.run(request, { tenantId });
   }
 
+  private async buildAttendanceIntelligence(tenantId: string) {
+    const attendanceWatchlist = getStarterView('athletes.attendanceWatchlist');
+    const trialHighEngagement = getStarterView('athletes.trialHighEngagement');
+    const noRecentCheckIn = getStarterView('athletes.noRecentCheckIn');
+    const coachLoad = getStarterView('training_sessions.coachLoad');
+    const lowAttendanceGroups = getStarterView('training_sessions.lowAttendanceGroups');
+    const attendancePending = getStarterView('training_sessions.attendancePending');
+    const upcomingNeedsAttention = getStarterView('training_sessions.upcomingNeedsAttention');
+    const [
+      watchlistRun,
+      trialRun,
+      noRecentRun,
+      coachLoadRun,
+      lowAttendanceRun,
+      pendingSessionsRun,
+      upcomingAttentionRun,
+    ] = await Promise.all([
+      this.compiler.run(
+        {
+          entity: 'athletes',
+          filter: attendanceWatchlist?.filter ?? undefined,
+          columns: [
+            'athlete.firstName',
+            'athlete.lastName',
+            'athlete.primaryGroupName',
+            'athlete.attendanceRate30d',
+            'athlete.attendanceRateDelta30d',
+            'athlete.absentCount30d',
+            'athlete.daysSinceLastPresent',
+          ],
+          sort: [{ field: 'athlete.attendanceRateDelta30d', direction: 'asc' }],
+          limit: 5,
+        },
+        { tenantId },
+      ),
+      this.compiler.run(
+        {
+          entity: 'athletes',
+          filter: trialHighEngagement?.filter ?? undefined,
+          columns: [
+            'athlete.firstName',
+            'athlete.lastName',
+            'athlete.primaryGroupName',
+            'athlete.recordedAttendanceCount30d',
+            'athlete.attendanceRate30d',
+          ],
+          sort: [{ field: 'athlete.attendanceRate30d', direction: 'desc' }],
+          limit: 5,
+        },
+        { tenantId },
+      ),
+      this.compiler.run(
+        {
+          entity: 'athletes',
+          filter: noRecentCheckIn?.filter ?? undefined,
+          columns: [
+            'athlete.firstName',
+            'athlete.lastName',
+            'athlete.primaryGroupName',
+            'athlete.daysSinceLastPresent',
+            'athlete.lastPresentAt',
+          ],
+          sort: [{ field: 'athlete.daysSinceLastPresent', direction: 'desc' }],
+          limit: 5,
+        },
+        { tenantId },
+      ),
+      this.compiler.run(
+        {
+          entity: 'training_sessions',
+          filter: coachLoad?.filter ?? undefined,
+          groupBy: coachLoad?.groupBy,
+          limit: 5,
+        },
+        { tenantId },
+      ),
+      this.compiler.run(
+        {
+          entity: 'training_sessions',
+          filter: lowAttendanceGroups?.filter ?? undefined,
+          groupBy: lowAttendanceGroups?.groupBy,
+          limit: 5,
+        },
+        { tenantId },
+      ),
+      this.compiler.run(
+        {
+          entity: 'training_sessions',
+          filter: attendancePending?.filter ?? undefined,
+          columns: [
+            'session.title',
+            'session.scheduledStart',
+            'session.groupName',
+            'session.coachName',
+            'session.rosterSize',
+            'session.attendanceRecordedCount',
+          ],
+          sort: [{ field: 'session.scheduledStart', direction: 'desc' }],
+          limit: 5,
+        },
+        { tenantId },
+      ),
+      this.compiler.run(
+        {
+          entity: 'training_sessions',
+          filter: upcomingNeedsAttention?.filter ?? undefined,
+          columns: [
+            'session.title',
+            'session.scheduledStart',
+            'session.groupName',
+            'session.coachName',
+            'session.location',
+            'session.missingCoach',
+            'session.missingLocation',
+          ],
+          sort: [{ field: 'session.scheduledStart', direction: 'asc' }],
+          limit: 5,
+        },
+        { tenantId },
+      ),
+    ]);
+
+    return {
+      windows: {
+        recentDays: ATTENDANCE_RECENT_WINDOW_DAYS,
+        followUpDays: ATTENDANCE_FOLLOW_UP_DAYS,
+        prepHours: TRAINING_PREP_WINDOW_HOURS,
+      },
+      thresholds: {
+        minimumMarkedSessions: ATTENDANCE_MIN_MARKED_SESSIONS,
+        declinePoints: ATTENDANCE_DECLINE_POINTS,
+        repeatAbsences: ATTENDANCE_REPEAT_ABSENCE_COUNT,
+        trialStrongRate: ATTENDANCE_TRIAL_RATE,
+      },
+      counts: {
+        watchlist: watchlistRun.total,
+        trialMomentum: trialRun.total,
+        followUp: noRecentRun.total,
+        attendancePending: pendingSessionsRun.total,
+        upcomingAttention: upcomingAttentionRun.total,
+      },
+      watchlist: watchlistRun.rows,
+      trialMomentum: trialRun.rows,
+      followUp: noRecentRun.rows,
+      coachLoad: coachLoadRun.rows,
+      lowAttendanceGroups: lowAttendanceRun.rows,
+      attendancePendingSessions: pendingSessionsRun.rows,
+      upcomingAttentionSessions: upcomingAttentionRun.rows,
+    };
+  }
+
   async commandCenter(tenantId: string, staffUserId: string) {
     const lessonsQuery = this.privateLessons
       .createQueryBuilder('lesson')
@@ -125,7 +286,15 @@ export class ReportingService {
       .orderBy('lesson.scheduledStart', 'ASC')
       .take(20);
 
-    const [dashboard, financeSummary, lessons, communicationAudience, workflowSummary, actionSummary] =
+    const [
+      dashboard,
+      financeSummary,
+      lessons,
+      communicationAudience,
+      workflowSummary,
+      actionSummary,
+      attendanceIntelligence,
+    ] =
       await Promise.all([
         this.finance.getDashboardSummary(tenantId),
         this.finance.listAthleteFinanceSummaries(tenantId, {}),
@@ -133,13 +302,15 @@ export class ReportingService {
         this.communications.listAudienceSafe(tenantId, {}),
         this.familyActions.getWorkflowSummarySafe(tenantId),
         this.actionCenter.listItemsSafe(tenantId, staffUserId, { limit: 6, includeRead: true }),
+        this.buildAttendanceIntelligence(tenantId),
       ]) as [
-        Awaited<ReturnType<FinanceService['getDashboardSummary']>>,
+        DashboardSummary,
         FinanceSummary,
         PrivateLesson[],
         CommunicationAudience,
         WorkflowSummary,
         ActionSummary,
+        Awaited<ReturnType<ReportingService['buildAttendanceIntelligence']>>,
       ];
 
     const today = new Date();
@@ -183,6 +354,7 @@ export class ReportingService {
         counts: actionSummary.counts,
         items: actionSummary.items.slice(0, 6),
       },
+      attendanceIntelligence,
     };
   }
 }

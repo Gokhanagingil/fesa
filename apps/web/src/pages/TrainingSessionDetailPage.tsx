@@ -23,6 +23,7 @@ import type {
 import { useTenant } from '../lib/tenant-hooks';
 
 const attendanceOptions: AttendanceStatus[] = ['present', 'absent', 'excused', 'late'];
+type DraftAttendanceStatus = AttendanceStatus | 'unset';
 
 export function TrainingSessionDetailPage() {
   const { id } = useParams();
@@ -34,7 +35,7 @@ export function TrainingSessionDetailPage() {
   const [groups, setGroups] = useState<ClubGroup[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
-  const [draft, setDraft] = useState<Record<string, AttendanceStatus>>({});
+  const [draft, setDraft] = useState<Record<string, DraftAttendanceStatus>>({});
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -67,12 +68,12 @@ export function TrainingSessionDetailPage() {
       setGroups(groupRes.items);
       setTeams(teamRes.items);
       setCoaches(coachRes.items);
-      const next: Record<string, AttendanceStatus> = {};
+      const next: Record<string, DraftAttendanceStatus> = {};
       for (const row of att) {
         next[row.athlete.id] = row.status;
       }
       for (const a of athletes.items) {
-        if (!next[a.id]) next[a.id] = 'present';
+        if (!next[a.id]) next[a.id] = 'unset';
       }
       setDraft(next);
     } catch (e) {
@@ -116,12 +117,16 @@ export function TrainingSessionDetailPage() {
       ),
     [draft],
   );
+  const unsetCount = useMemo(
+    () => Object.values(draft).filter((value) => value === 'unset').length,
+    [draft],
+  );
 
   const groupName = session ? groups.find((group) => group.id === session.groupId)?.name : undefined;
   const teamName = session?.teamId ? teams.find((team) => team.id === session.teamId)?.name : undefined;
   const coachName = session?.coachId ? getCoachName(coaches.find((coach) => coach.id === session.coachId)) : null;
 
-  function applyBulkStatus(status: AttendanceStatus) {
+  function applyBulkStatus(status: DraftAttendanceStatus) {
     setDraft((current) => {
       const next = { ...current };
       for (const { athlete } of rows) {
@@ -138,7 +143,9 @@ export function TrainingSessionDetailPage() {
     setError(null);
     try {
       const body = {
-        rows: Object.entries(draft).map(([athleteId, status]) => ({ athleteId, status })),
+        rows: Object.entries(draft)
+          .filter(([, status]) => status !== 'unset')
+          .map(([athleteId, status]) => ({ athleteId, status: status as AttendanceStatus })),
       };
       await apiPost(`/api/training-sessions/${id}/attendance/bulk`, body);
       setMessage(t('pages.training.savedAttendance'));
@@ -182,6 +189,10 @@ export function TrainingSessionDetailPage() {
 
       <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
         <p className="text-sm text-amateur-muted">{t('pages.training.attendanceHint')}</p>
+        <div className="mt-3 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm text-amateur-muted">
+          <p className="font-medium text-amateur-ink">{t('pages.training.attendanceFlowTitle')}</p>
+          <p className="mt-1">{t('pages.training.attendanceFlowBody')}</p>
+        </div>
         {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
         {message ? <p className="mt-2 text-sm text-amateur-accent">{message}</p> : null}
         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
@@ -195,6 +206,9 @@ export function TrainingSessionDetailPage() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="ghost" onClick={() => applyBulkStatus('unset')}>
+              {t('pages.training.clearMarkedStatuses')}
+            </Button>
             {attendanceOptions.map((status) => (
               <Button key={status} type="button" variant="ghost" onClick={() => applyBulkStatus(status)}>
                 {t('pages.training.markAll', { status: getAttendanceStatusLabel(t, status) })}
@@ -202,7 +216,22 @@ export function TrainingSessionDetailPage() {
             ))}
           </div>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {unsetCount > 0 ? (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {t('pages.training.unmarkedAttendanceHint', { count: unsetCount })}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            {t('pages.training.attendanceReadyHint')}
+          </div>
+        )}
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+              {t('pages.training.unmarkedAttendance')}
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold text-amateur-ink">{unsetCount}</p>
+          </div>
           {attendanceOptions.map((status) => (
             <div key={status} className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
               <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
@@ -221,17 +250,34 @@ export function TrainingSessionDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ athlete: a }) => (
+              {rows.map(({ athlete: a, attendanceId }) => {
+                const isUnset = (draft[a.id] ?? 'unset') === 'unset';
+                return (
                 <tr key={a.id} className="border-b border-amateur-border/60 last:border-0">
-                  <td className="py-2 pr-2">{getPersonName(a)}</td>
+                  <td className="py-2 pr-2">
+                    <div className="flex items-center gap-2">
+                      <span>{getPersonName(a)}</span>
+                      {attendanceId ? (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                          {t('pages.training.recordedBadge')}
+                        </span>
+                      ) : null}
+                      {isUnset ? (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                          {t('pages.training.unmarkedBadge')}
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="py-2">
                     <select
-                      value={draft[a.id] ?? 'present'}
+                      value={draft[a.id] ?? 'unset'}
                       onChange={(e) =>
-                        setDraft((d) => ({ ...d, [a.id]: e.target.value as AttendanceStatus }))
+                        setDraft((d) => ({ ...d, [a.id]: e.target.value as DraftAttendanceStatus }))
                       }
                       className="rounded-lg border border-amateur-border bg-amateur-canvas px-2 py-1 text-sm"
                     >
+                      <option value="unset">{t('pages.training.attendanceUnset')}</option>
                       {attendanceOptions.map((o) => (
                         <option key={o} value={o}>
                           {getAttendanceStatusLabel(t, o)}
@@ -240,7 +286,7 @@ export function TrainingSessionDetailPage() {
                     </select>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

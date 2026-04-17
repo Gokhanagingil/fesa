@@ -1,0 +1,197 @@
+{
+  "pages": {
+    "dashboard": {
+      "drilldown": {
+        "attendanceEyebrow": "Katılım",
+        "attendanceTitle": "İlgi isteyen sporcular",
+        "attendanceBody": "Düşen katılım, tekrar eden devamsızlık veya uzun süredir görünmeyen sporcuları tek listede toplayın.",
+        "trainingGroupsEyebrow": "Katılım özeti",
+        "trainingGroupsTitle": "Katılımı zayıf gruplar",
+        "trainingGroupsBody": "Son işaretli seanslarda hangi grupların ritim kaybettiğini görün.",
+        "trainingCoachEyebrow": "Koçluk yükü",
+        "trainingCoachTitle": "Koç yük dengesi",
+        "trainingCoachBody": "Yakın dönem seans yükünün koçlar arasında nasıl dağıldığını görün."
+      },
+      "trainingPulse": {
+        "eyebrow": "Antrenman ritmi",
+        "title": "Katılım ve hazırlık sinyalleri tek sakin yüzeyde.",
+        "subtitle": "Son {{recentDays}} güne ait işaretli katılım, yaklaşan {{prepHours}} saatlik hazırlık penceresi ve görünmeyen sporcular bir arada.",
+        "openWatchlist": "Katılım izleme listesini aç",
+        "openAttendanceQueue": "Yoklama bekleyen seansları aç",
+        "watchlist": "Takip gerektiren sporcular",
+        "watchlistHint": "Düşüş, tekrarlı devamsızlık veya {{followUpDays}}+ gündür görünmeme sinyali.",
+        "trialMomentum": "İyi giden denemeler",
+        "trialMomentumHint": "Son {{recentDays}} gündeki yüksek katılımı görün.",
+        "followUp": "Uzun süredir görünmeyen",
+        "followUpHint": "{{followUpDays}} gün ve üzeri görünmeyen sporcular.",
+        "attendancePending": "Yoklama bekleyen seanslar",
+        "attendancePendingHint": "Biten ama henüz işaretlenmemiş grup seansları.",
+        "upcomingAttention": "Hazırlık isteyen seanslar",
+        "upcomingAttentionHint": "Yakında başlayacak ve koç/konum netliği isteyen seanslar.",
+        "watchlistTitle": "Bugün dokunmak isteyeceğiniz sporcular",
+        "watchlistBody": "Operasyonel takip için en güçlü sinyalleri tek listede toplayın.",
+        "watchlistMeta": "{{group}} · {{rate}}% katılım · {{delta}} puan değişim",
+        "watchlistBadge": "Takip",
+        "emptyWatchlist": "Şu anda öne çıkan katılım riski görünmüyor.",
+        "groupSnapshotTitle": "Grup ritmi",
+        "groupSnapshotBody": "Son işaretli seansların ortalama katılımı en düşük gruplar.",
+        "groupSnapshotMeta": "{{sessionCount}} seans · ortalama {{rate}}%",
+        "rateValue": "%{{value}}",
+        "emptyGroups": "Henüz kıyaslanacak işaretli grup seansı yok.",
+        "coachSnapshotTitle": "Koç yük görünümü",
+        "coachSnapshotBody": "Yakın dönem seans yükünü eşit dağıtmak için iyi bir hızlı kontrol.",
+        "coachSnapshotMeta": "Ortalama kadro {{avgRoster}}",
+        "sessionValue": "{{count}} seans",
+        "emptyCoaches": "Henüz ölçülebilir koç yükü görünmüyor."
+      }
+    },
+    "training": {
+      "attendanceFlowTitle": "Önce görün, sonra kaydedin",
+      "attendanceFlowBody": "İşaretlenmemiş sporcuları net bırakın. Emin olduklarınızı seçin; gerisini gözden geçirip sonra kaydedin.",
+      "clearMarkedStatuses": "Seçili satırları temizle",
+      "attendanceReadyHint": "Tüm görünür sporcular için bir durum seçildi. Hazır olduğunuzda tek seferde kaydedebilirsiniz.",
+      "unmarkedAttendanceHint_one": "{{count}} sporcu hâlâ işaretlenmedi.",
+      "unmarkedAttendanceHint_other": "{{count}} sporcu hâlâ işaretlenmedi.",
+      "unmarkedAttendance": "İşaretlenmedi",
+      "attendanceUnset": "Henüz işaretlenmedi",
+      "recordedBadge": "Kaydedildi",
+      "unmarkedBadge": "Kontrol et"
+    },
+    "reports": {
+      "subtitle": "Planlama, tahsilat ve yoklama takibini aynı sakin rapor yüzeyinde birleştirin.",
+      "entities": {
+        "trainingSessions": "Grup antrenmanları"
+      },
+      "launch": {
+        "attendanceStarterTitle": "Katılımı ilgi isteyen sporcular",
+        "attendanceStarterBody": "Düşen katılım, tekrar eden devamsızlık ve uzun süredir görünmeyen sporcuları tek başlangıç raporunda görün.",
+        "attendanceStarterAction": "Katılım izleme listesini aç"
+      },
+      "management": {
+        "subtitle": "Canlı verilerden gelen yönetici dostu özetler; antrenman ve katılım şimdi bu setin içinde."
+      },
+      "attendancePulse": {
+        "eyebrow": "Katılım görünürlüğü",
+        "title": "Kulüp ritmini hissetmek için birkaç güçlü sinyal yeterli.",
+        "subtitle": "Son {{recentDays}} günün katılımı, deneme ilgisi ve seans takip yükü tek yerde.",
+        "openWatchlist": "Katılım izleme listesini aç",
+        "watchlist": "Takip gerektiren sporcular",
+        "trialMomentum": "İyi giden denemeler",
+        "followUp": "Uzun süredir görünmeyen",
+        "pendingSessions": "Yoklama bekleyen seanslar",
+        "prepAttention": "Hazırlık isteyen seanslar",
+        "watchlistTitle": "Önce buradan başlayın",
+        "watchlistHint": "Bu liste, kulüp koordinatörlerinin önce kimi arayıp kiminle konuşacağını netleştirir.",
+        "watchlistEmpty": "Şu anda belirgin bir katılım takibi görünmüyor.",
+        "watchlistEmptyHint": "Demo verisi işaretlendikçe veya kulüp kullanımı arttıkça izleme listesi dolacaktır.",
+        "watchlistMeta": "{{groupName}} · {{rate}}% katılım · {{delta}} puan değişim",
+        "groupSnapshotTitle": "Ritmi zayıf gruplar",
+        "groupSnapshotHint": "Ortalama katılımı düşük kalan grupları konuşmaya başlamak için iyi bir kısa özet.",
+        "groupSnapshotMeta": "{{sessionCount}} seans · ortalama {{rate}}%",
+        "groupSnapshotEmpty": "Henüz grup bazlı kıyas için yeterli işaretli seans yok.",
+        "groupSnapshotEmptyHint": "Katılım işlendiğinde hangi grupların daha fazla desteğe ihtiyaç duyduğu burada görünür.",
+        "coachSnapshotTitle": "Koç yük dağılımı",
+        "coachSnapshotHint": "Yakın dönem seans yükünü dengelemek için sade bir yönetim özeti.",
+        "coachSnapshotMeta": "{{sessionCount}} seans · ortalama kadro {{avgRoster}}",
+        "coachSnapshotEmpty": "Henüz koç bazlı seans yükü görünmüyor.",
+        "coachSnapshotEmptyHint": "Koç atamalı seanslar geldikçe yük dağılımı burada toplanır."
+      },
+      "starter": {
+        "categories": {
+          "attendance": "Katılım"
+        },
+        "athletes": {
+          "decliningAttendance": {
+            "title": "Katılımı düşen sporcular",
+            "description": "Son dönem katılımı önceki döneme göre belirgin düşen sporcular."
+          },
+          "trialHighEngagement": {
+            "title": "İlgi gören deneme sporcuları",
+            "description": "Deneme sürecinde olup son dönemde güçlü katılım gösteren sporcular."
+          },
+          "regularWithoutTeam": {
+            "title": "Takımsız ama düzenli gelen sporcular",
+            "description": "Takım ataması olmadan da ritimli şekilde antrenmana gelen aktif sporcular."
+          },
+          "recentAbsences": {
+            "title": "Son dönemde tekrar devamsız olanlar",
+            "description": "Birden fazla devamsızlıkla dikkat isteyen sporcular."
+          },
+          "noRecentCheckIn": {
+            "title": "Uzun süredir görünmeyen sporcular",
+            "description": "Son katılımı üzerinden bir süredir zaman geçen, dokunulması gereken sporcular."
+          },
+          "attendanceWatchlist": {
+            "title": "Katılım izleme listesi",
+            "description": "Düşüş, tekrar devamsızlık ve uzun süre görünmeme sinyallerini tek takip listesinde birleştirin."
+          }
+        },
+        "trainingSessions": {
+          "attendancePending": {
+            "title": "Yoklaması bekleyen seanslar",
+            "description": "Biten ama hâlâ işaretlenmemiş grup seansları."
+          },
+          "upcomingNeedsAttention": {
+            "title": "Yakında başlayacak ve netlik isteyen seanslar",
+            "description": "Koç veya konum bilgisi netleşmeden yaklaşan seanslar."
+          },
+          "notableAbsence": {
+            "title": "Belirgin devamsızlık görülen seanslar",
+            "description": "İşaretli katılım içinde devamsızlık oranı yüksek kalan seanslar."
+          },
+          "lowAttendanceGroups": {
+            "title": "Katılımı düşük gruplar",
+            "description": "İşaretli seanslara göre ortalama katılımı en zayıf kalan gruplar."
+          },
+          "coachLoad": {
+            "title": "Koçlara göre seans yükü",
+            "description": "Yakın dönem grup seans yükünün koçlara dağılımı."
+          }
+        }
+      },
+      "fields": {
+        "athlete": {
+          "recordedAttendanceCount30d": "İşaretli seans (30g)",
+          "attendedCount30d": "Katıldı (30g)",
+          "absentCount30d": "Devamsız (30g)",
+          "excusedCount30d": "Mazeretli (30g)",
+          "attendanceRate30d": "Katılım oranı (30g)",
+          "attendanceRateDelta30d": "Katılım değişimi",
+          "lastPresentAt": "Son katılım",
+          "daysSinceLastPresent": "Son katılımdan beri gün"
+        },
+        "session": {
+          "id": "ID",
+          "title": "Seans",
+          "scheduledStart": "Başlangıç zamanı",
+          "scheduledDate": "Tarih",
+          "status": "Durum",
+          "branchName": "Branş",
+          "groupName": "Grup",
+          "teamName": "Takım",
+          "coachName": "Antrenör",
+          "location": "Konum",
+          "missingCoach": "Antrenör eksik",
+          "missingLocation": "Konum eksik",
+          "hoursUntilStart": "Başlangıca kalan saat",
+          "rosterSize": "Beklenen kadro",
+          "attendanceRecordedCount": "İşaretlenen sporcu",
+          "attendedCount": "Katılan sporcu",
+          "absentCount": "Devamsız sporcu",
+          "excusedCount": "Mazeretli sporcu",
+          "lateCount": "Geç gelen sporcu",
+          "attendanceRate": "Katılım oranı",
+          "absenceRate": "Devamsızlık oranı",
+          "attendancePending": "Yoklama bekliyor"
+        }
+      }
+    },
+    "reportBuilder": {
+      "subtitle": "Sporcu, veli, özel ders, grup antrenmanı ve finans üzerinde sakin, özelleştirilebilir raporlar kurun.",
+      "welcomeBody": "Hazır bir başlangıç raporunu açın, filtre veya gruplamayı düzenleyin, sonra görünümü kaydedin ya da CSV olarak dışa aktarın. Tüm akış aynı yüzeyde kalır.",
+      "tipPickEntity": "Önce alanı seçin — sporcu, veli, özel ders, grup antrenmanı veya finans.",
+      "continueTitle": "Kaydedilen bir görünümden ya da güvenilir bir başlangıç raporundan devam edin.",
+      "continueBody": "Aynı oluşturucu; günlük listeler, gruplu özetler ve kulübünüzün tekrar tekrar açtığı görünümler için kullanılır."
+    }
+  }
+}
