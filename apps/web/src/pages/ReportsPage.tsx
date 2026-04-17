@@ -807,7 +807,7 @@ export function ReportsPage() {
                     </p>
                   </div>
                   <Link
-                    to="/app/communications"
+                    to="/app/communications?source=report&sourceKey=communications&channel=whatsapp"
                     className="text-sm font-medium text-amateur-accent hover:underline"
                   >
                     {t('pages.communications.openBuilder')} →
@@ -862,7 +862,7 @@ export function ReportsPage() {
                   </p>
                 </div>
                 <Link
-                  to="/app/communications?needsFollowUp=true"
+                  to="/app/communications?needsFollowUp=true&channel=whatsapp&template=family_follow_up&source=report&sourceKey=family_workflow"
                   className="text-sm font-medium text-amateur-accent hover:underline"
                 >
                   {t('pages.communications.openBuilder')} →

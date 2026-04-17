@@ -1,0 +1,210 @@
+{
+  "app": {
+    "nav": {
+      "communications": "Follow-up"
+    }
+  },
+  "pages": {
+    "communications": {
+      "subtitle": "Move from a club signal to a warm follow-up — built around the way amateur clubs actually talk to families.",
+      "channelPrimary": "WhatsApp",
+      "channels": {
+        "whatsapp": "WhatsApp",
+        "phone": "Call",
+        "email": "Email",
+        "manual": "Other"
+      },
+      "channelHint": {
+        "whatsapp": "Open WhatsApp with the message ready, per family.",
+        "phone": "Use the phone link for a quick check-in call.",
+        "email": "Optional: open an email draft when WhatsApp isn't appropriate.",
+        "manual": "Copy the recipient list and message to use elsewhere."
+      },
+      "channelLabel": "Channel",
+      "templatePickerTitle": "Pick a starting message",
+      "templatePickerHint": "Warm, club-friendly templates you can edit before sending. Editing one here only changes this draft.",
+      "templateNoneTitle": "Start from a blank message",
+      "templateNoneHint": "We'll keep the audience in view; the message is yours to shape.",
+      "templateApplied": "Using template: {{name}}",
+      "applyTemplate": "Use template",
+      "resetTemplate": "Reset template",
+      "templates": {
+        "categories": {
+          "finance": "Finance",
+          "attendance": "Attendance",
+          "trial": "Trial follow-up",
+          "session": "Session reminder",
+          "group": "Group update",
+          "general": "General"
+        },
+        "overduePayment": {
+          "title": "Overdue payment reminder",
+          "subject": "A friendly reminder about your club balance",
+          "body": "Hello,\n\nThis is a gentle reminder about an outstanding balance for {{athleteName}} at our club.\n\nIf the payment is already on the way, please disregard this note. If you have any questions or need a different schedule, just message us back — we are happy to help.\n\nThank you for your continued support.",
+          "hint": "Best when paired with the overdue audience or the action center finance follow-ups."
+        },
+        "trialFollowUp": {
+          "title": "Trial follow-up",
+          "subject": "How was the trial session?",
+          "body": "Hello,\n\nWe loved having {{athleteName}} at the trial session. We would love to hear how it felt and answer any questions before the next step.\n\nWhenever it is convenient, just reply on WhatsApp and we'll take it from there.",
+          "hint": "Pairs well with the trial high-engagement watchlist."
+        },
+        "attendanceCheckIn": {
+          "title": "Attendance check-in",
+          "subject": "Just checking in",
+          "body": "Hello,\n\nWe noticed {{athleteName}} hasn't been at training as often lately and we wanted to check in. Please let us know if anything is going on or how we can help — there is no pressure, we just like to stay close to our families.\n\nLooking forward to seeing them at the next session.",
+          "hint": "Designed for the attendance watchlist and quiet-lately follow-ups."
+        },
+        "sessionReminder": {
+          "title": "Upcoming session reminder",
+          "subject": "Quick reminder about your next session",
+          "body": "Hello,\n\nA friendly reminder that {{athleteName}} has a session coming up. If anything has changed, just send us a quick note so we can plan accordingly.\n\nSee you soon!",
+          "hint": "Useful before a planned training or trial session."
+        },
+        "groupAnnouncement": {
+          "title": "Group announcement",
+          "subject": "Quick update from the club",
+          "body": "Hello,\n\nA quick note for the families in our group: please review the update below and let us know if you have any questions.\n\nThank you for being part of the club.",
+          "hint": "For grouped audiences when you want a single warm message to go out."
+        },
+        "familyFollowUp": {
+          "title": "General family follow-up",
+          "subject": "A quick follow-up from the club",
+          "body": "Hello,\n\nWe're reaching out with a quick operational update from the club regarding {{athleteName}}.\n\nIf there is anything we can help with, please reply on WhatsApp anytime.",
+          "hint": "Default starting point when no other template fits."
+        }
+      },
+      "audience": {
+        "title": "Who you're contacting",
+        "summary": "{{athletes}} athletes · {{guardians}} guardians · {{primary}} primary contacts",
+        "phoneReachable": "{{count}} reachable on WhatsApp",
+        "phoneMissing": "{{count}} without a phone on file",
+        "emailReachable": "{{count}} reachable by email",
+        "needFollowUp": "{{count}} flagged for follow-up",
+        "sourceLabel": "Audience source",
+        "noContext": "Manual selection",
+        "contextOverdue": "Built from the overdue balance signal.",
+        "contextNeedsFollowUp": "Built from family follow-up signals.",
+        "contextTraining": "Built from a training session roster.",
+        "contextCoach": "Built from a coach assignment.",
+        "contextGroup": "Group · {{name}}",
+        "contextTeam": "Team · {{name}}",
+        "contextAthlete": "Single athlete focus",
+        "contextManual": "Manually filtered audience"
+      },
+      "draftPanel": {
+        "title": "Prepare your message",
+        "hint": "Your message stays warm and editable. We'll keep the audience and source visible the whole time.",
+        "messageLabel": "Message",
+        "topicLabel": "What is this about?",
+        "topicPlaceholder": "Eg. Overdue June balance, trial follow-up, U14 reminder",
+        "subjectLabel": "Email subject",
+        "subjectPlaceholder": "Optional — only used if you switch to email",
+        "noteLabel": "Internal note",
+        "notePlaceholder": "Optional — for the follow-up log",
+        "previewTitle": "Message preview",
+        "previewHint": "WhatsApp keeps line breaks. Edit anything that doesn't sound like your club.",
+        "tokenHint": "Use {{athleteName}} as a placeholder; we'll personalise per family at send time.",
+        "interpolationHint": "Tip: edits here apply to every recipient. Personal touches happen in WhatsApp.",
+        "previewFor": "Preview for {{name}}"
+      },
+      "actions": {
+        "openWhatsAppEach": "Open WhatsApp per family",
+        "openWhatsAppOne": "Open WhatsApp",
+        "openWhatsAppFirst": "Open the first family on WhatsApp",
+        "shareWhatsApp": "Share via WhatsApp",
+        "callRecipient": "Call",
+        "openEmail": "Open email draft",
+        "copyMessage": "Copy message",
+        "copyMessages": "Copy per-family messages",
+        "copyContacts": "Copy contact list",
+        "logFollowUp": "Save to follow-up log",
+        "saving": "Saving…",
+        "saved": "Follow-up saved",
+        "openLink": "Open"
+      },
+      "recipientList": {
+        "title": "Recipients",
+        "hint": "Click WhatsApp to open the chat with the message ready, or copy a personalised message to paste anywhere.",
+        "noPhone": "No phone on file",
+        "noEmail": "No email on file",
+        "primary": "Primary contact",
+        "perFamilyHint": "Per-family messages are pre-filled with {{athleteName}}.",
+        "showMore": "Show more recipients ({{count}})",
+        "showLess": "Show fewer"
+      },
+      "history": {
+        "title": "Recent follow-ups",
+        "hint": "A short audit log of what was prepared, by whom, and where it came from.",
+        "empty": "No follow-ups have been logged yet. Save one from the right panel to start the trail.",
+        "channelLabel": "Channel",
+        "topicLabel": "Topic",
+        "audienceLabel": "Audience",
+        "sourceLabel": "Source",
+        "savedBy": "by {{name}}",
+        "savedAnonymous": "by club staff",
+        "recipientsCount_one": "{{count}} family",
+        "recipientsCount_other": "{{count}} families",
+        "reachableCount_one": "{{count}} reachable guardian",
+        "reachableCount_other": "{{count}} reachable guardians",
+        "openOriginalSource": "Re-open the original list",
+        "messagePreviewLabel": "Message preview"
+      },
+      "sourceSurfaces": {
+        "manual": "Manual audience",
+        "communications": "Follow-up surface",
+        "report": "Report",
+        "report_athletes": "Athletes report",
+        "report_finance_charges": "Finance report",
+        "report_private_lessons": "Private lessons report",
+        "report_training_sessions": "Training report",
+        "starter": "Starter view",
+        "watchlist": "Attendance watchlist",
+        "action_center": "Action center",
+        "action_center_finance": "Action center · Finance",
+        "action_center_family": "Action center · Family",
+        "action_center_readiness": "Action center · Readiness",
+        "action_center_private_lessons": "Action center · Private lessons",
+        "action_center_training": "Action center · Training",
+        "athlete_detail": "Athlete profile",
+        "guardian_detail": "Guardian profile",
+        "finance_overdue": "Finance · Overdue balance",
+        "finance_outstanding": "Finance · Outstanding balance",
+        "trial_high_engagement": "Trial · High engagement",
+        "attendance_quiet": "Attendance · Quiet lately",
+        "attendance_drop": "Attendance · Drop watchlist",
+        "session_reminder": "Session reminder",
+        "group_announcement": "Group announcement",
+        "no_recent_check_in": "No recent check-in",
+        "regular_without_team": "Regular without team",
+        "guardian_contact_gap": "Guardian contact gap"
+      },
+      "quickScenarios": {
+        "title": "Common follow-ups",
+        "hint": "Pick a starting point — we'll set the audience, channel and template for you.",
+        "overduePayment": "Overdue payment reminder",
+        "overduePaymentHint": "Families with an overdue balance.",
+        "trialFollowUp": "Trial follow-up",
+        "trialFollowUpHint": "Trial athletes with strong recent attendance.",
+        "attendanceQuiet": "Attendance check-in",
+        "attendanceQuietHint": "Athletes with no recent check-in.",
+        "sessionReminder": "Session reminder",
+        "sessionReminderHint": "Pick an upcoming training session.",
+        "groupAnnouncement": "Group announcement",
+        "groupAnnouncementHint": "A warm group-wide note.",
+        "needsFollowUp": "Family follow-up",
+        "needsFollowUpHint": "Families with open readiness or review items."
+      },
+      "summaryReachWhatsApp": "Reachable on WhatsApp",
+      "summaryReachEmail": "Reachable by email",
+      "noPhoneWarning": "No guardians on this list have a phone number on file. Add a phone to enable WhatsApp follow-up.",
+      "openSourceLink": "Open source",
+      "selectionHint": "Tap a recipient to open WhatsApp directly with their message.",
+      "tabs": {
+        "draft": "Draft",
+        "history": "Recent follow-ups"
+      },
+      "channelSwitchHint": "WhatsApp is the primary channel here. Switch to phone or email if it fits the moment better."
+    }
+  }
+}

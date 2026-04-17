@@ -48,6 +48,7 @@ import {
   Coach,
   Guardian,
   GuardianPortalAccess,
+  OutreachActivity,
   Payment,
   PaymentAllocation,
   PrivateLesson,
@@ -1343,6 +1344,98 @@ async function loadBranchId(
   return row?.id ?? null;
 }
 
+async function ensureExpansionOutreachActivities(
+  club: ExpansionClub,
+  outreachActivities: Repository<OutreachActivity>,
+  athleteIds: Map<string, string>,
+): Promise<void> {
+  const samples = [
+    {
+      key: 'overdue-may',
+      channel: 'whatsapp',
+      sourceSurface: 'finance_overdue',
+      sourceKey: null,
+      templateKey: 'overdue_payment_reminder',
+      topic: 'Overdue payment — May dues',
+      messagePreview:
+        'Hello,\n\nA gentle reminder about an outstanding May balance for {{athleteName}}. Reply on WhatsApp anytime.',
+      recipientCount: 6,
+      reachableGuardianCount: 5,
+      contextLabel: 'Finance · Overdue balance',
+      ageDays: 9,
+    },
+    {
+      key: 'attendance-quiet',
+      channel: 'whatsapp',
+      sourceSurface: 'attendance_quiet',
+      sourceKey: null,
+      templateKey: 'attendance_check_in',
+      topic: 'Just checking in — quiet week',
+      messagePreview:
+        'Hello,\n\nWe noticed {{athleteName}} hasn’t been at training for a couple of weeks. Just checking in.',
+      recipientCount: 3,
+      reachableGuardianCount: 3,
+      contextLabel: 'Attendance · Quiet lately',
+      ageDays: 4,
+    },
+    {
+      key: 'trial-warmth',
+      channel: 'whatsapp',
+      sourceSurface: 'trial_high_engagement',
+      sourceKey: null,
+      templateKey: 'trial_warm_follow_up',
+      topic: 'Trial follow-up — warm leads',
+      messagePreview:
+        'Hello,\n\nWe loved having {{athleteName}} at the trial sessions. Would you like to chat about the next step?',
+      recipientCount: 2,
+      reachableGuardianCount: 2,
+      contextLabel: 'Trial · High engagement',
+      ageDays: 2,
+    },
+  ];
+
+  const knownAthleteIds = Array.from(athleteIds.values()).slice(0, 8);
+  if (knownAthleteIds.length === 0) return;
+  const now = Date.now();
+  for (const sample of samples) {
+    const id = stableId(club.tenantSlug, 'outreach-activity', sample.key);
+    const existing = await outreachActivities.findOne({ where: { id } });
+    const audienceSnapshot = {
+      athleteIds: knownAthleteIds.slice(0, sample.recipientCount),
+      guardianIds: [],
+      audienceSummary: {
+        athletes: sample.recipientCount,
+        guardians: sample.reachableGuardianCount,
+        primaryContacts: sample.reachableGuardianCount,
+        contextLabel: sample.contextLabel,
+      },
+    };
+    const row =
+      existing ??
+      outreachActivities.create({
+        id,
+        tenantId: club.tenantId,
+      });
+    row.tenantId = club.tenantId;
+    row.channel = sample.channel;
+    row.sourceSurface = sample.sourceSurface;
+    row.sourceKey = sample.sourceKey;
+    row.templateKey = sample.templateKey;
+    row.topic = sample.topic;
+    row.messagePreview = sample.messagePreview;
+    row.recipientCount = sample.recipientCount;
+    row.reachableGuardianCount = sample.reachableGuardianCount;
+    row.audienceSnapshot = audienceSnapshot;
+    row.note = null;
+    row.createdByStaffUserId = null;
+    if (!existing) {
+      row.createdAt = new Date(now - sample.ageDays * 24 * 60 * 60 * 1000);
+      row.updatedAt = row.createdAt;
+    }
+    await outreachActivities.save(row);
+  }
+}
+
 export async function runDemoSeedExpansion(dataSource: DataSource): Promise<void> {
   const tenants = dataSource.getRepository(Tenant);
 
@@ -1364,6 +1457,7 @@ export async function runDemoSeedExpansion(dataSource: DataSource): Promise<void
     const payments = manager.getRepository(Payment);
     const paymentAllocations = manager.getRepository(PaymentAllocation);
     const portalAccesses = manager.getRepository(GuardianPortalAccess);
+    const outreachActivities = manager.getRepository(OutreachActivity);
     const tenantsLocal = manager.getRepository(Tenant);
 
     const clubConfigs = buildClubExpansionConfig();
@@ -1519,6 +1613,8 @@ export async function runDemoSeedExpansion(dataSource: DataSource): Promise<void
         athleteIds,
         chargeIds,
       );
+
+      await ensureExpansionOutreachActivities(club, outreachActivities, athleteIds);
     }
   });
 

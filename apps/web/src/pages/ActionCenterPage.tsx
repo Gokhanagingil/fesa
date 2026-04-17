@@ -154,7 +154,7 @@ export function ActionCenterPage() {
             <Button type="button" variant="ghost" onClick={() => void load()}>
               {t('app.actions.refresh')}
             </Button>
-            <Link to="/app/communications?needsFollowUp=true">
+            <Link to="/app/communications?needsFollowUp=true&channel=whatsapp&template=family_follow_up&source=action_center">
               <Button variant="ghost">{t('pages.actionCenter.openCommunications')}</Button>
             </Link>
           </div>

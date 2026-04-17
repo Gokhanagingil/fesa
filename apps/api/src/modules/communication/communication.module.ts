@@ -7,14 +7,17 @@ import { AthleteTeamMembership } from '../../database/entities/athlete-team-memb
 import { Guardian } from '../../database/entities/guardian.entity';
 import { GuardianPortalAccess } from '../../database/entities/guardian-portal-access.entity';
 import { ClubGroup } from '../../database/entities/club-group.entity';
+import { OutreachActivity } from '../../database/entities/outreach-activity.entity';
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.entity';
+import { StaffUser } from '../../database/entities/staff-user.entity';
 import { Team } from '../../database/entities/team.entity';
 import { TrainingSession } from '../../database/entities/training-session.entity';
 import { FinanceModule } from '../finance/finance.module';
 import { FamilyActionModule } from '../family-action/family-action.module';
 import { CommunicationController } from './communication.controller';
 import { CommunicationService } from './communication.service';
+import { OutreachService } from './outreach.service';
 
 @Module({
   imports: [
@@ -32,10 +35,12 @@ import { CommunicationService } from './communication.service';
       TrainingSession,
       PrivateLesson,
       SavedFilterPreset,
+      OutreachActivity,
+      StaffUser,
     ]),
   ],
   controllers: [CommunicationController],
-  providers: [CommunicationService],
-  exports: [CommunicationService],
+  providers: [CommunicationService, OutreachService],
+  exports: [CommunicationService, OutreachService],
 })
 export class CommunicationModule {}

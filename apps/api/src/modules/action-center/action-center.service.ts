@@ -372,7 +372,7 @@ export class ActionCenterService {
           deepLink: `/app/finance/athlete-charges?athleteId=${row.athlete.id}&overdueOnly=${overdueCharges.length > 0 ? 'true' : 'false'}`,
           communicationLink: `/app/communications?athleteIds=${row.athlete.id}&financialState=${
             overdueCharges.length > 0 ? 'overdue' : 'outstanding'
-          }&primaryContactsOnly=true`,
+          }&primaryContactsOnly=true&channel=whatsapp&template=overdue_payment_reminder&source=action_center&sourceKey=finance`,
           context: {
             overdueCount: row.overdueCount,
             outstandingAmount: row.totalOutstanding.toFixed(2),
@@ -432,7 +432,7 @@ export class ActionCenterService {
             dueAt,
             occurredAt,
             deepLink: `/app/athletes/${item.athleteId}#family-actions`,
-            communicationLink: `/app/communications?athleteIds=${item.athleteId}&needsFollowUp=true&primaryContactsOnly=true`,
+            communicationLink: `/app/communications?athleteIds=${item.athleteId}&needsFollowUp=true&primaryContactsOnly=true&channel=whatsapp&template=family_follow_up&source=action_center&sourceKey=family`,
             context: {
               issueCount: item.summary.awaitingStaffReview,
               guardianName: reviewActions[0]?.guardianName ?? null,
@@ -468,7 +468,7 @@ export class ActionCenterService {
             dueAt,
             occurredAt,
             deepLink: `/app/athletes/${item.athleteId}#family-actions`,
-            communicationLink: `/app/communications?athleteIds=${item.athleteId}&needsFollowUp=true&primaryContactsOnly=true`,
+            communicationLink: `/app/communications?athleteIds=${item.athleteId}&needsFollowUp=true&primaryContactsOnly=true&channel=whatsapp&template=family_follow_up&source=action_center&sourceKey=family`,
             context: {
               issueCount: item.summary.pendingFamilyActions,
               guardianName: pendingActions[0]?.guardianName ?? null,
@@ -503,7 +503,7 @@ export class ActionCenterService {
           dueAt: null,
           occurredAt: null,
           deepLink: `/app/athletes/${item.athleteId}#family-actions`,
-          communicationLink: `/app/communications?athleteIds=${item.athleteId}&familyReadiness=incomplete&primaryContactsOnly=true`,
+          communicationLink: `/app/communications?athleteIds=${item.athleteId}&familyReadiness=incomplete&primaryContactsOnly=true&channel=whatsapp&template=family_follow_up&source=action_center&sourceKey=readiness`,
           context: {
             issueCodes: item.issueCodes,
             issueCount: item.issueCodes.length,
@@ -560,7 +560,7 @@ export class ActionCenterService {
           dueAt: lesson.scheduledStart,
           occurredAt: lesson.updatedAt,
           deepLink: `/app/private-lessons?athleteId=${lesson.athleteId}&coachId=${lesson.coachId}&status=planned`,
-          communicationLink: `/app/communications?athleteIds=${lesson.athleteId}&coachId=${lesson.coachId}&primaryContactsOnly=true`,
+          communicationLink: `/app/communications?athleteIds=${lesson.athleteId}&coachId=${lesson.coachId}&primaryContactsOnly=true&channel=whatsapp&template=session_reminder&source=action_center&sourceKey=private_lessons`,
           context: {
             issueCodes,
             issueCount: issueCodes.length,
@@ -616,7 +616,7 @@ export class ActionCenterService {
           dueAt: session.scheduledStart,
           occurredAt: session.updatedAt,
           deepLink: `/app/training/${session.id}`,
-          communicationLink: `/app/communications?trainingSessionId=${session.id}&primaryContactsOnly=true`,
+          communicationLink: `/app/communications?trainingSessionId=${session.id}&primaryContactsOnly=true&channel=whatsapp&template=session_reminder&source=action_center&sourceKey=training`,
           context: {
             issueCodes,
             issueCount: issueCodes.length,
@@ -669,7 +669,7 @@ export class ActionCenterService {
       dueAt: new Date(row.scheduledEnd),
       occurredAt: new Date(row.updatedAt),
       deepLink: `/app/training/${row.id}`,
-      communicationLink: `/app/communications?trainingSessionId=${row.id}&primaryContactsOnly=true`,
+      communicationLink: `/app/communications?trainingSessionId=${row.id}&primaryContactsOnly=true&channel=whatsapp&template=session_reminder&source=action_center&sourceKey=training`,
       context: {
         issueCodes: ['attendance_missing'],
         issueCount: 1,

@@ -426,6 +426,18 @@ export class CommunicationService {
       (sum, item) => sum + item.guardians.filter((guardian) => guardian.isPrimaryContact).length,
       0,
     );
+    const guardiansWithPhone = items.reduce(
+      (sum, item) => sum + item.guardians.filter((guardian) => Boolean(guardian.phone)).length,
+      0,
+    );
+    const guardiansWithEmail = items.reduce(
+      (sum, item) => sum + item.guardians.filter((guardian) => Boolean(guardian.email)).length,
+      0,
+    );
+    const athletesWithPhoneReach = items.filter((item) =>
+      item.guardians.some((guardian) => Boolean(guardian.phone)),
+    ).length;
+    const athletesMissingPhone = items.length - athletesWithPhoneReach;
 
     return {
       items,
@@ -433,6 +445,10 @@ export class CommunicationService {
         athletes: items.length,
         guardians: guardianCount,
         primaryContacts,
+        guardiansWithPhone,
+        guardiansWithEmail,
+        athletesWithPhoneReach,
+        athletesMissingPhone,
         withOverdueBalance: items.filter((item) => item.hasOverdueBalance).length,
         incompleteAthletes: items.filter((item) => item.familyReadinessStatus === FamilyReadinessStatus.INCOMPLETE).length,
         awaitingGuardianAction: items.filter(
@@ -457,6 +473,10 @@ export class CommunicationService {
             athletes: 0,
             guardians: 0,
             primaryContacts: 0,
+            guardiansWithPhone: 0,
+            guardiansWithEmail: 0,
+            athletesWithPhoneReach: 0,
+            athletesMissingPhone: 0,
             withOverdueBalance: 0,
             incompleteAthletes: 0,
             awaitingGuardianAction: 0,

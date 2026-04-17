@@ -147,6 +147,24 @@ export function getPrivateLessonReasonLabel(t: TFunction, reason: string): strin
   return labels[reason] ?? reason;
 }
 
+export function getCommunicationChannelLabel(t: TFunction, channel: string): string {
+  return t(`pages.communications.channels.${channel}`, { defaultValue: channel });
+}
+
+export function getCommunicationSourceLabel(
+  t: TFunction,
+  surface: string,
+  sourceKey?: string | null,
+): string {
+  if (sourceKey) {
+    const composite = t(`pages.communications.sourceSurfaces.${surface}_${sourceKey}`, {
+      defaultValue: '',
+    });
+    if (composite) return composite;
+  }
+  return t(`pages.communications.sourceSurfaces.${surface}`, { defaultValue: surface });
+}
+
 export function getPrivateLessonAttendanceLabel(t: TFunction, status: PrivateLesson['attendanceStatus']): string {
   if (!status) return t('pages.privateLessons.noAttendance');
   return getAttendanceStatusLabel(t, status);

@@ -182,6 +182,7 @@ The current product wave extends the existing command center into a more complet
 - [docs/migrations.md](docs/migrations.md) — database migrations and `synchronize` policy
 - [docs/i18n.md](docs/i18n.md) — localization
 - [docs/reporting.md](docs/reporting.md) — reporting and bulk placeholders
+- [docs/communication.md](docs/communication.md) — Communication & Follow-up Pack v1 (WhatsApp-first follow-up)
 
 ## Security
 

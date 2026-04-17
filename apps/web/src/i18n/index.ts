@@ -3,8 +3,10 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
 import en from './locales/en/common.json';
 import enAttendanceReporting from './locales/en/attendance-reporting.json';
+import enCommunicationFollowUp from './locales/en/communication-follow-up.json';
 import tr from './locales/tr/common.json';
 import trAttendanceReporting from './locales/tr/attendance-reporting.json';
+import trCommunicationFollowUp from './locales/tr/communication-follow-up.json';
 
 function deepMerge<T extends Record<string, unknown>>(base: T, extension: Record<string, unknown>): T {
   const output: Record<string, unknown> = { ...base };
@@ -26,8 +28,8 @@ function deepMerge<T extends Record<string, unknown>>(base: T, extension: Record
   return output as T;
 }
 
-const enMerged = deepMerge(en, enAttendanceReporting);
-const trMerged = deepMerge(tr, trAttendanceReporting);
+const enMerged = deepMerge(deepMerge(en, enAttendanceReporting), enCommunicationFollowUp);
+const trMerged = deepMerge(deepMerge(tr, trAttendanceReporting), trCommunicationFollowUp);
 
 export const defaultNS = 'common';
 export const resources = {

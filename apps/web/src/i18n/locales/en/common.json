@@ -32,7 +32,8 @@
       "save": "Save",
       "record": "Record",
       "apply": "Apply",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "hide": "Hide"
     },
     "states": {
       "loading": "Loading…",
