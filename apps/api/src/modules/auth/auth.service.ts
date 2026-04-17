@@ -3,7 +3,6 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, pbkdf2Sync, randomBytes, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
@@ -93,7 +92,6 @@ export class AuthService {
     private readonly guardianPortalAccesses: Repository<GuardianPortalAccess>,
     private readonly tenants: TenantService,
     private readonly actionCenter: ActionCenterService,
-    private readonly config: ConfigService,
   ) {}
 
   private normalizeEmail(email: string): string {
@@ -131,11 +129,15 @@ export class AuthService {
   }
 
   getCookieOptions() {
-    const nodeEnv = this.config.get<string>('NODE_ENV', 'development');
+    const nodeEnv = process.env.NODE_ENV ?? 'development';
+    const cookieSecureOverride = process.env.COOKIE_SECURE;
+    const secure = cookieSecureOverride !== undefined
+      ? cookieSecureOverride === 'true' || cookieSecureOverride === '1'
+      : nodeEnv === 'production';
     return {
       httpOnly: true,
       sameSite: 'lax' as const,
-      secure: nodeEnv === 'production' || nodeEnv === 'staging',
+      secure,
       path: '/',
       maxAge: this.sessionTtlDays * 24 * 60 * 60 * 1000,
     };

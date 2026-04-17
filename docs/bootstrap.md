@@ -78,7 +78,7 @@ Use these at `http://localhost:5173/login` after running `npm run seed:demo`.
 - **Finance**: catalog items (dues, camp, merchandise, tournament) and athlete charges with **mixed statuses** (pending, partially paid, paid, cancelled).
 - **Identity/admin**: includes one global admin plus one club admin per seeded club so role-aware landing, tenant switching, and settings/admin surfaces can be validated against real multi-tenant demo data.
 - **Platform visibility**: after sign-in, the dashboard and settings surfaces should show all four seeded clubs for the platform admin and a club-scoped overview for each club admin.
-- **Bootstrap recovery**: the staff shell now hydrates the first visible club from the authenticated session before refreshing `/api/tenants`, so a signed-in platform admin or club admin should not land in a "logged in but no club context" state when seeded tenants already exist.
+- **Bootstrap recovery**: the login flow now uses the profile returned by `POST /api/auth/login` directly (including `accessibleTenants` and `defaultTenantId`), then verifies via `GET /api/auth/me` in the background. This means a signed-in user always lands in a valid club context immediately — even if the cookie round-trip is delayed or the session verification call fails temporarily.
 - **Lifecycle and bulk flows**: the seeded clubs are suitable for trial-to-active conversion, pause/reactivate/withdraw flows, roster bulk status or primary-group updates, scoped finance bulk assignment, and status-aware communication audience follow-up.
 
 ## Staging

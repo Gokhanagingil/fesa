@@ -1162,10 +1162,15 @@
       "submit": "Sign in",
       "submitting": "Signing in...",
       "sessionError": "Your session could not be restored.",
-      "sessionBootstrapFailed": "Sign-in succeeded, but the club context could not be verified. Refresh the page, then inspect the active staging session and the /api/auth/me response if the problem persists.",
+      "sessionBootstrapFailed": "Sign-in succeeded, but the session could not be fully verified. Your club context has been loaded from the login response. If anything looks off, refresh the page.",
       "helperTitle": "Why this matters",
       "helperBody": "Staff access is now separated from the guardian portal and bound to real tenant memberships.",
-      "backHome": "Back to home"
+      "backHome": "Back to home",
+      "demoAccountsTitle": "Demo accounts",
+      "demoAccountsHint": "Click to prefill credentials. All demo accounts use the same password.",
+      "platformNoticeTitle": "Platform owner view",
+      "platformNoticeBody": "Global admins switch between clubs intentionally; club admins see only their own club.",
+      "guardianCta": "Are you a guardian? Go to the family portal"
     },
     "guardianPortal": {
       "backHome": "Back to portal home",
