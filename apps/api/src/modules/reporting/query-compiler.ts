@@ -7,11 +7,14 @@ import {
   WhereExpressionBuilder,
 } from 'typeorm';
 import type {
+  ReportAggregateMeasure,
+  ReportAggregateOp,
   ReportEntityKey,
   ReportFieldDefinition,
   ReportFilterCondition,
   ReportFilterGroup,
   ReportFilterNode,
+  ReportGroupBy,
   ReportRunRequest,
   ReportRunResponse,
   ReportRunRow,
@@ -308,6 +311,10 @@ export class ReportingQueryCompiler {
       throw new BadRequestException(`Unknown reporting entity "${request.entity}".`);
     }
 
+    if (request.groupBy) {
+      return this.runGrouped(request, request.groupBy, options);
+    }
+
     const filter = validateFilterTree(request.entity, request.filter ?? null);
     const requestedColumns = (request.columns?.length ? request.columns : entity.defaultColumns)
       .filter((key, idx, arr) => arr.indexOf(key) === idx);
@@ -419,6 +426,184 @@ export class ReportingQueryCompiler {
       offset,
       columns: requestedColumns,
       rows,
+    };
+  }
+
+  /**
+   * Lightweight grouping/aggregation engine introduced in v2.
+   *
+   * Constraints kept on purpose:
+   *   - exactly one dimension (groupBy.field, must have `groupable: true`),
+   *   - up to 6 measures, each one of `count|sum|avg|min|max`,
+   *   - measures other than `count` require a numeric/currency field that
+   *     declares the requested op in `aggregations`,
+   *   - tenant isolation enforced by the same base query as row mode,
+   *   - no ORDER BY on raw fields — only by alias of dimension or measure.
+   */
+  private async runGrouped(
+    request: ReportRunRequest,
+    groupBy: ReportGroupBy,
+    options: CompileOptions,
+  ): Promise<ReportRunResponse> {
+    const dimensionDef = getFieldDefinition(request.entity, groupBy.field);
+    if (!dimensionDef) {
+      throw new BadRequestException(`Unknown groupBy field "${groupBy.field}".`);
+    }
+    if (!dimensionDef.groupable) {
+      throw new BadRequestException(`Field "${groupBy.field}" is not groupable.`);
+    }
+    const dimensionSql = FIELD_TABLE[request.entity][groupBy.field];
+    if (!dimensionSql) {
+      throw new BadRequestException(`No SQL projection for "${groupBy.field}".`);
+    }
+
+    const rawMeasures: ReportAggregateMeasure[] =
+      groupBy.measures && groupBy.measures.length > 0
+        ? groupBy.measures
+        : [{ op: 'count', alias: 'count' }];
+    if (rawMeasures.length > 6) {
+      throw new BadRequestException('Grouped reports support up to 6 measures.');
+    }
+    const usedAliases = new Set<string>();
+    const measures = rawMeasures.map((measure, index) => {
+      const op = measure.op;
+      if (!isAggregateOp(op)) {
+        throw new BadRequestException(`Unsupported aggregate op "${String(op)}".`);
+      }
+      let measureField: ReportFieldDefinition | null = null;
+      let measureSql: FieldSql | null = null;
+      if (op !== 'count') {
+        if (!measure.field) {
+          throw new BadRequestException(`Aggregate "${op}" requires a field.`);
+        }
+        measureField = getFieldDefinition(request.entity, measure.field);
+        if (!measureField) {
+          throw new BadRequestException(`Unknown measure field "${measure.field}".`);
+        }
+        if (!measureField.aggregations || !measureField.aggregations.includes(op)) {
+          throw new BadRequestException(
+            `Field "${measure.field}" does not allow aggregate "${op}".`,
+          );
+        }
+        if (measureField.type !== 'number' && measureField.type !== 'currency') {
+          throw new BadRequestException(`Field "${measure.field}" is not numeric.`);
+        }
+        measureSql = FIELD_TABLE[request.entity][measure.field] ?? null;
+        if (!measureSql) {
+          throw new BadRequestException(`No SQL projection for measure "${measure.field}".`);
+        }
+      }
+      const baseAlias = measure.alias?.trim() || `${op}${index === 0 ? '' : `_${index}`}`;
+      let alias = sanitizeAlias(baseAlias);
+      if (usedAliases.has(alias)) {
+        alias = `${alias}_${index}`;
+      }
+      usedAliases.add(alias);
+      return { op, alias, fieldDef: measureField, fieldSql: measureSql, originalField: measure.field ?? null };
+    });
+
+    const limit = clampGroupLimit(groupBy.limit);
+    const filter = validateFilterTree(request.entity, request.filter ?? null);
+
+    paramCounter = 0;
+    const qb = this.buildBaseQuery(request.entity, options.tenantId);
+    const appliedJoins = new Set<string>();
+    const referenceField = (key: string) => this.applyJoinsForField(qb, request.entity, key, appliedJoins);
+    referenceField(groupBy.field);
+    for (const measure of measures) {
+      if (measure.op !== 'count' && measure.originalField) {
+        referenceField(measure.originalField);
+      }
+    }
+
+    if (filter) {
+      collectJoinsFromFilter(filter, request.entity, appliedJoins, qb);
+    }
+    if (request.search?.trim()) {
+      this.applyQuickSearch(qb, request.entity, request.search.trim());
+    }
+    if (filter) {
+      qb.andWhere(
+        new Brackets((root) => this.applyFilter(root, filter, request.entity, qb)),
+      );
+    }
+
+    const dimensionExpression = dimensionSql.expression;
+    const dimensionAlias = sanitizeAlias(`dim_${hashKey(groupBy.field)}`);
+    const baseAlias = ENTITY_ALIAS[request.entity];
+
+    const selects: string[] = [`${dimensionExpression} AS "${dimensionAlias}"`];
+    for (const measure of measures) {
+      selects.push(`${renderAggregateSql(measure.op, measure.fieldSql, baseAlias)} AS "${measure.alias}"`);
+    }
+    qb.select(selects);
+    qb.groupBy(dimensionExpression);
+
+    const sortDirection = groupBy.sort?.direction === 'asc' ? 'ASC' : 'DESC';
+    const sortAlias = groupBy.sort?.alias ?? measures[0].alias;
+    let sortExpression: string | null = null;
+    if (sortAlias === dimensionAlias || sortAlias === groupBy.field) {
+      sortExpression = dimensionExpression;
+    } else {
+      const measure = measures.find((m) => m.alias === sortAlias);
+      if (measure) {
+        sortExpression = renderAggregateSql(measure.op, measure.fieldSql, baseAlias);
+      }
+    }
+    if (sortExpression) {
+      qb.orderBy(sortExpression, sortDirection, 'NULLS LAST');
+    } else {
+      qb.orderBy(renderAggregateSql('count', null, baseAlias), 'DESC');
+    }
+    qb.limit(limit);
+
+    const rawRows = await qb.getRawMany<Record<string, unknown>>();
+    const columns = [dimensionAlias, ...measures.map((m) => m.alias)];
+    const columnLabels = [
+      {
+        key: dimensionAlias,
+        labelKey: dimensionDef.labelKey,
+        label: dimensionDef.label ?? dimensionDef.key,
+      },
+      ...measures.map((m) => ({
+        key: m.alias,
+        labelKey:
+          m.op === 'count'
+            ? 'pages.reports.aggregate.measure.count'
+            : `pages.reports.aggregate.measure.${m.op}`,
+        label: m.op === 'count' ? 'Count' : `${m.op}(${m.originalField ?? ''})`,
+        isMeasure: true,
+      })),
+    ];
+
+    const rows: ReportRunRow[] = rawRows.map((rawRow) => {
+      const row: ReportRunRow = {};
+      row[dimensionAlias] = normalizeValueForResponse(rawRow[dimensionAlias], dimensionDef);
+      for (const measure of measures) {
+        const raw = rawRow[measure.alias];
+        if (raw === null || raw === undefined) {
+          row[measure.alias] = measure.op === 'count' ? 0 : null;
+          continue;
+        }
+        if (measure.op === 'count') {
+          row[measure.alias] = Number(raw);
+        } else {
+          const numeric = Number(raw);
+          row[measure.alias] = Number.isFinite(numeric) ? Number(numeric.toFixed(2)) : null;
+        }
+      }
+      return row;
+    });
+
+    return {
+      entity: request.entity,
+      total: rows.length,
+      limit,
+      offset: 0,
+      columns,
+      rows,
+      groupBy,
+      columnLabels,
     };
   }
 
@@ -607,8 +792,48 @@ function clampLimit(requested: number | undefined): number {
   return Math.min(requested, 1000);
 }
 
+function clampGroupLimit(requested: number | undefined): number {
+  if (!requested || requested <= 0) return 50;
+  return Math.min(requested, 200);
+}
+
 function hashKey(key: string): string {
   return key.replace(/[^a-zA-Z0-9]+/g, '_');
+}
+
+function sanitizeAlias(value: string): string {
+  const cleaned = value.replace(/[^a-zA-Z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
+  return cleaned.length === 0 ? 'col' : cleaned.slice(0, 60);
+}
+
+function isAggregateOp(op: unknown): op is ReportAggregateOp {
+  return op === 'count' || op === 'sum' || op === 'avg' || op === 'min' || op === 'max';
+}
+
+function renderAggregateSql(
+  op: ReportAggregateOp,
+  fieldSql: FieldSql | null,
+  baseAlias: string,
+): string {
+  if (op === 'count') {
+    return `COUNT(DISTINCT ${baseAlias}.id)`;
+  }
+  const expression = fieldSql?.expression;
+  if (!expression) {
+    throw new BadRequestException(`Aggregate ${op} requires a SQL expression.`);
+  }
+  switch (op) {
+    case 'sum':
+      return `COALESCE(SUM((${expression})::numeric), 0)::numeric(14,2)`;
+    case 'avg':
+      return `COALESCE(AVG((${expression})::numeric), 0)::numeric(14,2)`;
+    case 'min':
+      return `MIN((${expression})::numeric)::numeric(14,2)`;
+    case 'max':
+      return `MAX((${expression})::numeric)::numeric(14,2)`;
+    default:
+      throw new BadRequestException(`Unsupported aggregate "${op}".`);
+  }
 }
 
 function renderOperator(operator: string, expression: string, paramName: string): string {

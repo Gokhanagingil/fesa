@@ -6,7 +6,10 @@ import { InlineAlert } from '../components/ui/InlineAlert';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
+import { StarterViewsPanel } from '../components/reporting/StarterViewsPanel';
+import { buildStarterLink } from '../lib/report-deep-link';
 import { apiGet } from '../lib/api';
+import { useNavigate } from 'react-router-dom';
 import {
   formatDateTime,
   getActionCenterItemSummary,
@@ -26,6 +29,7 @@ import type {
 
 export function ReportsPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { tenantId, loading: tenantLoading } = useTenant();
   const [definitions, setDefinitions] = useState<ReportingDefinitionsResponse['items']>([]);
   const [report, setReport] = useState<CommandCenterResponse | null>(null);
@@ -68,6 +72,13 @@ export function ReportsPage() {
           <EmptyState />
         ) : (
           <div className="space-y-6">
+            <StarterViewsPanel
+              managementOnly
+              title={t('pages.reports.management.title')}
+              subtitle={t('pages.reports.management.subtitle')}
+              onApply={(view) => navigate(buildStarterLink(view.id))}
+            />
+
             <section className="grid gap-4 md:grid-cols-3">
               <StatCard
                 label={t('pages.reports.commandCenter.outstanding')}

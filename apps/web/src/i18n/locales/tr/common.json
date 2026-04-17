@@ -249,6 +249,31 @@
         "openQueue": "Aksiyon merkezini aç",
         "openBuilder": "Rapor oluştur"
       },
+      "drilldown": {
+        "eyebrow": "Bir rapora doğrudan girin",
+        "title": "Bir rakamdan tek tıkla bir listeye geçin.",
+        "subtitle": "Bu kartlar, en sık ihtiyaç duyulan takip akışları için Rapor Oluşturucu'yu önceden filtrelenmiş olarak açar.",
+        "openReport": "Raporu aç",
+        "groupedBadge": "Özet",
+        "financeOverdueEyebrow": "Finans",
+        "financeOverdueTitle": "Gecikmiş ücretler",
+        "financeOverdueBody": "Vadesi geçmiş tüm ücretler, kalan tutara göre sıralı.",
+        "outstandingEyebrow": "Sporcular",
+        "outstandingTitle": "Açık bakiyeler",
+        "outstandingBody": "Şu anda kulübe borcu olan sporcular — en yüksek önce.",
+        "teamlessEyebrow": "Kadro",
+        "teamlessTitle": "Takımı olmayan aktif sporcular",
+        "teamlessBody": "Aktif olan ama hiçbir takıma yazılmamış sporcular.",
+        "lessonsEyebrow": "Planlama",
+        "lessonsTitle": "Planlanmış özel dersler",
+        "lessonsBody": "Takvimde bekleyen 1’e 1 dersler — kolay günlük hazırlık.",
+        "byGroupEyebrow": "Yönetim",
+        "byGroupTitle": "Gruba göre açık bakiye",
+        "byGroupBody": "Finansal takibin gerçekten yoğunlaştığı yer.",
+        "byCoachEyebrow": "Yönetim",
+        "byCoachTitle": "Antrenöre göre ders yükü",
+        "byCoachBody": "Antrenör başına ders sayısı ve kalan ücret."
+      },
       "commandCenterTitle": "Komuta merkezi",
       "commandCenterHint": "Koçluk, planlama ve finans takibini tek operasyon görünümünde tutun.",
       "collectionsTitle": "Tahsilat görünümü",
@@ -1063,19 +1088,159 @@
       },
       "savedViews": {
         "title": "Kaydedilen görünümler",
-        "shared": "Paylaşılan",
-        "private": "Sadece kişisel",
+        "ownTitle": "Görünümleriniz",
+        "sharedTitle": "Kulüple paylaşılan",
+        "shared": "Kulüple paylaş",
+        "sharedTag": "paylaşıldı",
+        "private": "Sadece bana özel",
+        "privateHint": "Bu görünümü yalnızca siz görürsünüz.",
+        "sharedHint": "Bu kulübün tüm personeli görür.",
         "applied": "Görünüm yüklendi: {{name}}",
         "saved": "Görünüm kaydedildi: {{name}}",
+        "update": "Görünümü güncelle",
         "delete": "Görünümü sil",
         "dialogTitle": "Rapor görünümünü kaydet",
+        "dialogHelper": "Bu rapora anlamlı bir ad verin; bir sonraki ekip arkadaşı (veya gelecek haftaki siz) ne işe yaradığını anlasın.",
         "name": "Ad",
-        "description": "Açıklama",
+        "namePlaceholder": "ör. Açık bakiye — küçük gruplar",
+        "description": "Açıklama (opsiyonel)",
+        "descriptionPlaceholder": "Bu görünüm ne zaman açılır ve nasıl kullanılır?",
         "visibility": "Görünürlük",
+        "firstRun": "Filtrelenmiş raporları tek tıkla kaydedin — bir dahaki açtığınızda burada görünür.",
+        "dismissHint": "Anladım",
         "mode": {
           "create": "Yeni olarak kaydet",
-          "update": "Mevcut görünümü güncelle"
+          "update": "Bu görünümü güncelle"
         }
+      },
+      "aggregate": {
+        "title": "Grupla & özetle",
+        "subtitle": "Bir boyut ve bir-iki ölçü seçin. Sayım her zaman otomatiktir.",
+        "toggleShow": "Grupla",
+        "toggleHide": "Gruplamayı gizle",
+        "toggleOn": "Gruplama (aktif)",
+        "disable": "Gruplamayı kapat",
+        "dimension": "Şuna göre grupla",
+        "limit": "Grup sınırı",
+        "measures": "Ölçüler",
+        "addMeasure": "Ölçü ekle",
+        "removeMeasure": "Kaldır",
+        "measureOp": "Toplama işlemi",
+        "measureField": "Alan",
+        "measureAlias": "Sütun adı",
+        "measureCountField": "Tüm satırların sayısı",
+        "sortBy": "Şuna göre sırala",
+        "sortDimension": "Grup etiketi",
+        "direction": "Yön",
+        "directionDesc": "En yüksek önce",
+        "directionAsc": "En düşük önce",
+        "summary_one": "{{count}} grup",
+        "summary_other": "{{count}} grup",
+        "columnsHiddenWhileGrouped": "Gruplama açıkken sütun seçici gizlidir.",
+        "notSupported": "Bu nesne için henüz gruplamaya uygun alan tanımlı değil.",
+        "measure": {
+          "count": "Sayım",
+          "sum": "Toplam",
+          "avg": "Ortalama",
+          "min": "Min",
+          "max": "Maks"
+        }
+      },
+      "context": {
+        "starter": "Hazır rapor",
+        "savedView": "Kaydedilen görünüm",
+        "startFresh": "Sıfırdan başla"
+      },
+      "starter": {
+        "eyebrow": "Hazır rapor şablonları",
+        "panelTitle": "Hazır bir raporu açın",
+        "panelSubtitle": "Boş ekrandan kaçının — bunlar gerçek kulüp akışları. Açın, üzerinde değiştirin, kendi görünümünüz olarak kaydedin.",
+        "all": "Hepsi",
+        "open": "Aç",
+        "groupedBadge": "Gruplu",
+        "categories": {
+          "roster": "Kadro",
+          "finance": "Finans",
+          "scheduling": "Planlama",
+          "contact": "İletişim",
+          "management": "Yönetim"
+        },
+        "athletes": {
+          "activeWithoutTeam": {
+            "title": "Takımı olmayan aktif sporcular",
+            "description": "Aktif olup henüz hiçbir takımda olmayan sporcular — atama günleri için ideal."
+          },
+          "trialFollowUp": {
+            "title": "Deneme aşamasındaki sporcular",
+            "description": "Hâlâ değerlendirme aşamasındaki adaylar — ulaşın, karar verin veya kayda dönüştürün."
+          },
+          "outstandingBalance": {
+            "title": "Açık bakiyesi olan sporcular",
+            "description": "Şu anda kulübe borcu olan herkes; tutara göre sıralı."
+          },
+          "unpaidPrivateLessons": {
+            "title": "Ödenmemiş özel ders ücretleri",
+            "description": "En az bir özel ders ücreti tam ödenmemiş sporcular."
+          },
+          "femaleShirtSizeM": {
+            "title": "Kadın sporcular — forma bedeni M",
+            "description": "Çoklu koşullu filtreleme demosu; kıyafet planlamasında kullanılır."
+          },
+          "byGroup": {
+            "title": "Gruba göre sporcu sayısı",
+            "description": "Kadronun gruplara dağılımı şu anda nasıl?"
+          },
+          "byGender": {
+            "title": "Cinsiyete göre sporcu sayısı",
+            "description": "Aktif ve deneme sporcularının cinsiyet dağılımı."
+          },
+          "outstandingByGroup": {
+            "title": "Gruba göre açık bakiye",
+            "description": "Finansal takibin gerçekten yoğunlaştığı yer."
+          }
+        },
+        "guardians": {
+          "contactGaps": {
+            "title": "İletişim bilgisi eksik veliler",
+            "description": "Telefon veya e-posta bilgisi henüz girilmemiş veliler."
+          },
+          "unlinked": {
+            "title": "Hiçbir sporcuya bağlı olmayan veliler",
+            "description": "Muhtemelen eksik kayıtlar — bağlayın veya arşivleyin."
+          }
+        },
+        "lessons": {
+          "upcoming": {
+            "title": "Yaklaşan planlı özel dersler",
+            "description": "Tarihe göre sıralanmış planlı 1’e 1 dersler — kolay günlük hazırlık."
+          },
+          "unbilled": {
+            "title": "Henüz faturalanmamış özel dersler",
+            "description": "Aileye fatura çıkarmadan önce ücret bağlanması gereken dersler."
+          },
+          "byCoach": {
+            "title": "Antrenöre göre özel ders yükü",
+            "description": "Antrenör başına ders sayısı ve kalan ücret."
+          }
+        },
+        "finance": {
+          "overdue": {
+            "title": "Gecikmiş ücretler",
+            "description": "Vadesi geçmiş açık bakiyeler, kalan tutara göre sıralı."
+          },
+          "outstandingByItem": {
+            "title": "Ücret kalemine göre açık bakiye",
+            "description": "Açık paranın hangi kalemlerde yoğunlaştığı."
+          },
+          "overdueByCategory": {
+            "title": "Kategoriye göre gecikme yükü",
+            "description": "Gecikmiş ücretleri kategoriye göre özetleyin."
+          }
+        }
+      },
+      "management": {
+        "title": "Yönetim seti",
+        "subtitle": "Canlı verinizden çekilmiş, yönetici dostu, hazır özetler."
       },
       "fields": {
         "athlete": {
@@ -1143,7 +1308,16 @@
     },
     "reportBuilder": {
       "title": "Rapor oluşturucu",
-      "subtitle": "Sporcu, veli, özel ders ve finans alanlarında gelişmiş raporlar oluşturun, kaydedin ve dışa aktarın."
+      "subtitle": "Sporcu, veli, özel ders ve finans alanlarında gelişmiş raporlar oluşturun, kaydedin ve dışa aktarın.",
+      "welcomeEyebrow": "Raporlama çalışma alanı",
+      "welcomeTitle": "Üç sakin adımda rapor hazırlayın.",
+      "welcomeBody": "Hazır bir şablonu açın, filtre veya gruplamayı değiştirin, görünümü kaydedin veya CSV olarak dışa aktarın. Tüm akış bu sayfanın içinde.",
+      "tipPickEntity": "Neye bakacağınızı seçin — sporcu, veli, özel ders ya da finans.",
+      "tipFilterOrGroup": "Filtre ekleyin veya tek boyutlu özet için gruplamayı açın.",
+      "tipSaveOrExport": "Görünümü kaydedin (size özel veya kulüple paylaşımlı) ve gerektiğinde CSV olarak dışa aktarın.",
+      "entityPickerEyebrow": "Veya tek bir nesneyle baştan başlayın",
+      "exploringEntity": "{{name}} inceleniyor",
+      "invalidPreset": "Bağlantıdaki ön ayar yüklenemedi — boş bir gezgin açıldı."
     },
     "actionCenter": {
       "title": "Aksiyon merkezi",

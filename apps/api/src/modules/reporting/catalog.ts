@@ -3,6 +3,7 @@ import type {
   ReportEntityKey,
   ReportFieldDefinition,
   ReportFilterOperator,
+  StarterReportView,
 } from '@amateur/shared-types';
 
 /**
@@ -103,6 +104,7 @@ const ATHLETES: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'athlete.shirtSize',
@@ -132,6 +134,7 @@ const ATHLETES: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'athlete.birthDate',
@@ -152,6 +155,7 @@ const ATHLETES: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'athlete.jerseyNumber',
@@ -172,6 +176,7 @@ const ATHLETES: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'athlete.primaryGroupName',
@@ -182,6 +187,7 @@ const ATHLETES: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'athlete.primaryGroupId',
@@ -257,6 +263,7 @@ const ATHLETES: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    aggregations: ['sum', 'avg', 'min', 'max'],
   },
   {
     key: 'athlete.guardianCount',
@@ -365,6 +372,7 @@ const GUARDIANS: ReportFieldDefinition[] = [
     selectable: true,
     sortable: false,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'guardian.id',
@@ -400,6 +408,7 @@ const PRIVATE_LESSONS: ReportFieldDefinition[] = [
     sortable: true,
     exportable: true,
     quickSearch: true,
+    groupable: true,
   },
   {
     key: 'lesson.scheduledStart',
@@ -421,6 +430,7 @@ const PRIVATE_LESSONS: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'lesson.attendanceStatus',
@@ -487,6 +497,7 @@ const PRIVATE_LESSONS: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    aggregations: ['sum', 'avg', 'min', 'max'],
   },
   {
     key: 'lesson.id',
@@ -522,6 +533,7 @@ const FINANCE: ReportFieldDefinition[] = [
     sortable: true,
     exportable: true,
     quickSearch: true,
+    groupable: true,
   },
   {
     key: 'charge.itemCategory',
@@ -532,6 +544,7 @@ const FINANCE: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'charge.amount',
@@ -542,6 +555,7 @@ const FINANCE: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    aggregations: ['sum', 'avg', 'min', 'max'],
   },
   {
     key: 'charge.allocatedAmount',
@@ -552,6 +566,7 @@ const FINANCE: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    aggregations: ['sum', 'avg', 'min', 'max'],
   },
   {
     key: 'charge.remainingAmount',
@@ -562,6 +577,7 @@ const FINANCE: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    aggregations: ['sum', 'avg', 'min', 'max'],
   },
   {
     key: 'charge.dueDate',
@@ -583,6 +599,7 @@ const FINANCE: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'charge.isOverdue',
@@ -593,6 +610,7 @@ const FINANCE: ReportFieldDefinition[] = [
     selectable: true,
     sortable: false,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'charge.fromPrivateLesson',
@@ -603,6 +621,7 @@ const FINANCE: ReportFieldDefinition[] = [
     selectable: true,
     sortable: false,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'charge.billingPeriodLabel',
@@ -613,6 +632,7 @@ const FINANCE: ReportFieldDefinition[] = [
     selectable: true,
     sortable: true,
     exportable: true,
+    groupable: true,
   },
   {
     key: 'charge.id',
@@ -710,3 +730,397 @@ export function getFieldDefinition(entity: ReportEntityKey, key: string): Report
 }
 
 export const REPORT_ENTITY_KEYS: ReportEntityKey[] = ['athletes', 'guardians', 'private_lessons', 'finance_charges'];
+
+/**
+ * Starter / curated reports
+ * --------------------------
+ * Predefined, deterministic, tenant-safe reports surfaced inside the Report
+ * Builder so the experience is never "blank canvas". They are intentionally
+ * conservative: every field, filter, and group dimension references a real
+ * catalog entry above.
+ *
+ * Adding a starter view is a one-place change: append below, then add an
+ * i18n key under `pages.reports.starter.<id>.title` /
+ * `pages.reports.starter.<id>.description` in both `en` and `tr`.
+ */
+const STARTER_VIEWS: StarterReportView[] = [
+  {
+    id: 'athletes.activeWithoutTeam',
+    entity: 'athletes',
+    titleKey: 'pages.reports.starter.athletes.activeWithoutTeam.title',
+    descriptionKey: 'pages.reports.starter.athletes.activeWithoutTeam.description',
+    categoryKey: 'pages.reports.starter.categories.roster',
+    category: 'Roster',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [
+        { type: 'condition', field: 'athlete.status', operator: 'is', value: 'active' },
+        {
+          type: 'group',
+          combinator: 'and',
+          children: [{ type: 'condition', field: 'athlete.teamCount', operator: 'is', value: 0 }],
+        },
+      ],
+    },
+    columns: [
+      'athlete.lastName',
+      'athlete.firstName',
+      'athlete.primaryGroupName',
+      'athlete.status',
+      'athlete.teamCount',
+    ],
+    sort: [{ field: 'athlete.lastName', direction: 'asc' }],
+  },
+  {
+    id: 'athletes.trialFollowUp',
+    entity: 'athletes',
+    titleKey: 'pages.reports.starter.athletes.trialFollowUp.title',
+    descriptionKey: 'pages.reports.starter.athletes.trialFollowUp.description',
+    categoryKey: 'pages.reports.starter.categories.roster',
+    category: 'Roster',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [{ type: 'condition', field: 'athlete.status', operator: 'is', value: 'trial' }],
+    },
+    columns: [
+      'athlete.lastName',
+      'athlete.firstName',
+      'athlete.primaryGroupName',
+      'athlete.guardianCount',
+      'athlete.status',
+    ],
+    sort: [{ field: 'athlete.lastName', direction: 'asc' }],
+  },
+  {
+    id: 'athletes.outstandingBalance',
+    entity: 'athletes',
+    titleKey: 'pages.reports.starter.athletes.outstandingBalance.title',
+    descriptionKey: 'pages.reports.starter.athletes.outstandingBalance.description',
+    categoryKey: 'pages.reports.starter.categories.finance',
+    category: 'Finance',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [{ type: 'condition', field: 'athlete.outstandingTotal', operator: 'gt', value: 0 }],
+    },
+    columns: [
+      'athlete.lastName',
+      'athlete.firstName',
+      'athlete.primaryGroupName',
+      'athlete.status',
+      'athlete.outstandingTotal',
+    ],
+    sort: [{ field: 'athlete.outstandingTotal', direction: 'desc' }],
+    managementPack: true,
+  },
+  {
+    id: 'athletes.unpaidPrivateLessons',
+    entity: 'athletes',
+    titleKey: 'pages.reports.starter.athletes.unpaidPrivateLessons.title',
+    descriptionKey: 'pages.reports.starter.athletes.unpaidPrivateLessons.description',
+    categoryKey: 'pages.reports.starter.categories.finance',
+    category: 'Finance',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [
+        {
+          type: 'condition',
+          field: 'athlete.unpaidPrivateLessonChargesExist',
+          operator: 'exists',
+        },
+      ],
+    },
+    columns: [
+      'athlete.lastName',
+      'athlete.firstName',
+      'athlete.primaryGroupName',
+      'athlete.outstandingTotal',
+    ],
+    sort: [{ field: 'athlete.outstandingTotal', direction: 'desc' }],
+  },
+  {
+    id: 'athletes.femaleShirtSizeM',
+    entity: 'athletes',
+    titleKey: 'pages.reports.starter.athletes.femaleShirtSizeM.title',
+    descriptionKey: 'pages.reports.starter.athletes.femaleShirtSizeM.description',
+    categoryKey: 'pages.reports.starter.categories.roster',
+    category: 'Roster',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [
+        { type: 'condition', field: 'athlete.gender', operator: 'is', value: 'female' },
+        { type: 'condition', field: 'athlete.shirtSize', operator: 'is', value: 'M' },
+      ],
+    },
+    columns: [
+      'athlete.lastName',
+      'athlete.firstName',
+      'athlete.primaryGroupName',
+      'athlete.shirtSize',
+    ],
+    sort: [{ field: 'athlete.lastName', direction: 'asc' }],
+  },
+  {
+    id: 'athletes.byGroup',
+    entity: 'athletes',
+    titleKey: 'pages.reports.starter.athletes.byGroup.title',
+    descriptionKey: 'pages.reports.starter.athletes.byGroup.description',
+    categoryKey: 'pages.reports.starter.categories.management',
+    category: 'Management',
+    filter: null,
+    columns: [],
+    sort: [],
+    groupBy: {
+      field: 'athlete.primaryGroupName',
+      measures: [{ op: 'count', alias: 'athleteCount' }],
+      sort: { alias: 'athleteCount', direction: 'desc' },
+      limit: 50,
+    },
+    managementPack: true,
+  },
+  {
+    id: 'athletes.byGender',
+    entity: 'athletes',
+    titleKey: 'pages.reports.starter.athletes.byGender.title',
+    descriptionKey: 'pages.reports.starter.athletes.byGender.description',
+    categoryKey: 'pages.reports.starter.categories.management',
+    category: 'Management',
+    filter: null,
+    columns: [],
+    sort: [],
+    groupBy: {
+      field: 'athlete.gender',
+      measures: [{ op: 'count', alias: 'athleteCount' }],
+      sort: { alias: 'athleteCount', direction: 'desc' },
+      limit: 10,
+    },
+  },
+  {
+    id: 'athletes.outstandingByGroup',
+    entity: 'athletes',
+    titleKey: 'pages.reports.starter.athletes.outstandingByGroup.title',
+    descriptionKey: 'pages.reports.starter.athletes.outstandingByGroup.description',
+    categoryKey: 'pages.reports.starter.categories.management',
+    category: 'Management',
+    filter: null,
+    columns: [],
+    sort: [],
+    groupBy: {
+      field: 'athlete.primaryGroupName',
+      measures: [
+        { op: 'count', alias: 'athleteCount' },
+        { op: 'sum', field: 'athlete.outstandingTotal', alias: 'outstandingSum' },
+      ],
+      sort: { alias: 'outstandingSum', direction: 'desc' },
+      limit: 50,
+    },
+    managementPack: true,
+  },
+  {
+    id: 'guardians.contactGaps',
+    entity: 'guardians',
+    titleKey: 'pages.reports.starter.guardians.contactGaps.title',
+    descriptionKey: 'pages.reports.starter.guardians.contactGaps.description',
+    categoryKey: 'pages.reports.starter.categories.contact',
+    category: 'Contact',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [{ type: 'condition', field: 'guardian.contactComplete', operator: 'is', value: false }],
+    },
+    columns: [
+      'guardian.lastName',
+      'guardian.firstName',
+      'guardian.email',
+      'guardian.phone',
+      'guardian.athleteCount',
+    ],
+    sort: [{ field: 'guardian.lastName', direction: 'asc' }],
+  },
+  {
+    id: 'guardians.unlinked',
+    entity: 'guardians',
+    titleKey: 'pages.reports.starter.guardians.unlinked.title',
+    descriptionKey: 'pages.reports.starter.guardians.unlinked.description',
+    categoryKey: 'pages.reports.starter.categories.contact',
+    category: 'Contact',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [{ type: 'condition', field: 'guardian.athletesExist', operator: 'notExists' }],
+    },
+    columns: [
+      'guardian.lastName',
+      'guardian.firstName',
+      'guardian.email',
+      'guardian.phone',
+    ],
+    sort: [{ field: 'guardian.lastName', direction: 'asc' }],
+  },
+  {
+    id: 'lessons.upcoming',
+    entity: 'private_lessons',
+    titleKey: 'pages.reports.starter.lessons.upcoming.title',
+    descriptionKey: 'pages.reports.starter.lessons.upcoming.description',
+    categoryKey: 'pages.reports.starter.categories.scheduling',
+    category: 'Scheduling',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [{ type: 'condition', field: 'lesson.status', operator: 'is', value: 'planned' }],
+    },
+    columns: [
+      'lesson.scheduledStart',
+      'lesson.athleteName',
+      'lesson.coachName',
+      'lesson.focus',
+      'lesson.chargeStatus',
+    ],
+    sort: [{ field: 'lesson.scheduledStart', direction: 'asc' }],
+  },
+  {
+    id: 'lessons.unbilled',
+    entity: 'private_lessons',
+    titleKey: 'pages.reports.starter.lessons.unbilled.title',
+    descriptionKey: 'pages.reports.starter.lessons.unbilled.description',
+    categoryKey: 'pages.reports.starter.categories.finance',
+    category: 'Finance',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [{ type: 'condition', field: 'lesson.chargeStatus', operator: 'is', value: 'unbilled' }],
+    },
+    columns: [
+      'lesson.scheduledStart',
+      'lesson.athleteName',
+      'lesson.coachName',
+      'lesson.status',
+      'lesson.chargeStatus',
+    ],
+    sort: [{ field: 'lesson.scheduledStart', direction: 'desc' }],
+  },
+  {
+    id: 'lessons.byCoach',
+    entity: 'private_lessons',
+    titleKey: 'pages.reports.starter.lessons.byCoach.title',
+    descriptionKey: 'pages.reports.starter.lessons.byCoach.description',
+    categoryKey: 'pages.reports.starter.categories.management',
+    category: 'Management',
+    filter: null,
+    columns: [],
+    sort: [],
+    groupBy: {
+      field: 'lesson.coachName',
+      measures: [
+        { op: 'count', alias: 'lessonCount' },
+        { op: 'sum', field: 'lesson.chargeRemaining', alias: 'remainingSum' },
+      ],
+      sort: { alias: 'lessonCount', direction: 'desc' },
+      limit: 50,
+    },
+    managementPack: true,
+  },
+  {
+    id: 'finance.overdue',
+    entity: 'finance_charges',
+    titleKey: 'pages.reports.starter.finance.overdue.title',
+    descriptionKey: 'pages.reports.starter.finance.overdue.description',
+    categoryKey: 'pages.reports.starter.categories.finance',
+    category: 'Finance',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [{ type: 'condition', field: 'charge.isOverdue', operator: 'is', value: true }],
+    },
+    columns: [
+      'charge.dueDate',
+      'charge.athleteName',
+      'charge.itemName',
+      'charge.amount',
+      'charge.remainingAmount',
+    ],
+    sort: [{ field: 'charge.remainingAmount', direction: 'desc' }],
+    managementPack: true,
+  },
+  {
+    id: 'finance.outstandingByItem',
+    entity: 'finance_charges',
+    titleKey: 'pages.reports.starter.finance.outstandingByItem.title',
+    descriptionKey: 'pages.reports.starter.finance.outstandingByItem.description',
+    categoryKey: 'pages.reports.starter.categories.management',
+    category: 'Management',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [
+        { type: 'condition', field: 'charge.derivedStatus', operator: 'in', value: ['pending', 'partially_paid'] },
+      ],
+    },
+    columns: [],
+    sort: [],
+    groupBy: {
+      field: 'charge.itemName',
+      measures: [
+        { op: 'count', alias: 'chargeCount' },
+        { op: 'sum', field: 'charge.remainingAmount', alias: 'remainingSum' },
+      ],
+      sort: { alias: 'remainingSum', direction: 'desc' },
+      limit: 50,
+    },
+    managementPack: true,
+  },
+  {
+    id: 'finance.overdueByCategory',
+    entity: 'finance_charges',
+    titleKey: 'pages.reports.starter.finance.overdueByCategory.title',
+    descriptionKey: 'pages.reports.starter.finance.overdueByCategory.description',
+    categoryKey: 'pages.reports.starter.categories.management',
+    category: 'Management',
+    filter: {
+      type: 'group',
+      combinator: 'and',
+      children: [{ type: 'condition', field: 'charge.isOverdue', operator: 'is', value: true }],
+    },
+    columns: [],
+    sort: [],
+    groupBy: {
+      field: 'charge.itemCategory',
+      measures: [
+        { op: 'count', alias: 'chargeCount' },
+        { op: 'sum', field: 'charge.remainingAmount', alias: 'remainingSum' },
+      ],
+      sort: { alias: 'remainingSum', direction: 'desc' },
+      limit: 25,
+    },
+  },
+];
+
+export function listStarterViews(entity?: ReportEntityKey): StarterReportView[] {
+  const list = entity ? STARTER_VIEWS.filter((view) => view.entity === entity) : STARTER_VIEWS;
+  return list.map((view) => cloneStarter(view));
+}
+
+export function getStarterView(id: string): StarterReportView | null {
+  const found = STARTER_VIEWS.find((view) => view.id === id);
+  return found ? cloneStarter(found) : null;
+}
+
+function cloneStarter(view: StarterReportView): StarterReportView {
+  return {
+    ...view,
+    filter: view.filter ? JSON.parse(JSON.stringify(view.filter)) : null,
+    columns: [...view.columns],
+    sort: view.sort.map((clause) => ({ ...clause })),
+    groupBy: view.groupBy
+      ? {
+          ...view.groupBy,
+          measures: view.groupBy.measures.map((measure) => ({ ...measure })),
+          sort: view.groupBy.sort ? { ...view.groupBy.sort } : undefined,
+        }
+      : undefined,
+  };
+}

@@ -18,6 +18,7 @@ import {
 import type { Coach, CommandCenterResponse, Payment, PrivateLesson } from '../lib/domain-types';
 import type { ClubOverviewResponse, PlatformOverviewResponse } from '../lib/overview-types';
 import { useTenant } from '../lib/tenant-hooks';
+import { buildStarterLink } from '../lib/report-deep-link';
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -179,6 +180,44 @@ export function DashboardPage() {
     },
   ];
 
+  // Local helper card kept inline so the drill-down section stays self-contained.
+  function DrillDownCard({
+    to,
+    eyebrow,
+    title,
+    body,
+    badge,
+  }: {
+    to: string;
+    eyebrow: string;
+    title: string;
+    body: string;
+    badge?: string;
+  }) {
+    return (
+      <Link
+        to={to}
+        className="group flex h-full flex-col justify-between rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4 transition hover:border-amateur-accent/40 hover:shadow"
+      >
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amateur-accent">
+            <span>{eyebrow}</span>
+            {badge ? (
+              <span className="rounded-full border border-amateur-border bg-amateur-surface px-2 py-0.5 text-[10px] text-amateur-muted">
+                {badge}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-2 font-display text-base font-semibold text-amateur-ink">{title}</p>
+          <p className="mt-1 text-sm text-amateur-muted">{body}</p>
+        </div>
+        <span className="mt-3 text-sm font-semibold text-amateur-accent group-hover:underline">
+          {t('pages.dashboard.drilldown.openReport')} →
+        </span>
+      </Link>
+    );
+  }
+
   function renderPayment(payment: Payment) {
     return (
       <li key={payment.id} className="flex items-center justify-between gap-3 py-3">
@@ -254,6 +293,67 @@ export function DashboardPage() {
           </div>
         </section>
       ) : null}
+      <section className="mb-6 rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-accent">
+              {t('pages.dashboard.drilldown.eyebrow')}
+            </p>
+            <h2 className="mt-2 font-display text-lg font-semibold text-amateur-ink">
+              {t('pages.dashboard.drilldown.title')}
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm text-amateur-muted">
+              {t('pages.dashboard.drilldown.subtitle')}
+            </p>
+          </div>
+          <Link
+            to="/app/report-builder"
+            className="text-sm font-semibold text-amateur-accent hover:underline"
+          >
+            {t('pages.dashboard.openReportBuilder')}
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <DrillDownCard
+            to={buildStarterLink('finance.overdue')}
+            eyebrow={t('pages.dashboard.drilldown.financeOverdueEyebrow')}
+            title={t('pages.dashboard.drilldown.financeOverdueTitle')}
+            body={t('pages.dashboard.drilldown.financeOverdueBody')}
+          />
+          <DrillDownCard
+            to={buildStarterLink('athletes.outstandingBalance')}
+            eyebrow={t('pages.dashboard.drilldown.outstandingEyebrow')}
+            title={t('pages.dashboard.drilldown.outstandingTitle')}
+            body={t('pages.dashboard.drilldown.outstandingBody')}
+          />
+          <DrillDownCard
+            to={buildStarterLink('athletes.activeWithoutTeam')}
+            eyebrow={t('pages.dashboard.drilldown.teamlessEyebrow')}
+            title={t('pages.dashboard.drilldown.teamlessTitle')}
+            body={t('pages.dashboard.drilldown.teamlessBody')}
+          />
+          <DrillDownCard
+            to={buildStarterLink('lessons.upcoming')}
+            eyebrow={t('pages.dashboard.drilldown.lessonsEyebrow')}
+            title={t('pages.dashboard.drilldown.lessonsTitle')}
+            body={t('pages.dashboard.drilldown.lessonsBody')}
+          />
+          <DrillDownCard
+            to={buildStarterLink('athletes.outstandingByGroup')}
+            eyebrow={t('pages.dashboard.drilldown.byGroupEyebrow')}
+            title={t('pages.dashboard.drilldown.byGroupTitle')}
+            body={t('pages.dashboard.drilldown.byGroupBody')}
+            badge={t('pages.dashboard.drilldown.groupedBadge')}
+          />
+          <DrillDownCard
+            to={buildStarterLink('lessons.byCoach')}
+            eyebrow={t('pages.dashboard.drilldown.byCoachEyebrow')}
+            title={t('pages.dashboard.drilldown.byCoachTitle')}
+            body={t('pages.dashboard.drilldown.byCoachBody')}
+            badge={t('pages.dashboard.drilldown.groupedBadge')}
+          />
+        </div>
+      </section>
       <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">

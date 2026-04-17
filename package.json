@@ -14,6 +14,7 @@
     "dashboard:smoke": "node scripts/dashboard-smoke.mjs",
     "reporting:smoke": "node scripts/reporting-smoke.mjs",
     "reporting:filter-tree:test": "node scripts/reporting-filter-tree.test.mjs",
+    "reporting:starter-views:test": "node scripts/reporting-starter-views.test.mjs",
     "lint": "eslint apps/api/src packages/*/src apps/web/src --max-warnings 0",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",

@@ -164,6 +164,18 @@ export interface ReportFieldDefinition {
   relationCheck?: boolean;
   /** Optional description for tooltip / hint text in the UI. */
   hintKey?: string;
+  /**
+   * v2: Whether this field can be used as a `groupBy` dimension by the lightweight
+   * aggregation compiler. Only meaningful for short, low-cardinality dimensions
+   * (status, gender, group name, coach, etc.).
+   */
+  groupable?: boolean;
+  /**
+   * v2: Aggregations supported on this field as a measure. `count` is implicit on
+   * the base entity and never needs to be listed here; this whitelists numeric/
+   * currency fields like `athlete.outstandingTotal` for `sum` / `avg` use.
+   */
+  aggregations?: ReportAggregateOp[];
 }
 
 /** Catalog snapshot for an entity. */
@@ -225,6 +237,47 @@ export interface ReportRunRequest {
   sort?: ReportSortClause[];
   limit?: number;
   offset?: number;
+  /**
+   * v2: when present, the run/export endpoint returns grouped/aggregated rows
+   * instead of raw rows. The `columns` and `sort` clauses are ignored in that
+   * case (the dimension + measures define the response shape).
+   */
+  groupBy?: ReportGroupBy;
+}
+
+/**
+ * v2: aggregate operators supported by the lightweight grouping engine. We
+ * intentionally keep this list small so the product does not turn into a full
+ * pivot-table BI tool. `count` is the implicit row count of the base entity.
+ */
+export type ReportAggregateOp = 'count' | 'sum' | 'avg' | 'min' | 'max';
+
+/**
+ * v2: a single measure requested in a grouped report. `field` is omitted only
+ * for `op = 'count'`. Each measure produces one column in the response.
+ */
+export interface ReportAggregateMeasure {
+  op: ReportAggregateOp;
+  /** Field key from the catalog (omit for plain `count`). */
+  field?: string;
+  /** Optional caller-provided alias used as the response column key. */
+  alias?: string;
+}
+
+/**
+ * v2: optional grouping payload added to ReportRunRequest. Lightweight on
+ * purpose: a single dimension, a small set of measures, and an optional
+ * direction-only sort by alias.
+ */
+export interface ReportGroupBy {
+  /** One groupable field key (must have `groupable: true` in the catalog). */
+  field: string;
+  /** Measures to compute. `count` is added automatically if list is empty. */
+  measures: ReportAggregateMeasure[];
+  /** Sort by one alias (a measure alias, or the dimension key); defaults to count desc. */
+  sort?: { alias: string; direction: 'asc' | 'desc' };
+  /** Hard cap on returned groups (defaults to 50, max 200). */
+  limit?: number;
 }
 
 /** A single row returned by /api/reporting/run; values are primitives or null. */
@@ -237,6 +290,42 @@ export interface ReportRunResponse {
   offset: number;
   columns: string[];
   rows: ReportRunRow[];
+  /** v2: included when the request used `groupBy`. Mirrors the request. */
+  groupBy?: ReportGroupBy;
+  /** v2: column descriptors for grouped responses (label keys for headers). */
+  columnLabels?: Array<{ key: string; labelKey?: string; label?: string; isMeasure?: boolean }>;
+}
+
+/**
+ * v2: a curated, ready-made starter report that is shipped with the platform
+ * and surfaced in the Report Builder so the experience is never empty. Each
+ * starter view is deterministic, tenant-safe, and uses only catalog-supported
+ * filters / fields.
+ */
+export interface StarterReportView {
+  /** Stable id, e.g. "athletes.activeWithoutTeam". */
+  id: string;
+  entity: ReportEntityKey;
+  /** i18n key under reports.starter.<id>.title. */
+  titleKey: string;
+  /** i18n key under reports.starter.<id>.description. */
+  descriptionKey: string;
+  /** i18n key under reports.starter.categories.<value> for grouping in the UI. */
+  categoryKey: string;
+  /** Short marketing-friendly category string (en label fallback). */
+  category: string;
+  filter: ReportFilterNode | null;
+  columns: string[];
+  sort: ReportSortClause[];
+  search?: string | null;
+  /** v2: optional grouped/aggregate definition for "management pack" starter reports. */
+  groupBy?: ReportGroupBy;
+  /** Whether the catalog suggests this for the management/executive pack on Reports page. */
+  managementPack?: boolean;
+}
+
+export interface StarterReportListResponse {
+  items: StarterReportView[];
 }
 
 /** Saved view / report definition persisted per tenant. */
@@ -257,6 +346,10 @@ export interface SavedReportView {
   ownerName?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** v2: lightweight group/aggregate definition (when present, view is grouped). */
+  groupBy?: ReportGroupBy | null;
+  /** v2: optional starter-view id that this saved view was forked from. */
+  derivedFromStarterId?: string | null;
 }
 
 export interface SavedReportViewListResponse {
