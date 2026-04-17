@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { AppDataSource } from '../data-source';
 import { runDemoSeed } from './demo-seed';
+import { runDemoSeedExpansion } from './demo-seed-expansion';
 import { DEMO_TENANT_ID, DEMO_TENANT_SLUG } from './constants';
 
 async function main(): Promise<void> {
@@ -12,7 +13,15 @@ async function main(): Promise<void> {
   await AppDataSource.initialize();
   try {
     await runDemoSeed(AppDataSource);
-    console.log('Demo seed completed (idempotent upsert).');
+    console.log('Demo seed (base) completed (idempotent upsert).');
+
+    if (process.env.SKIP_DEMO_SEED_EXPANSION === 'true') {
+      console.log('Skipping demo seed expansion (SKIP_DEMO_SEED_EXPANSION=true).');
+    } else {
+      await runDemoSeedExpansion(AppDataSource);
+      console.log('Demo seed (expansion) completed (idempotent upsert).');
+    }
+
     console.log(`Demo tenant slug: ${DEMO_TENANT_SLUG}`);
     console.log(`Demo tenant id (DEV_TENANT_ID / X-Tenant-Id): ${DEMO_TENANT_ID}`);
   } finally {
