@@ -10,7 +10,14 @@ The amateur platform ships a **single, repeatable demo seed** for local developm
   - `moda-voleybol-akademi` — Moda Voleybol Akademi
   - `marmara-futbol-okulu` — Marmara Futbol Okulu
 - Inserts **sport branches**, **age groups**, **groups (cohorts)**, **teams**, **coaches**, **athletes**, **guardians**, **links**, **team memberships**, **training sessions**, **private lessons**, **attendance**, **charge items**, **athlete charges**, **staff users**, **tenant memberships**, and **staff sessions**.
-- Is **idempotent**: safe to run multiple times. Rows are keyed by deterministic UUIDs, and the demo tenant/admin identities also reconcile on their natural unique keys (`tenants.slug`, `staff_users.email`) so repeat runs do not fail on those collisions.
+- After the base seed completes, runs an **expansion seed** that grows each
+  demo club into a believable staging-walkthrough footprint (≈22-29 athletes,
+  ≈12-21 guardians, 4-6 coaches, several groups and teams, weekly recurring
+  training sessions with attendance, a few private lessons, three months of
+  monthly dues with payments, and a sprinkle of merchandise / tournament /
+  camp charges). The expansion can be skipped with
+  `SKIP_DEMO_SEED_EXPANSION=true` if you only want the original smoke seed.
+- Is **idempotent**: safe to run multiple times. Rows are keyed by deterministic UUIDs (base seed) or `stableId(slug, kind, key, …)` SHA-256 hashes (expansion seed), and the demo tenant/admin identities also reconcile on their natural unique keys (`tenants.slug`, `staff_users.email`) so repeat runs do not fail on those collisions.
 
 ## What it does *not* do
 
@@ -96,4 +103,15 @@ That command runs the demo seed twice against the same database and confirms the
 ## Extending
 
 - Add more deterministic UUIDs in `apps/api/src/database/seed/constants.ts` and rows in `demo-seed.ts`.
+- For broad volume changes (more athletes per club, different overdue rates, more recurring sessions, etc.), tune the per-club `profile` knobs in `apps/api/src/database/seed/demo-seed-expansion.ts`. Each knob is documented inline; bumping `extraAthletes`, `recurringSessionWeeks`, or `overdueRate` will be reflected on the next seed run without touching the base seed.
 - Additional tenants or “demo packs” can follow the same pattern (separate constant namespaces per pack).
+
+## Smoke test
+
+After seeding, run the dashboard smoke test against a running API to confirm every endpoint that backs the staff sidebar still returns 200 for each accessible tenant:
+
+```bash
+npm run dashboard:smoke
+```
+
+Override `API_BASE`, `ADMIN_EMAIL`, or `ADMIN_PASSWORD` to point the smoke test at a different environment. The script logs in as the global admin, walks every accessible tenant, and asserts that the `/api/reporting/command-center` payload still has the `stats`, `attendance`, `actionCenter`, and `familyWorkflow` blocks the dashboard expects.
