@@ -4,8 +4,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type {
   ReportCatalogResponse,
+  ReportEntityKey,
   ReportRunRequest,
   ReportRunResponse,
+  StarterReportListResponse,
 } from '@amateur/shared-types';
 import { ReportDefinition } from '../../database/entities/report-definition.entity';
 import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.entity';
@@ -16,7 +18,7 @@ import { ActionCenterService } from '../action-center/action-center.service';
 import { FamilyActionService } from '../family-action/family-action.service';
 import { FinanceService } from '../finance/finance.service';
 import { isMissingRelationError } from '../core/database-error.util';
-import { listCatalogEntities } from './catalog';
+import { getStarterView, listCatalogEntities, listStarterViews } from './catalog';
 import { ReportingQueryCompiler } from './query-compiler';
 
 type FinanceSummary = Awaited<ReturnType<FinanceService['listAthleteFinanceSummaries']>>;
@@ -93,6 +95,14 @@ export class ReportingService {
 
   catalog(): ReportCatalogResponse {
     return { entities: listCatalogEntities() };
+  }
+
+  starterViews(entity?: ReportEntityKey): StarterReportListResponse {
+    return { items: listStarterViews(entity) };
+  }
+
+  starterView(id: string) {
+    return getStarterView(id);
   }
 
   async run(tenantId: string, request: ReportRunRequest): Promise<ReportRunResponse> {

@@ -4,6 +4,7 @@ import { Brackets, Repository } from 'typeorm';
 import type {
   ReportEntityKey,
   ReportFilterNode,
+  ReportGroupBy,
   ReportSortClause,
   SavedReportView,
 } from '@amateur/shared-types';
@@ -21,6 +22,10 @@ export interface SavedViewInput {
   sort?: ReportSortClause[];
   search?: string | null;
   visibility?: 'private' | 'shared';
+  /** v2: optional grouping payload (light validation only — compiler enforces). */
+  groupBy?: ReportGroupBy | null;
+  /** v2: provenance metadata when this view was duplicated from a starter view. */
+  derivedFromStarterId?: string | null;
 }
 
 @Injectable()
@@ -82,6 +87,11 @@ export class SavedViewsService {
     const columns = this.normalizeColumns(input.entity, input.columns);
     const sort = this.normalizeSort(input.entity, input.sort);
 
+    const payload: Record<string, unknown> = {};
+    if (input.search) payload.search = input.search;
+    if (input.groupBy) payload.groupBy = sanitizeGroupBy(input.groupBy);
+    if (input.derivedFromStarterId) payload.derivedFromStarterId = input.derivedFromStarterId;
+
     const preset = this.presets.create({
       tenantId,
       surface: this.surfaceFor(input.entity),
@@ -93,7 +103,7 @@ export class SavedViewsService {
       sort,
       visibility: input.visibility === 'shared' ? 'shared' : 'private',
       ownerStaffUserId: staffUserId,
-      payload: input.search ? { search: input.search } : {},
+      payload,
     });
 
     const saved = await this.presets.save(preset);
@@ -138,8 +148,25 @@ export class SavedViewsService {
     if (input.sort !== undefined) {
       row.sort = this.normalizeSort(targetEntity, input.sort);
     }
-    if (input.search !== undefined) {
-      row.payload = input.search ? { search: input.search } : {};
+    if (
+      input.search !== undefined ||
+      input.groupBy !== undefined ||
+      input.derivedFromStarterId !== undefined
+    ) {
+      const nextPayload: Record<string, unknown> = { ...(row.payload ?? {}) };
+      if (input.search !== undefined) {
+        if (input.search) nextPayload.search = input.search;
+        else delete nextPayload.search;
+      }
+      if (input.groupBy !== undefined) {
+        if (input.groupBy) nextPayload.groupBy = sanitizeGroupBy(input.groupBy);
+        else delete nextPayload.groupBy;
+      }
+      if (input.derivedFromStarterId !== undefined) {
+        if (input.derivedFromStarterId) nextPayload.derivedFromStarterId = input.derivedFromStarterId;
+        else delete nextPayload.derivedFromStarterId;
+      }
+      row.payload = nextPayload;
     }
     if (input.visibility !== undefined) {
       row.visibility = input.visibility === 'shared' ? 'shared' : 'private';
@@ -201,6 +228,7 @@ export class SavedViewsService {
     const ownerName = owner
       ? owner.preferredName || `${owner.firstName} ${owner.lastName}`.trim() || null
       : null;
+    const payload = (row.payload ?? {}) as Record<string, unknown>;
     return {
       id: row.id,
       tenantId: row.tenantId,
@@ -210,12 +238,32 @@ export class SavedViewsService {
       filter: (row.filterTree as ReportFilterNode | null) ?? null,
       columns: row.columns ?? [],
       sort: (row.sort as ReportSortClause[] | null) ?? [],
-      search: typeof row.payload?.search === 'string' ? (row.payload.search as string) : null,
+      search: typeof payload.search === 'string' ? (payload.search as string) : null,
       visibility: row.visibility,
       ownerStaffUserId: row.ownerStaffUserId ?? null,
       ownerName,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
+      groupBy: (payload.groupBy as ReportGroupBy | undefined) ?? null,
+      derivedFromStarterId:
+        typeof payload.derivedFromStarterId === 'string'
+          ? (payload.derivedFromStarterId as string)
+          : null,
     };
   }
+}
+
+function sanitizeGroupBy(input: ReportGroupBy): ReportGroupBy {
+  return {
+    field: String(input.field),
+    measures: Array.isArray(input.measures)
+      ? input.measures.slice(0, 6).map((measure) => ({
+          op: measure.op,
+          field: measure.field ?? undefined,
+          alias: measure.alias ?? undefined,
+        }))
+      : [],
+    sort: input.sort ? { alias: String(input.sort.alias), direction: input.sort.direction === 'asc' ? 'asc' : 'desc' } : undefined,
+    limit: typeof input.limit === 'number' ? input.limit : undefined,
+  };
 }

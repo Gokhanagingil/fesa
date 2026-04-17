@@ -6,6 +6,8 @@ import type {
   ReportRunResponse,
   SavedReportView,
   SavedReportViewListResponse,
+  StarterReportListResponse,
+  StarterReportView,
 } from './reporting-types';
 
 let catalogCache: ReportCatalogResponse | null = null;
@@ -71,4 +73,16 @@ export function updateSavedView(id: string, input: Partial<SavedReportView>) {
 
 export function deleteSavedView(id: string) {
   return apiDelete(`/api/reporting/saved-views/${id}`);
+}
+
+let starterCache: StarterReportView[] | null = null;
+export async function fetchStarterViews(force = false): Promise<StarterReportView[]> {
+  if (starterCache && !force) return starterCache;
+  const res = await apiGet<StarterReportListResponse>('/api/reporting/starter-views');
+  starterCache = res.items;
+  return starterCache;
+}
+
+export function fetchStarterView(id: string): Promise<StarterReportView> {
+  return apiGet<StarterReportView>(`/api/reporting/starter-views/${id}`);
 }

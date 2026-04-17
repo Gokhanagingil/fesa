@@ -58,6 +58,23 @@ export interface ReportFieldDefinition {
   currency?: string;
   relationCheck?: boolean;
   hintKey?: string;
+  groupable?: boolean;
+  aggregations?: ReportAggregateOp[];
+}
+
+export type ReportAggregateOp = 'count' | 'sum' | 'avg' | 'min' | 'max';
+
+export interface ReportAggregateMeasure {
+  op: ReportAggregateOp;
+  field?: string;
+  alias?: string;
+}
+
+export interface ReportGroupBy {
+  field: string;
+  measures: ReportAggregateMeasure[];
+  sort?: { alias: string; direction: 'asc' | 'desc' };
+  limit?: number;
 }
 
 export interface ReportSortClause {
@@ -102,6 +119,7 @@ export interface ReportRunRequest {
   sort?: ReportSortClause[];
   limit?: number;
   offset?: number;
+  groupBy?: ReportGroupBy;
 }
 
 export type ReportRunRow = Record<string, string | number | boolean | null>;
@@ -113,6 +131,27 @@ export interface ReportRunResponse {
   offset: number;
   columns: string[];
   rows: ReportRunRow[];
+  groupBy?: ReportGroupBy;
+  columnLabels?: Array<{ key: string; labelKey?: string; label?: string; isMeasure?: boolean }>;
+}
+
+export interface StarterReportView {
+  id: string;
+  entity: ReportEntityKey;
+  titleKey: string;
+  descriptionKey: string;
+  categoryKey: string;
+  category: string;
+  filter: ReportFilterNode | null;
+  columns: string[];
+  sort: ReportSortClause[];
+  search?: string | null;
+  groupBy?: ReportGroupBy;
+  managementPack?: boolean;
+}
+
+export interface StarterReportListResponse {
+  items: StarterReportView[];
 }
 
 export interface SavedReportView {
@@ -130,6 +169,8 @@ export interface SavedReportView {
   ownerName?: string | null;
   createdAt: string;
   updatedAt: string;
+  groupBy?: ReportGroupBy | null;
+  derivedFromStarterId?: string | null;
 }
 
 export interface SavedReportViewListResponse {

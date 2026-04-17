@@ -245,6 +245,31 @@
         "openQueue": "Open action center",
         "openBuilder": "Build a report"
       },
+      "drilldown": {
+        "eyebrow": "Drill into a report",
+        "title": "Move from a number to a list with one click.",
+        "subtitle": "These cards open the Report Builder pre-filtered for the most common follow-up flows.",
+        "openReport": "Open report",
+        "groupedBadge": "Summary",
+        "financeOverdueEyebrow": "Finance",
+        "financeOverdueTitle": "Overdue charges",
+        "financeOverdueBody": "All charges past their due date, sorted by remaining amount.",
+        "outstandingEyebrow": "Athletes",
+        "outstandingTitle": "Outstanding balances",
+        "outstandingBody": "Athletes who currently owe the club money — highest first.",
+        "teamlessEyebrow": "Roster",
+        "teamlessTitle": "Active athletes without a team",
+        "teamlessBody": "Active athletes not on any team — useful for assignment days.",
+        "lessonsEyebrow": "Scheduling",
+        "lessonsTitle": "Upcoming planned private lessons",
+        "lessonsBody": "1-to-1 sessions waiting on the calendar — easy daily prep.",
+        "byGroupEyebrow": "Management",
+        "byGroupTitle": "Outstanding balance by group",
+        "byGroupBody": "Where the financial follow-up actually concentrates.",
+        "byCoachEyebrow": "Management",
+        "byCoachTitle": "Lesson workload by coach",
+        "byCoachBody": "Lesson count and remaining billing by coach."
+      },
       "commandCenterTitle": "Command center",
       "commandCenterHint": "Keep coaching, scheduling, and finance follow-up in one operational overview.",
       "collectionsTitle": "Collections overview",
@@ -1090,19 +1115,159 @@
       },
       "savedViews": {
         "title": "Saved views",
-        "shared": "Shared",
-        "private": "Private only",
+        "ownTitle": "Your views",
+        "sharedTitle": "Shared with the club",
+        "shared": "Shared with club",
+        "sharedTag": "shared",
+        "private": "Just for me",
+        "privateHint": "Only you can see this view.",
+        "sharedHint": "Visible to every staff member in this club.",
         "applied": "Loaded view: {{name}}",
         "saved": "View saved: {{name}}",
+        "update": "Update view",
         "delete": "Delete view",
         "dialogTitle": "Save report view",
+        "dialogHelper": "Give this report a friendly name so the next teammate (or the next-week version of you) understands what it is for.",
         "name": "Name",
-        "description": "Description",
+        "namePlaceholder": "e.g. Outstanding balance — junior groups",
+        "description": "Description (optional)",
+        "descriptionPlaceholder": "Explain when to open this view and what to do with it.",
         "visibility": "Visibility",
+        "firstRun": "Save filtered views with one click — they show up here next time you open the explorer.",
+        "dismissHint": "Got it",
         "mode": {
           "create": "Save as new",
-          "update": "Update current"
+          "update": "Update this view"
         }
+      },
+      "aggregate": {
+        "title": "Group & summarize",
+        "subtitle": "Pick one dimension and one or more lightweight measures. Counts are automatic.",
+        "toggleShow": "Group",
+        "toggleHide": "Hide grouping",
+        "toggleOn": "Grouped (active)",
+        "disable": "Switch off grouping",
+        "dimension": "Group by",
+        "limit": "Group cap",
+        "measures": "Measures",
+        "addMeasure": "Add measure",
+        "removeMeasure": "Remove",
+        "measureOp": "Aggregate",
+        "measureField": "Field",
+        "measureAlias": "Column name",
+        "measureCountField": "Row count of the entity",
+        "sortBy": "Sort by",
+        "sortDimension": "Group label",
+        "direction": "Direction",
+        "directionDesc": "Highest first",
+        "directionAsc": "Lowest first",
+        "summary_one": "{{count}} group",
+        "summary_other": "{{count}} groups",
+        "columnsHiddenWhileGrouped": "Column picker is hidden while grouping is active.",
+        "notSupported": "This entity does not have any group-friendly fields yet.",
+        "measure": {
+          "count": "Count",
+          "sum": "Sum",
+          "avg": "Average",
+          "min": "Min",
+          "max": "Max"
+        }
+      },
+      "context": {
+        "starter": "Curated starter",
+        "savedView": "Saved view",
+        "startFresh": "Start a blank report"
+      },
+      "starter": {
+        "eyebrow": "Curated starter reports",
+        "panelTitle": "Open a ready-made report",
+        "panelSubtitle": "Skip the blank canvas — these are real club workflows you can run, duplicate, and save as your own.",
+        "all": "All",
+        "open": "Open",
+        "groupedBadge": "Grouped",
+        "categories": {
+          "roster": "Roster",
+          "finance": "Finance",
+          "scheduling": "Scheduling",
+          "contact": "Contact",
+          "management": "Management"
+        },
+        "athletes": {
+          "activeWithoutTeam": {
+            "title": "Active athletes without a team",
+            "description": "Active athletes who are not on any team yet — perfect for assignment days."
+          },
+          "trialFollowUp": {
+            "title": "Trial athletes awaiting decision",
+            "description": "Trialists still in the consideration phase. Reach out, decide, or convert."
+          },
+          "outstandingBalance": {
+            "title": "Athletes with outstanding balance",
+            "description": "Anyone who currently owes the club money, sorted by amount."
+          },
+          "unpaidPrivateLessons": {
+            "title": "Unpaid private lesson fees",
+            "description": "Athletes with at least one private-lesson charge that is not fully paid."
+          },
+          "femaleShirtSizeM": {
+            "title": "Female athletes — shirt size M",
+            "description": "A demo of multi-condition filtering used for kit and uniform planning."
+          },
+          "byGroup": {
+            "title": "Athlete count by group",
+            "description": "How is the roster distributed across groups right now?"
+          },
+          "byGender": {
+            "title": "Athlete count by gender",
+            "description": "Quick gender mix snapshot of active and trial athletes."
+          },
+          "outstandingByGroup": {
+            "title": "Outstanding balance by group",
+            "description": "Where the financial follow-up actually concentrates."
+          }
+        },
+        "guardians": {
+          "contactGaps": {
+            "title": "Guardians missing contact info",
+            "description": "Guardians whose phone or email is not yet captured."
+          },
+          "unlinked": {
+            "title": "Guardians not linked to an athlete",
+            "description": "Likely incomplete records — connect them or archive them."
+          }
+        },
+        "lessons": {
+          "upcoming": {
+            "title": "Upcoming planned private lessons",
+            "description": "Planned 1-to-1 sessions, sorted by date — easy daily prep."
+          },
+          "unbilled": {
+            "title": "Private lessons not billed yet",
+            "description": "Lessons that need a charge before invoicing the family."
+          },
+          "byCoach": {
+            "title": "Private lesson workload by coach",
+            "description": "Lesson count and remaining billing by coach."
+          }
+        },
+        "finance": {
+          "overdue": {
+            "title": "Overdue charges",
+            "description": "Open balances past their due date, sorted by remaining amount."
+          },
+          "outstandingByItem": {
+            "title": "Outstanding balance by charge item",
+            "description": "Where the open money is concentrated by item."
+          },
+          "overdueByCategory": {
+            "title": "Overdue load by category",
+            "description": "Group overdue charges by category to plan outreach."
+          }
+        }
+      },
+      "management": {
+        "title": "Management pack",
+        "subtitle": "Curated, manager-friendly summaries pulled from your live data."
       },
       "fields": {
         "athlete": {
@@ -1170,7 +1335,16 @@
     },
     "reportBuilder": {
       "title": "Report builder",
-      "subtitle": "Build, save, and export advanced reports across athletes, guardians, private lessons, and finance."
+      "subtitle": "Build, save, and export advanced reports across athletes, guardians, private lessons, and finance.",
+      "welcomeEyebrow": "Reporting workspace",
+      "welcomeTitle": "Build a report in three calm steps.",
+      "welcomeBody": "Open a curated starter, tweak filters or grouping, then save the view or export to CSV. The whole experience stays inside this page.",
+      "tipPickEntity": "Pick what you want to look at — athletes, guardians, private lessons, or finance.",
+      "tipFilterOrGroup": "Add filters, or switch on grouping for one-dimension summaries.",
+      "tipSaveOrExport": "Save the view (just for you, or shared with the club) and export to CSV when needed.",
+      "entityPickerEyebrow": "Or start fresh with one entity",
+      "exploringEntity": "Exploring {{name}}",
+      "invalidPreset": "Could not load the preset from the link — opening a blank explorer instead."
     },
     "actionCenter": {
       "title": "Action center",

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
@@ -18,16 +18,41 @@ import {
   type ReportEntityKey,
   type ReportFieldDefinition,
   type ReportFilterNode,
+  type ReportGroupBy,
   type ReportRunResponse,
   type ReportSortClause,
   type SavedReportView,
+  type StarterReportView,
 } from '../../lib/reporting-types';
 import { AdvancedFilterBuilder } from './AdvancedFilterBuilder';
+import { GroupingPanel } from './GroupingPanel';
+
+/**
+ * Initial state passed to the explorer when it is opened from a starter view,
+ * a saved view, or a deep link from the dashboard.
+ *
+ * The explorer treats this as the canonical "first paint" so filters / columns
+ * / sort / grouping all line up before the first network call.
+ */
+export type ExplorerInitialState = {
+  filter?: ReportFilterNode | null;
+  search?: string | null;
+  columns?: string[];
+  sort?: ReportSortClause[];
+  groupBy?: ReportGroupBy | null;
+  derivedFromStarterId?: string | null;
+  /** Optional pre-applied saved view (so the controls reflect "active view"). */
+  activeViewId?: string | null;
+  /** Optional friendly label rendered above the explorer body. */
+  contextLabel?: string;
+};
 
 type Props = {
   entity: ReportEntityKey;
-  /** Optional preset filter applied on first render (e.g. when navigated from a card). */
+  /** Optional preset filter applied on first render (legacy entry point). */
   initialFilter?: ReportFilterNode | null;
+  /** v2: full first-paint state (filter + columns + sort + groupBy etc.). */
+  initialState?: ExplorerInitialState;
   /** Optional UI heading shown above the explorer. */
   heading?: string;
   /** Hide built-in heading; useful when this is embedded inside a richer page. */
@@ -36,25 +61,34 @@ type Props = {
 
 const PAGE_SIZE = 25;
 
-export function DataExplorer({ entity, initialFilter = null, heading, embed }: Props) {
+export function DataExplorer({ entity, initialFilter = null, initialState, heading, embed }: Props) {
   const { t } = useTranslation();
   const [catalog, setCatalog] = useState<ReportCatalogEntity | null>(null);
-  const [filter, setFilter] = useState<ReportFilterNode | null>(initialFilter);
-  const [search, setSearch] = useState('');
-  const [columns, setColumns] = useState<string[]>([]);
-  const [sort, setSort] = useState<ReportSortClause[]>([]);
+  const [filter, setFilter] = useState<ReportFilterNode | null>(initialState?.filter ?? initialFilter);
+  const [search, setSearch] = useState(initialState?.search ?? '');
+  const [columns, setColumns] = useState<string[]>(initialState?.columns ?? []);
+  const [sort, setSort] = useState<ReportSortClause[]>(initialState?.sort ?? []);
+  const [groupBy, setGroupBy] = useState<ReportGroupBy | null>(initialState?.groupBy ?? null);
+  const [derivedFromStarterId, setDerivedFromStarterId] = useState<string | null>(
+    initialState?.derivedFromStarterId ?? null,
+  );
+  const [contextLabel, setContextLabel] = useState<string | null>(initialState?.contextLabel ?? null);
   const [page, setPage] = useState(0);
   const [response, setResponse] = useState<ReportRunResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedViews, setSavedViews] = useState<SavedReportView[]>([]);
-  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [activeViewId, setActiveViewId] = useState<string | null>(initialState?.activeViewId ?? null);
   const [showColumnsPicker, setShowColumnsPicker] = useState(false);
-  const [showFilters, setShowFilters] = useState<boolean>(!isFilterEmpty(initialFilter));
+  const [showFilters, setShowFilters] = useState<boolean>(
+    !isFilterEmpty(initialState?.filter ?? initialFilter),
+  );
+  const [showGrouping, setShowGrouping] = useState<boolean>(Boolean(initialState?.groupBy));
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,19 +98,43 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
       const found = cat.entities.find((e) => e.key === entity) ?? null;
       setCatalog(found);
       if (found) {
-        setColumns(found.defaultColumns);
-        setSort(found.defaultSort ? [found.defaultSort] : []);
+        setColumns((current) => (current.length ? current : initialState?.columns ?? found.defaultColumns));
+        setSort((current) =>
+          current.length
+            ? current
+            : initialState?.sort ?? (found.defaultSort ? [found.defaultSort] : []),
+        );
       }
     })();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity]);
 
+  // Re-apply legacy initialFilter prop changes (kept for backward compat).
   useEffect(() => {
+    if (initialState) return;
     setFilter(initialFilter ?? null);
     setShowFilters(!isFilterEmpty(initialFilter ?? null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialFilter]);
+
+  // Re-apply v2 initialState when it changes (e.g. user picks a different starter).
+  useEffect(() => {
+    if (!initialState) return;
+    setFilter(initialState.filter ?? null);
+    setSearch(initialState.search ?? '');
+    setColumns(initialState.columns ?? []);
+    setSort(initialState.sort ?? []);
+    setGroupBy(initialState.groupBy ?? null);
+    setDerivedFromStarterId(initialState.derivedFromStarterId ?? null);
+    setActiveViewId(initialState.activeViewId ?? null);
+    setContextLabel(initialState.contextLabel ?? null);
+    setShowFilters(!isFilterEmpty(initialState.filter ?? null));
+    setShowGrouping(Boolean(initialState.groupBy));
+    setPage(0);
+  }, [initialState]);
 
   const loadViews = useCallback(async () => {
     try {
@@ -100,10 +158,11 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
         entity,
         filter: filter ?? undefined,
         search: search.trim() || undefined,
-        columns: columns.length ? columns : undefined,
-        sort,
-        limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
+        columns: groupBy ? undefined : columns.length ? columns : undefined,
+        sort: groupBy ? [] : sort,
+        limit: groupBy ? groupBy.limit ?? 50 : PAGE_SIZE,
+        offset: groupBy ? 0 : page * PAGE_SIZE,
+        groupBy: groupBy ?? undefined,
       });
       setResponse(res);
     } catch (e) {
@@ -111,28 +170,36 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
     } finally {
       setLoading(false);
     }
-  }, [catalog, columns, entity, filter, page, search, sort, t]);
+  }, [catalog, columns, entity, filter, groupBy, page, search, sort, t]);
 
   useEffect(() => {
     const id = setTimeout(() => void run(), 200);
     return () => clearTimeout(id);
   }, [run]);
 
+  const fieldByKey = useMemo(
+    () => new Map((catalog?.fields ?? []).map((field) => [field.key, field])),
+    [catalog],
+  );
+
   if (!catalog) {
     return <p className="text-sm text-amateur-muted">{t('app.states.loading')}</p>;
   }
 
-  const fieldByKey = new Map(catalog.fields.map((field) => [field.key, field]));
-  const totalPages = response ? Math.max(1, Math.ceil(response.total / PAGE_SIZE)) : 1;
+  const totalPages = response && !groupBy ? Math.max(1, Math.ceil(response.total / PAGE_SIZE)) : 1;
 
-  const onApplyView = (view: SavedReportView) => {
+  const onApplySavedView = (view: SavedReportView) => {
     setActiveViewId(view.id);
     setFilter(view.filter ?? null);
     setColumns(view.columns.length ? view.columns : catalog.defaultColumns);
     setSort(view.sort.length ? view.sort : catalog.defaultSort ? [catalog.defaultSort] : []);
     setSearch(view.search ?? '');
+    setGroupBy(view.groupBy ?? null);
+    setDerivedFromStarterId(view.derivedFromStarterId ?? null);
+    setContextLabel(view.name);
     setPage(0);
     setShowFilters(!isFilterEmpty(view.filter));
+    setShowGrouping(Boolean(view.groupBy));
     setInfo(t('pages.reports.savedViews.applied', { name: view.name }));
   };
 
@@ -142,7 +209,12 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
     setColumns(catalog.defaultColumns);
     setSort(catalog.defaultSort ? [catalog.defaultSort] : []);
     setSearch('');
+    setGroupBy(null);
+    setDerivedFromStarterId(null);
+    setContextLabel(null);
     setPage(0);
+    setShowFilters(false);
+    setShowGrouping(false);
   };
 
   const onExport = async () => {
@@ -153,9 +225,10 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
         entity,
         filter: filter ?? undefined,
         search: search.trim() || undefined,
-        columns: columns.length ? columns : undefined,
-        sort,
-        limit: catalog.exportRowLimit,
+        columns: groupBy ? undefined : columns.length ? columns : undefined,
+        sort: groupBy ? [] : sort,
+        limit: groupBy ? groupBy.limit ?? 200 : catalog.exportRowLimit,
+        groupBy: groupBy ?? undefined,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
@@ -164,10 +237,33 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
     }
   };
 
+  const filterCountValue = filterCount(filter);
+  const ownViews = savedViews.filter((view) => view.visibility !== 'shared');
+  const sharedViews = savedViews.filter((view) => view.visibility === 'shared');
+  const isFromStarter = Boolean(derivedFromStarterId);
+
   return (
     <div className="space-y-4">
       {!embed && heading ? (
         <h2 className="font-display text-lg font-semibold text-amateur-ink">{heading}</h2>
+      ) : null}
+
+      {contextLabel ? (
+        <div className="rounded-2xl border border-amateur-accent/30 bg-amateur-accent-soft/40 px-4 py-3 text-sm text-amateur-ink">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wide text-amateur-accent">
+                {isFromStarter
+                  ? t('pages.reports.context.starter')
+                  : t('pages.reports.context.savedView')}
+              </span>
+              <p className="mt-0.5 font-semibold">{contextLabel}</p>
+            </div>
+            <Button type="button" variant="ghost" onClick={onClearAll}>
+              {t('pages.reports.context.startFresh')}
+            </Button>
+          </div>
+        </div>
       ) : null}
 
       <div className="rounded-2xl border border-amateur-border bg-amateur-surface p-4 shadow-sm">
@@ -189,12 +285,27 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
             {showFilters
               ? t('pages.reports.explorer.hideFilters')
               : t('pages.reports.explorer.showFilters')}
-            {filterCount(filter) > 0 ? ` (${filterCount(filter)})` : ''}
+            {filterCountValue > 0 ? ` (${filterCountValue})` : ''}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setShowGrouping((v) => !v);
+            }}
+          >
+            {groupBy
+              ? t('pages.reports.aggregate.toggleOn')
+              : showGrouping
+              ? t('pages.reports.aggregate.toggleHide')
+              : t('pages.reports.aggregate.toggleShow')}
           </Button>
           <Button
             type="button"
             variant="ghost"
             onClick={() => setShowColumnsPicker((v) => !v)}
+            disabled={Boolean(groupBy)}
+            title={groupBy ? t('pages.reports.aggregate.columnsHiddenWhileGrouped') : undefined}
           >
             {t('pages.reports.explorer.columns')} ({columns.length})
           </Button>
@@ -202,7 +313,7 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
             {t('pages.reports.explorer.reset')}
           </Button>
           <Button type="button" onClick={() => setShowSaveDialog(true)}>
-            {t('pages.reports.explorer.save')}
+            {activeViewId ? t('pages.reports.savedViews.update') : t('pages.reports.explorer.save')}
           </Button>
           <Button type="button" variant="ghost" disabled={exporting} onClick={() => void onExport()}>
             {exporting ? t('pages.reports.explorer.exporting') : t('pages.reports.explorer.exportCsv')}
@@ -210,24 +321,45 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
         </div>
 
         {savedViews.length > 0 ? (
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-amateur-muted">{t('pages.reports.savedViews.title')}:</span>
-            {savedViews.map((view) => (
-              <button
-                key={view.id}
-                type="button"
-                onClick={() => onApplyView(view)}
-                className={`rounded-full border px-3 py-1 ${
-                  activeViewId === view.id
-                    ? 'border-amateur-accent bg-amateur-accent text-white'
-                    : 'border-amateur-border text-amateur-ink hover:bg-amateur-canvas'
-                }`}
-                title={view.description ?? ''}
-              >
-                {view.name}
-                {view.visibility === 'shared' ? ` · ${t('pages.reports.savedViews.shared')}` : ''}
-              </button>
-            ))}
+          <div className="mt-3 space-y-2 text-xs">
+            {ownViews.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-amateur-muted">{t('pages.reports.savedViews.ownTitle')}:</span>
+                {ownViews.map((view) => (
+                  <SavedViewChip
+                    key={view.id}
+                    view={view}
+                    active={activeViewId === view.id}
+                    onClick={() => onApplySavedView(view)}
+                  />
+                ))}
+              </div>
+            ) : null}
+            {sharedViews.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-amateur-muted">{t('pages.reports.savedViews.sharedTitle')}:</span>
+                {sharedViews.map((view) => (
+                  <SavedViewChip
+                    key={view.id}
+                    view={view}
+                    active={activeViewId === view.id}
+                    onClick={() => onApplySavedView(view)}
+                    sharedTag={t('pages.reports.savedViews.sharedTag')}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : showOnboarding ? (
+          <div className="mt-3 flex items-start justify-between gap-3 rounded-xl border border-dashed border-amateur-border bg-amateur-canvas px-3 py-2 text-xs text-amateur-muted">
+            <span>{t('pages.reports.savedViews.firstRun')}</span>
+            <button
+              type="button"
+              onClick={() => setShowOnboarding(false)}
+              className="text-amateur-accent hover:underline"
+            >
+              {t('pages.reports.savedViews.dismissHint')}
+            </button>
           </div>
         ) : null}
       </div>
@@ -245,7 +377,18 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
         />
       ) : null}
 
-      {showColumnsPicker ? (
+      {showGrouping ? (
+        <GroupingPanel
+          entity={catalog}
+          value={groupBy}
+          onChange={(next) => {
+            setGroupBy(next);
+            setPage(0);
+          }}
+        />
+      ) : null}
+
+      {showColumnsPicker && !groupBy ? (
         <ColumnsPicker
           catalog={catalog}
           selected={columns}
@@ -261,31 +404,35 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
       <div className="rounded-2xl border border-amateur-border bg-amateur-surface shadow-sm">
         <div className="flex items-center justify-between gap-3 border-b border-amateur-border px-4 py-3 text-sm text-amateur-muted">
           <p>
-            {response
+            {response && groupBy
+              ? t('pages.reports.aggregate.summary', { count: response.rows.length })
+              : response
               ? t('pages.reports.explorer.summary', { count: response.total })
               : t('app.states.loading')}
           </p>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={page === 0 || loading}
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-            >
-              ←
-            </Button>
-            <span>
-              {page + 1} / {totalPages}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={loading || page + 1 >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              →
-            </Button>
-          </div>
+          {!groupBy ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={page === 0 || loading}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                ←
+              </Button>
+              <span>
+                {page + 1} / {totalPages}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={loading || page + 1 >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                →
+              </Button>
+            </div>
+          ) : null}
         </div>
         {loading ? (
           <p className="px-4 py-6 text-sm text-amateur-muted">{t('app.states.loading')}</p>
@@ -294,64 +441,30 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
             title={t('pages.reports.explorer.empty')}
             hint={t('pages.reports.explorer.emptyHint')}
           />
+        ) : groupBy ? (
+          <GroupedTable response={response} fieldByKey={fieldByKey} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-amateur-border bg-amateur-canvas text-amateur-muted">
-                  {columns.map((col) => {
-                    const def = fieldByKey.get(col);
-                    if (!def) return <th key={col} className="px-4 py-2 font-medium">{col}</th>;
-                    const isSorted = sort.find((clause) => clause.field === col);
-                    const arrow = isSorted ? (isSorted.direction === 'asc' ? '▲' : '▼') : '';
-                    return (
-                      <th
-                        key={col}
-                        className={`px-4 py-2 font-medium ${def.sortable ? 'cursor-pointer hover:text-amateur-ink' : ''}`}
-                        onClick={() => {
-                          if (def.sortable === false) return;
-                          setSort((current) => {
-                            const existing = current.find((c) => c.field === col);
-                            if (!existing) return [{ field: col, direction: 'asc' }];
-                            if (existing.direction === 'asc') return [{ field: col, direction: 'desc' }];
-                            return [];
-                          });
-                        }}
-                      >
-                        {t(def.labelKey, def.label ?? def.key)} {arrow}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {response.rows.map((row, idx) => (
-                  <tr key={idx} className="border-b border-amateur-border/70 last:border-0">
-                    {columns.map((col) => {
-                      const def = fieldByKey.get(col);
-                      return (
-                        <td key={col} className="px-4 py-2 align-top text-amateur-ink">
-                          {renderCell(row[col], def)}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <RowsTable
+            response={response}
+            columns={columns}
+            sort={sort}
+            onSort={setSort}
+            fieldByKey={fieldByKey}
+          />
         )}
       </div>
 
       {showSaveDialog ? (
         <SaveViewDialog
           existing={savedViews.find((v) => v.id === activeViewId) ?? null}
+          showDuplicateMode={Boolean(activeViewId) || isFromStarter}
+          defaultDuplicate={isFromStarter}
           onCancel={() => setShowSaveDialog(false)}
           onSave={async ({ name, description, visibility, mode }) => {
             setSaving(true);
             try {
               if (mode === 'update' && activeViewId) {
-                await updateSavedView(activeViewId, {
+                const updated = await updateSavedView(activeViewId, {
                   name,
                   description,
                   visibility,
@@ -359,7 +472,10 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
                   columns,
                   sort,
                   search: search.trim() || null,
+                  groupBy,
                 });
+                setActiveViewId(updated.id);
+                setContextLabel(updated.name);
               } else {
                 const created = await createSavedView({
                   entity,
@@ -370,8 +486,12 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
                   columns,
                   sort,
                   search: search.trim() || null,
+                  groupBy,
+                  derivedFromStarterId: derivedFromStarterId ?? undefined,
                 });
                 setActiveViewId(created.id);
+                setContextLabel(created.name);
+                setDerivedFromStarterId(null);
               }
               setInfo(t('pages.reports.savedViews.saved', { name }));
               setShowSaveDialog(false);
@@ -389,6 +509,7 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
                   try {
                     await deleteSavedView(activeViewId);
                     setActiveViewId(null);
+                    setContextLabel(null);
                     setShowSaveDialog(false);
                     await loadViews();
                   } catch (e) {
@@ -402,6 +523,149 @@ export function DataExplorer({ entity, initialFilter = null, heading, embed }: P
           saving={saving}
         />
       ) : null}
+    </div>
+  );
+}
+
+function SavedViewChip({
+  view,
+  active,
+  onClick,
+  sharedTag,
+}: {
+  view: SavedReportView;
+  active: boolean;
+  onClick: () => void;
+  sharedTag?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={view.description ?? ''}
+      className={`rounded-full border px-3 py-1 ${
+        active
+          ? 'border-amateur-accent bg-amateur-accent text-white'
+          : 'border-amateur-border text-amateur-ink hover:bg-amateur-canvas'
+      }`}
+    >
+      {view.name}
+      {sharedTag ? <span className="ml-1 opacity-70">· {sharedTag}</span> : null}
+      {view.groupBy ? <span className="ml-1 opacity-70">· Σ</span> : null}
+    </button>
+  );
+}
+
+function RowsTable({
+  response,
+  columns,
+  sort,
+  onSort,
+  fieldByKey,
+}: {
+  response: ReportRunResponse;
+  columns: string[];
+  sort: ReportSortClause[];
+  onSort: (next: ReportSortClause[]) => void;
+  fieldByKey: Map<string, ReportFieldDefinition>;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-left text-sm">
+        <thead>
+          <tr className="border-b border-amateur-border bg-amateur-canvas text-amateur-muted">
+            {columns.map((col) => {
+              const def = fieldByKey.get(col);
+              if (!def) return <th key={col} className="px-4 py-2 font-medium">{col}</th>;
+              const isSorted = sort.find((clause) => clause.field === col);
+              const arrow = isSorted ? (isSorted.direction === 'asc' ? '▲' : '▼') : '';
+              return (
+                <th
+                  key={col}
+                  className={`px-4 py-2 font-medium ${def.sortable ? 'cursor-pointer hover:text-amateur-ink' : ''}`}
+                  onClick={() => {
+                    if (def.sortable === false) return;
+                    const existing = sort.find((c) => c.field === col);
+                    if (!existing) onSort([{ field: col, direction: 'asc' }]);
+                    else if (existing.direction === 'asc') onSort([{ field: col, direction: 'desc' }]);
+                    else onSort([]);
+                  }}
+                >
+                  {t(def.labelKey, def.label ?? def.key)} {arrow}
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {response.rows.map((row, idx) => (
+            <tr key={idx} className="border-b border-amateur-border/70 last:border-0">
+              {columns.map((col) => {
+                const def = fieldByKey.get(col);
+                return (
+                  <td key={col} className="px-4 py-2 align-top text-amateur-ink">
+                    {renderCell(row[col], def)}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function GroupedTable({
+  response,
+  fieldByKey,
+}: {
+  response: ReportRunResponse;
+  fieldByKey: Map<string, ReportFieldDefinition>;
+}) {
+  const { t } = useTranslation();
+  const labels: Array<{ key: string; labelKey?: string; label?: string; isMeasure?: boolean }> =
+    response.columnLabels ?? response.columns.map((key) => ({ key, label: key }));
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[480px] text-left text-sm">
+        <thead>
+          <tr className="border-b border-amateur-border bg-amateur-canvas text-amateur-muted">
+            {labels.map((entry) => (
+              <th key={entry.key} className="px-4 py-2 font-medium">
+                {entry.labelKey ? t(entry.labelKey, entry.label ?? entry.key) : entry.label ?? entry.key}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {response.rows.map((row, idx) => (
+            <tr key={idx} className="border-b border-amateur-border/70 last:border-0">
+              {labels.map((entry) => {
+                const value = row[entry.key];
+                if (entry.isMeasure) {
+                  return (
+                    <td key={entry.key} className="px-4 py-2 align-top text-amateur-ink">
+                      {value === null || value === undefined
+                        ? '—'
+                        : typeof value === 'number'
+                        ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                        : String(value)}
+                    </td>
+                  );
+                }
+                const def = fieldByKey.get(entry.key);
+                return (
+                  <td key={entry.key} className="px-4 py-2 align-top text-amateur-ink">
+                    {renderCell(value, def)}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -451,12 +715,16 @@ function ColumnsPicker({
 
 function SaveViewDialog({
   existing,
+  showDuplicateMode,
+  defaultDuplicate,
   onCancel,
   onSave,
   onDelete,
   saving,
 }: {
   existing: SavedReportView | null;
+  showDuplicateMode: boolean;
+  defaultDuplicate: boolean;
   onCancel: () => void;
   onSave: (input: {
     name: string;
@@ -468,10 +736,11 @@ function SaveViewDialog({
   saving: boolean;
 }) {
   const { t } = useTranslation();
-  const [name, setName] = useState(existing?.name ?? '');
+  const initialMode: 'create' | 'update' = defaultDuplicate || !existing ? 'create' : 'update';
+  const [name, setName] = useState(existing && initialMode === 'update' ? existing.name : '');
   const [description, setDescription] = useState(existing?.description ?? '');
   const [visibility, setVisibility] = useState<'private' | 'shared'>(existing?.visibility ?? 'private');
-  const [mode, setMode] = useState<'create' | 'update'>(existing ? 'update' : 'create');
+  const [mode, setMode] = useState<'create' | 'update'>(initialMode);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
@@ -479,13 +748,20 @@ function SaveViewDialog({
         <h3 className="font-display text-lg font-semibold text-amateur-ink">
           {t('pages.reports.savedViews.dialogTitle')}
         </h3>
-        {existing ? (
+        <p className="mt-1 text-sm text-amateur-muted">
+          {t('pages.reports.savedViews.dialogHelper')}
+        </p>
+        {showDuplicateMode && existing ? (
           <div className="mt-3 inline-flex overflow-hidden rounded-xl border border-amateur-border text-xs">
-            {(['create', 'update'] as const).map((option) => (
+            {(['update', 'create'] as const).map((option) => (
               <button
                 key={option}
                 type="button"
-                onClick={() => setMode(option)}
+                onClick={() => {
+                  setMode(option);
+                  if (option === 'create') setName('');
+                  if (option === 'update' && existing) setName(existing.name);
+                }}
                 className={`px-3 py-1.5 font-semibold uppercase tracking-wide ${
                   mode === option ? 'bg-amateur-accent text-white' : 'bg-amateur-surface text-amateur-muted'
                 }`}
@@ -504,6 +780,7 @@ function SaveViewDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="mt-1 w-full rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+              placeholder={t('pages.reports.savedViews.namePlaceholder')}
             />
           </label>
           <label className="block">
@@ -515,6 +792,7 @@ function SaveViewDialog({
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
               className="mt-1 w-full rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+              placeholder={t('pages.reports.savedViews.descriptionPlaceholder')}
             />
           </label>
           <fieldset className="space-y-1 text-xs text-amateur-muted">
@@ -526,7 +804,12 @@ function SaveViewDialog({
                 checked={visibility === 'private'}
                 onChange={() => setVisibility('private')}
               />
-              {t('pages.reports.savedViews.private')}
+              <span>
+                {t('pages.reports.savedViews.private')}
+                <span className="ml-1 text-[10px] opacity-70">
+                  · {t('pages.reports.savedViews.privateHint')}
+                </span>
+              </span>
             </label>
             <label className="flex items-center gap-2">
               <input
@@ -535,12 +818,17 @@ function SaveViewDialog({
                 checked={visibility === 'shared'}
                 onChange={() => setVisibility('shared')}
               />
-              {t('pages.reports.savedViews.shared')}
+              <span>
+                {t('pages.reports.savedViews.shared')}
+                <span className="ml-1 text-[10px] opacity-70">
+                  · {t('pages.reports.savedViews.sharedHint')}
+                </span>
+              </span>
             </label>
           </fieldset>
         </div>
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
-          {onDelete ? (
+          {onDelete && mode === 'update' ? (
             <Button
               type="button"
               variant="ghost"
@@ -612,3 +900,5 @@ function filterCount(node: ReportFilterNode | null | undefined): number {
   if (node.type === 'condition') return 1;
   return node.children.reduce((sum, child) => sum + filterCount(child), 0);
 }
+
+export type { StarterReportView };
