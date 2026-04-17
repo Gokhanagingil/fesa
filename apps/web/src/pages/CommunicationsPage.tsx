@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -9,25 +9,136 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { apiGet } from '../lib/api';
 import {
+  formatDateTime,
   getAthleteStatusLabel,
+  getCommunicationChannelLabel,
+  getCommunicationSourceLabel,
   getFamilyReadinessStatusLabel,
   getFamilyReadinessTone,
   getPersonName,
   getPrivateLessonReasonLabel,
 } from '../lib/display';
+import {
+  buildMailtoLink,
+  buildPhoneLink,
+  buildWhatsAppLink,
+  buildWhatsAppShareLink,
+  countReachable,
+  isReachableForChannel,
+  listOutreach,
+  logOutreach,
+  pickBestGuardian,
+} from '../lib/communication';
 import { useTenant } from '../lib/tenant-hooks';
 import type {
-  ClubGroup,
-  CommunicationAudienceResponse,
-  Coach,
   AthleteStatus,
+  ClubGroup,
+  Coach,
+  CommunicationAudienceMember,
+  CommunicationAudienceResponse,
+  CommunicationChannel,
+  CommunicationTemplate,
+  CommunicationTemplatesResponse,
   FamilyReadinessStatus,
+  OutreachActivity,
+  OutreachActivityListResponse,
   Team,
   TrainingSession,
 } from '../lib/domain-types';
 
+type AudienceSourceContext = {
+  surface: string;
+  key?: string | null;
+  hint?: string | null;
+};
+
+type QuickScenario = {
+  id: string;
+  labelKey: string;
+  hintKey: string;
+  templateKey: string;
+  channel: CommunicationChannel;
+  filters: Record<string, string>;
+  topicKey: string;
+  source: AudienceSourceContext;
+};
+
+const QUICK_SCENARIOS: QuickScenario[] = [
+  {
+    id: 'overdue-payment',
+    labelKey: 'pages.communications.quickScenarios.overduePayment',
+    hintKey: 'pages.communications.quickScenarios.overduePaymentHint',
+    templateKey: 'overdue_payment_reminder',
+    channel: 'whatsapp',
+    filters: { financialState: 'overdue', primaryContactsOnly: 'true' },
+    topicKey: 'pages.communications.templates.overduePayment.title',
+    source: { surface: 'finance_overdue' },
+  },
+  {
+    id: 'family-follow-up',
+    labelKey: 'pages.communications.quickScenarios.needsFollowUp',
+    hintKey: 'pages.communications.quickScenarios.needsFollowUpHint',
+    templateKey: 'family_follow_up',
+    channel: 'whatsapp',
+    filters: { needsFollowUp: 'true', primaryContactsOnly: 'true' },
+    topicKey: 'pages.communications.templates.familyFollowUp.title',
+    source: { surface: 'communications', key: 'needs_follow_up' },
+  },
+  {
+    id: 'attendance-quiet',
+    labelKey: 'pages.communications.quickScenarios.attendanceQuiet',
+    hintKey: 'pages.communications.quickScenarios.attendanceQuietHint',
+    templateKey: 'attendance_check_in',
+    channel: 'whatsapp',
+    filters: { athleteStatus: 'active', primaryContactsOnly: 'true' },
+    topicKey: 'pages.communications.templates.attendanceCheckIn.title',
+    source: { surface: 'attendance_quiet' },
+  },
+  {
+    id: 'trial-follow-up',
+    labelKey: 'pages.communications.quickScenarios.trialFollowUp',
+    hintKey: 'pages.communications.quickScenarios.trialFollowUpHint',
+    templateKey: 'trial_warm_follow_up',
+    channel: 'whatsapp',
+    filters: { athleteStatus: 'trial', primaryContactsOnly: 'true' },
+    topicKey: 'pages.communications.templates.trialFollowUp.title',
+    source: { surface: 'trial_high_engagement' },
+  },
+  {
+    id: 'session-reminder',
+    labelKey: 'pages.communications.quickScenarios.sessionReminder',
+    hintKey: 'pages.communications.quickScenarios.sessionReminderHint',
+    templateKey: 'session_reminder',
+    channel: 'whatsapp',
+    filters: { primaryContactsOnly: 'true' },
+    topicKey: 'pages.communications.templates.sessionReminder.title',
+    source: { surface: 'session_reminder' },
+  },
+  {
+    id: 'group-announcement',
+    labelKey: 'pages.communications.quickScenarios.groupAnnouncement',
+    hintKey: 'pages.communications.quickScenarios.groupAnnouncementHint',
+    templateKey: 'group_announcement',
+    channel: 'whatsapp',
+    filters: { primaryContactsOnly: 'true' },
+    topicKey: 'pages.communications.templates.groupAnnouncement.title',
+    source: { surface: 'group_announcement' },
+  },
+];
+
+const CHANNEL_TONE: Record<CommunicationChannel, string> = {
+  whatsapp: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  phone: 'bg-sky-100 text-sky-700 border-sky-200',
+  email: 'bg-violet-100 text-violet-700 border-violet-200',
+  manual: 'bg-slate-100 text-slate-700 border-slate-200',
+};
+
+function personalizeMessage(template: string, athleteName: string): string {
+  return template.replace(/\{\{athleteName\}\}/g, athleteName).replace(/\{\{name\}\}/g, athleteName);
+}
+
 export function CommunicationsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { tenantId, loading: tenantLoading } = useTenant();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
@@ -47,18 +158,39 @@ export function CommunicationsPage() {
   );
   const [needsFollowUp, setNeedsFollowUp] = useState(searchParams.get('needsFollowUp') === 'true');
   const [primaryContactsOnly, setPrimaryContactsOnly] = useState(searchParams.get('primaryContactsOnly') === 'true');
-  const [athleteIds, setAthleteIds] = useState<string[]>(
-    searchParams.getAll('athleteIds').filter(Boolean),
-  );
+  const [athleteIds, setAthleteIds] = useState<string[]>(searchParams.getAll('athleteIds').filter(Boolean));
+  const [showFilters, setShowFilters] = useState(false);
+  const [tab, setTab] = useState<'draft' | 'history'>('draft');
+
+  const initialChannel = (searchParams.get('channel') as CommunicationChannel | null) ?? 'whatsapp';
+  const initialTemplate = searchParams.get('template') ?? null;
+  const initialSourceSurface = searchParams.get('source') ?? 'manual';
+  const initialSourceKey = searchParams.get('sourceKey');
+
+  const [channel, setChannel] = useState<CommunicationChannel>(initialChannel);
+  const [templateKey, setTemplateKey] = useState<string | null>(initialTemplate);
+  const [draftTopic, setDraftTopic] = useState('');
+  const [draftSubject, setDraftSubject] = useState('');
+  const [draftBody, setDraftBody] = useState('');
+  const [draftNote, setDraftNote] = useState('');
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [audienceSource, setAudienceSource] = useState<AudienceSourceContext>({
+    surface: initialSourceSurface,
+    key: initialSourceKey,
+  });
+
   const [groups, setGroups] = useState<ClubGroup[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [audience, setAudience] = useState<CommunicationAudienceResponse | null>(null);
+  const [templates, setTemplates] = useState<CommunicationTemplate[]>([]);
+  const [history, setHistory] = useState<OutreachActivityListResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [draftTitle, setDraftTitle] = useState('');
-  const [draftBody, setDraftBody] = useState('');
+  const [savingOutreach, setSavingOutreach] = useState(false);
+  const [savedNotice, setSavedNotice] = useState<string | null>(null);
+  const [revealAllRecipients, setRevealAllRecipients] = useState(false);
 
   useEffect(() => {
     setQuery(searchParams.get('q') ?? '');
@@ -75,6 +207,18 @@ export function CommunicationsPage() {
     setNeedsFollowUp(searchParams.get('needsFollowUp') === 'true');
     setPrimaryContactsOnly(searchParams.get('primaryContactsOnly') === 'true');
     setAthleteIds(searchParams.getAll('athleteIds').filter(Boolean));
+    setAudienceSource({
+      surface: searchParams.get('source') ?? 'manual',
+      key: searchParams.get('sourceKey'),
+    });
+    const incomingTemplate = searchParams.get('template');
+    if (incomingTemplate) {
+      setTemplateKey(incomingTemplate);
+    }
+    const incomingChannel = searchParams.get('channel') as CommunicationChannel | null;
+    if (incomingChannel) {
+      setChannel(incomingChannel);
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -93,10 +237,19 @@ export function CommunicationsPage() {
     if (needsFollowUp) next.set('needsFollowUp', 'true');
     if (primaryContactsOnly) next.set('primaryContactsOnly', 'true');
     athleteIds.forEach((athleteId) => next.append('athleteIds', athleteId));
+    if (channel && channel !== 'whatsapp') next.set('channel', channel);
+    if (templateKey) next.set('template', templateKey);
+    if (audienceSource.surface && audienceSource.surface !== 'manual') {
+      next.set('source', audienceSource.surface);
+    }
+    if (audienceSource.key) next.set('sourceKey', audienceSource.key);
     setSearchParams(next, { replace: true });
   }, [
     athleteIds,
-      athleteStatus,
+    athleteStatus,
+    audienceSource.key,
+    audienceSource.surface,
+    channel,
     coachId,
     familyReadiness,
     financialState,
@@ -109,6 +262,7 @@ export function CommunicationsPage() {
     query,
     setSearchParams,
     teamId,
+    templateKey,
     trainingSessionId,
   ]);
 
@@ -116,24 +270,41 @@ export function CommunicationsPage() {
     if (!tenantId) return;
     void (async () => {
       try {
-        const [groupRes, teamRes, coachRes, sessionRes] = await Promise.all([
+        const [groupRes, teamRes, coachRes, sessionRes, templatesRes] = await Promise.all([
           apiGet<{ items: ClubGroup[] }>('/api/groups?limit=200'),
           apiGet<{ items: Team[] }>('/api/teams?limit=200'),
           apiGet<{ items: Coach[] }>('/api/coaches?limit=200'),
           apiGet<{ items: TrainingSession[] }>('/api/training-sessions?limit=100'),
+          apiGet<CommunicationTemplatesResponse>('/api/communications/templates'),
         ]);
         setGroups(groupRes.items);
         setTeams(teamRes.items);
         setCoaches(coachRes.items);
         setSessions(sessionRes.items);
+        setTemplates(templatesRes.items);
       } catch {
         setGroups([]);
         setTeams([]);
         setCoaches([]);
         setSessions([]);
+        setTemplates([]);
       }
     })();
   }, [tenantId]);
+
+  const loadHistory = useCallback(async () => {
+    if (!tenantId) return;
+    try {
+      const res = await listOutreach();
+      setHistory(res);
+    } catch {
+      setHistory({ items: [], counts: { total: 0, whatsapp: 0, phone: 0, email: 0, manual: 0 } });
+    }
+  }, [tenantId]);
+
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory]);
 
   const loadAudience = useCallback(async () => {
     if (!tenantId) return;
@@ -155,15 +326,10 @@ export function CommunicationsPage() {
       if (needsFollowUp) params.set('needsFollowUp', 'true');
       if (primaryContactsOnly) params.set('primaryContactsOnly', 'true');
       athleteIds.forEach((athleteId) => params.append('athleteIds', athleteId));
-
-      const res = await apiGet<CommunicationAudienceResponse>(`/api/communications/audiences?${params.toString()}`);
+      const res = await apiGet<CommunicationAudienceResponse>(
+        `/api/communications/audiences?${params.toString()}`,
+      );
       setAudience(res);
-      if (!draftTitle) {
-        setDraftTitle(t('pages.communications.defaultDraftTitle'));
-      }
-      if (!draftBody) {
-        setDraftBody(t('pages.communications.defaultDraftBody'));
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
     } finally {
@@ -173,8 +339,6 @@ export function CommunicationsPage() {
     athleteIds,
     athleteStatus,
     coachId,
-    draftBody,
-    draftTitle,
     familyReadiness,
     financialState,
     groupId,
@@ -191,57 +355,215 @@ export function CommunicationsPage() {
   ]);
 
   useEffect(() => {
-    const id = setTimeout(() => void loadAudience(), 250);
+    const id = setTimeout(() => void loadAudience(), 200);
     return () => clearTimeout(id);
   }, [loadAudience]);
+
+  const activeTemplate = useMemo(
+    () => templates.find((template) => template.key === templateKey) ?? null,
+    [templateKey, templates],
+  );
+
+  useEffect(() => {
+    if (!activeTemplate) {
+      if (!draftHydrated) {
+        setDraftTopic(t('pages.communications.templates.familyFollowUp.title'));
+        setDraftBody(t('pages.communications.templates.familyFollowUp.body'));
+        setDraftSubject(t('pages.communications.templates.familyFollowUp.subject'));
+        setDraftHydrated(true);
+      }
+      return;
+    }
+    setDraftTopic(t(activeTemplate.titleKey));
+    setDraftBody(t(activeTemplate.bodyKey));
+    setDraftSubject(activeTemplate.subjectKey ? t(activeTemplate.subjectKey) : '');
+    setDraftHydrated(true);
+  }, [activeTemplate, draftHydrated, t]);
 
   const visibleTeams = useMemo(
     () => (groupId ? teams.filter((team) => team.groupId === groupId) : teams),
     [groupId, teams],
   );
 
-  const hasActiveFilters = useMemo(
-    () =>
-      Boolean(
-        query.trim() ||
-          groupId ||
-          teamId ||
-          coachId ||
-          athleteStatus ||
-          financialState ||
-          privateLessonStatus ||
-          trainingSessionId ||
-          portalEnabledOnly ||
-          portalPendingOnly ||
-          familyReadiness ||
-          needsFollowUp ||
-          primaryContactsOnly ||
-          athleteIds.length > 0,
-      ),
-    [
-      athleteIds.length,
-      athleteStatus,
-      coachId,
-      familyReadiness,
-      financialState,
-      groupId,
-      needsFollowUp,
-      portalEnabledOnly,
-      portalPendingOnly,
-      primaryContactsOnly,
-      privateLessonStatus,
-      query,
-      teamId,
-      trainingSessionId,
-    ],
+  const reachable = useMemo(() => countReachable(audience, channel), [audience, channel]);
+
+  const recipientPlan = useMemo(() => {
+    if (!audience) return [];
+    return audience.items.map((member) => {
+      const guardian = pickBestGuardian(member, channel);
+      const personalizedMessage = personalizeMessage(draftBody, member.athleteName);
+      const link =
+        channel === 'whatsapp'
+          ? buildWhatsAppLink(guardian?.phone ?? null, personalizedMessage)
+          : channel === 'phone'
+            ? buildPhoneLink(guardian?.phone ?? null)
+            : channel === 'email'
+              ? buildMailtoLink(guardian?.email ?? null, draftSubject || draftTopic, personalizedMessage)
+              : null;
+      return {
+        member,
+        guardian,
+        personalizedMessage,
+        link,
+        reachable: Boolean(guardian),
+      };
+    });
+  }, [audience, channel, draftBody, draftSubject, draftTopic]);
+
+  const reachableRecipients = useMemo(
+    () => recipientPlan.filter((row) => row.reachable),
+    [recipientPlan],
+  );
+
+  const visibleRecipients = useMemo(
+    () => (revealAllRecipients ? recipientPlan : recipientPlan.slice(0, 8)),
+    [recipientPlan, revealAllRecipients],
   );
 
   const contactLines = useMemo(() => {
-    if (!audience) return [];
-    return audience.items.flatMap((item) =>
-      item.guardians.map((guardian) => `${item.athleteName} · ${guardian.name} · ${guardian.phone || guardian.email || '—'}`),
+    return recipientPlan.flatMap((row) =>
+      row.member.guardians.map(
+        (guardian) =>
+          `${row.member.athleteName} · ${guardian.name} · ${guardian.phone || guardian.email || '—'}`,
+      ),
     );
-  }, [audience]);
+  }, [recipientPlan]);
+
+  const perFamilyMessages = useMemo(() => {
+    return recipientPlan
+      .map((row) => {
+        const guardianName = row.guardian?.name ?? row.member.guardians[0]?.name ?? '—';
+        const phone = row.guardian?.phone ?? '—';
+        return `## ${row.member.athleteName} (${guardianName} · ${phone})\n${row.personalizedMessage}`;
+      })
+      .join('\n\n');
+  }, [recipientPlan]);
+
+  const handleApplyTemplate = useCallback(
+    (template: CommunicationTemplate | null) => {
+      setTemplateKey(template?.key ?? null);
+      if (template) {
+        setChannel(template.defaultChannel);
+        setDraftTopic(t(template.titleKey));
+        setDraftBody(t(template.bodyKey));
+        setDraftSubject(template.subjectKey ? t(template.subjectKey) : '');
+        setDraftHydrated(true);
+      }
+    },
+    [t],
+  );
+
+  const handleApplyScenario = useCallback(
+    (scenario: QuickScenario) => {
+      setQuery('');
+      setGroupId(scenario.filters.groupId ?? '');
+      setTeamId(scenario.filters.teamId ?? '');
+      setCoachId(scenario.filters.coachId ?? '');
+      setAthleteStatus((scenario.filters.athleteStatus as AthleteStatus | undefined) ?? '');
+      setFinancialState(scenario.filters.financialState ?? '');
+      setPrivateLessonStatus(scenario.filters.privateLessonStatus ?? '');
+      setTrainingSessionId(scenario.filters.trainingSessionId ?? '');
+      setPortalEnabledOnly(scenario.filters.portalEnabledOnly === 'true');
+      setPortalPendingOnly(scenario.filters.portalPendingOnly === 'true');
+      setFamilyReadiness((scenario.filters.familyReadiness as FamilyReadinessStatus | undefined) ?? '');
+      setNeedsFollowUp(scenario.filters.needsFollowUp === 'true');
+      setPrimaryContactsOnly(scenario.filters.primaryContactsOnly !== 'false');
+      setAthleteIds([]);
+      setAudienceSource(scenario.source);
+      setChannel(scenario.channel);
+      const template = templates.find((item) => item.key === scenario.templateKey) ?? null;
+      handleApplyTemplate(template);
+      setDraftTopic(t(scenario.topicKey));
+      setTab('draft');
+    },
+    [handleApplyTemplate, t, templates],
+  );
+
+  const handleClearAudience = useCallback(() => {
+    setQuery('');
+    setGroupId('');
+    setTeamId('');
+    setCoachId('');
+    setAthleteStatus('');
+    setFinancialState('');
+    setPrivateLessonStatus('');
+    setTrainingSessionId('');
+    setPortalEnabledOnly(false);
+    setPortalPendingOnly(false);
+    setFamilyReadiness('');
+    setNeedsFollowUp(false);
+    setPrimaryContactsOnly(false);
+    setAthleteIds([]);
+    setAudienceSource({ surface: 'manual' });
+  }, []);
+
+  const handleLogOutreach = useCallback(async () => {
+    if (!audience) return;
+    setSavingOutreach(true);
+    setSavedNotice(null);
+    try {
+      const guardianIds = audience.items
+        .flatMap((item) => item.guardians.map((guardian) => guardian.guardianId))
+        .filter(Boolean);
+      const audienceSummary = {
+        athletes: audience.counts.athletes,
+        guardians: audience.counts.guardians,
+        primaryContacts: audience.counts.primaryContacts,
+        withOverdueBalance: audience.counts.withOverdueBalance,
+        needingFollowUp: audience.counts.needingFollowUp,
+        contextLabel: getCommunicationSourceLabel(t, audienceSource.surface, audienceSource.key),
+      };
+      await logOutreach({
+        channel,
+        sourceSurface: audienceSource.surface,
+        sourceKey: audienceSource.key ?? undefined,
+        templateKey: templateKey ?? undefined,
+        topic: draftTopic.trim() || t('pages.communications.templates.familyFollowUp.title'),
+        messagePreview: draftBody.trim().slice(0, 4000) || undefined,
+        athleteIds: audience.items.map((item) => item.athleteId),
+        guardianIds,
+        recipientCount: audience.counts.athletes,
+        reachableGuardianCount: reachable.guardians,
+        audienceSummary,
+        note: draftNote.trim() || undefined,
+      });
+      setSavedNotice(t('pages.communications.actions.saved'));
+      await loadHistory();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
+    } finally {
+      setSavingOutreach(false);
+    }
+  }, [
+    audience,
+    audienceSource.key,
+    audienceSource.surface,
+    channel,
+    draftBody,
+    draftNote,
+    draftTopic,
+    loadHistory,
+    reachable.guardians,
+    t,
+    templateKey,
+  ]);
+
+  const audienceSourceLabel = getCommunicationSourceLabel(
+    t,
+    audienceSource.surface,
+    audienceSource.key,
+  );
+
+  const noPhoneFamilies = audience ? audience.counts.athletes - reachable.athletes : 0;
+
+  const channelButtons = useMemo(() => {
+    const channels: CommunicationChannel[] = ['whatsapp', 'phone', 'email', 'manual'];
+    return channels.map((value) => ({
+      value,
+      label: getCommunicationChannelLabel(t, value),
+      hint: t(`pages.communications.channelHint.${value}`),
+    }));
+  }, [t]);
 
   return (
     <div>
@@ -249,9 +571,17 @@ export function CommunicationsPage() {
         title={t('pages.communications.title')}
         subtitle={t('pages.communications.subtitle')}
         actions={
-          <Button type="button" variant="ghost" onClick={() => void loadAudience()}>
-            {t('app.actions.refresh')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="ghost" onClick={() => setTab('draft')}>
+              {t('pages.communications.tabs.draft')}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setTab('history')}>
+              {t('pages.communications.tabs.history')}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => void loadAudience()}>
+              {t('app.actions.refresh')}
+            </Button>
+          </div>
         }
       />
 
@@ -261,414 +591,893 @@ export function CommunicationsPage() {
         </InlineAlert>
       ) : null}
 
-      <ListPageFrame
-        search={{
-          value: query,
-          onChange: setQuery,
-          disabled: !tenantId || tenantLoading,
-          placeholder: t('pages.communications.searchPlaceholder'),
-        }}
-        toolbarLabel={t('app.actions.filter')}
-        toolbar={
-          <>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.athletes.primaryGroup')}</span>
-              <select
-                value={groupId}
-                onChange={(e) => {
-                  setGroupId(e.target.value);
-                  setTeamId('');
-                }}
-                className="bg-transparent text-amateur-ink outline-none"
-              >
-                <option value="">{t('pages.communications.allGroups')}</option>
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.teams.title')}</span>
-              <select value={teamId} onChange={(e) => setTeamId(e.target.value)} className="bg-transparent text-amateur-ink outline-none">
-                <option value="">{t('pages.communications.allTeams')}</option>
-                {visibleTeams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.coaches.title')}</span>
-              <select
-                value={coachId}
-                onChange={(e) => setCoachId(e.target.value)}
-                className="bg-transparent text-amateur-ink outline-none"
-              >
-                <option value="">{t('pages.communications.allCoaches')}</option>
-                {coaches.map((coach) => (
-                  <option key={coach.id} value={coach.id}>
-                    {getPersonName(coach)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.athletes.status')}</span>
-              <select
-                value={athleteStatus}
-                onChange={(e) => setAthleteStatus((e.target.value as AthleteStatus) || '')}
-                className="bg-transparent text-amateur-ink outline-none"
-              >
-                <option value="">{t('pages.communications.anyAthleteStatus')}</option>
-                {(['trial', 'active', 'paused', 'inactive', 'archived'] as AthleteStatus[]).map((value) => (
-                  <option key={value} value={value}>
-                    {getAthleteStatusLabel(t, value)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.communications.financialState')}</span>
-              <select
-                value={financialState}
-                onChange={(e) => setFinancialState(e.target.value)}
-                className="bg-transparent text-amateur-ink outline-none"
-              >
-                <option value="">{t('pages.communications.anyFinancialState')}</option>
-                <option value="outstanding">{t('pages.communications.financialOutstanding')}</option>
-                <option value="overdue">{t('pages.communications.financialOverdue')}</option>
-              </select>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.communications.privateLessonStatus')}</span>
-              <select
-                value={privateLessonStatus}
-                onChange={(e) => setPrivateLessonStatus(e.target.value)}
-                className="bg-transparent text-amateur-ink outline-none"
-              >
-                <option value="">{t('pages.communications.anyLessonStatus')}</option>
-                <option value="planned">{t('app.enums.trainingStatus.planned')}</option>
-                <option value="completed">{t('app.enums.trainingStatus.completed')}</option>
-                <option value="cancelled">{t('app.enums.trainingStatus.cancelled')}</option>
-              </select>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <input
-                type="checkbox"
-                checked={portalEnabledOnly}
-                onChange={(e) => setPortalEnabledOnly(e.target.checked)}
-              />
-              <span>{t('pages.communications.portalEnabledOnly')}</span>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <input
-                type="checkbox"
-                checked={portalPendingOnly}
-                onChange={(e) => setPortalPendingOnly(e.target.checked)}
-              />
-              <span>{t('pages.communications.portalPendingOnly')}</span>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.communications.familyReadiness')}</span>
-              <select
-                value={familyReadiness}
-                onChange={(e) => setFamilyReadiness((e.target.value as FamilyReadinessStatus) || '')}
-                className="bg-transparent text-amateur-ink outline-none"
-              >
-                <option value="">{t('pages.communications.anyFamilyReadiness')}</option>
-                {(['incomplete', 'awaiting_guardian_action', 'awaiting_staff_review', 'complete'] as FamilyReadinessStatus[]).map(
-                  (value) => (
-                    <option key={value} value={value}>
-                      {getFamilyReadinessStatusLabel(t, value)}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <span>{t('pages.training.detailTitle')}</span>
-              <select
-                value={trainingSessionId}
-                onChange={(e) => setTrainingSessionId(e.target.value)}
-                className="bg-transparent text-amateur-ink outline-none"
-              >
-                <option value="">{t('pages.communications.anySession')}</option>
-                {sessions.slice(0, 50).map((session) => (
-                  <option key={session.id} value={session.id}>
-                    {session.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <input type="checkbox" checked={needsFollowUp} onChange={(e) => setNeedsFollowUp(e.target.checked)} />
-              <span>{t('pages.communications.needsFollowUpOnly')}</span>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
-              <input
-                type="checkbox"
-                checked={primaryContactsOnly}
-                onChange={(e) => setPrimaryContactsOnly(e.target.checked)}
-              />
-              <span>{t('pages.communications.primaryContactsOnly')}</span>
-            </label>
-            <Button
+      <section className="mb-4 rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-amateur-muted">
+              {t('pages.communications.quickScenarios.title')}
+            </p>
+            <h2 className="font-display text-base font-semibold text-amateur-ink">
+              {t('pages.communications.quickScenarios.hint')}
+            </h2>
+          </div>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {QUICK_SCENARIOS.map((scenario) => (
+            <button
+              key={scenario.id}
               type="button"
-              variant="ghost"
-              onClick={() => {
-                setGroupId('');
-                setTeamId('');
-                setCoachId('');
-                setAthleteStatus('');
-                setFinancialState('');
-                setPrivateLessonStatus('');
-                setTrainingSessionId('');
-                setPortalEnabledOnly(false);
-                setPortalPendingOnly(false);
-                setFamilyReadiness('');
-                setNeedsFollowUp(false);
-                setPrimaryContactsOnly(false);
-                setAthleteIds([]);
-                setQuery('');
-              }}
+              onClick={() => handleApplyScenario(scenario)}
+              className="group flex h-full flex-col items-start rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50/40"
             >
-              {t('app.actions.clear')}
-            </Button>
-          </>
-        }
-      >
-        {!tenantId && !tenantLoading ? (
-          <p className="text-sm text-amateur-muted">{t('app.errors.needTenant')}</p>
-        ) : loading && !audience ? (
-          <p className="text-sm text-amateur-muted">{t('app.states.loading')}</p>
-        ) : !audience ? (
-          <EmptyState title={t('pages.communications.empty')} hint={t('pages.communications.emptyHint')} />
-        ) : (
-          <div className="space-y-6">
-            <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <StatCard label={t('pages.communications.summaryAthletes')} value={audience.counts.athletes} compact />
-              <StatCard label={t('pages.communications.summaryGuardians')} value={audience.counts.guardians} compact />
-              <StatCard label={t('pages.communications.summaryPrimaryContacts')} value={audience.counts.primaryContacts} compact />
-              <StatCard
-                label={t('pages.communications.summaryOverdue')}
-                value={audience.counts.withOverdueBalance}
-                compact
-                tone="danger"
-              />
-              <StatCard
-                label={t('pages.communications.summaryNeedsFollowUp')}
-                value={audience.counts.needingFollowUp}
-                compact
-                tone={audience.counts.needingFollowUp > 0 ? 'danger' : 'default'}
-              />
-              <StatCard
-                label={t('pages.communications.summaryAwaitingGuardian')}
-                value={audience.counts.awaitingGuardianAction}
-                compact
-                tone={audience.counts.awaitingGuardianAction > 0 ? 'danger' : 'default'}
-              />
-              <StatCard
-                label={t('pages.communications.summaryAwaitingReview')}
-                value={audience.counts.awaitingStaffReview}
-                compact
-                tone={audience.counts.awaitingStaffReview > 0 ? 'danger' : 'default'}
-              />
-              <StatCard
-                label={t('pages.communications.summaryIncomplete')}
-                value={audience.counts.incompleteAthletes}
-                compact
-              />
-            </section>
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
+                {t('pages.communications.channels.whatsapp')}
+              </span>
+              <p className="mt-2 font-medium text-amateur-ink">{t(scenario.labelKey)}</p>
+              <p className="mt-1 text-xs text-amateur-muted">{t(scenario.hintKey)}</p>
+            </button>
+          ))}
+        </div>
+      </section>
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+      {tab === 'history' ? (
+        <FollowUpHistory
+          history={history}
+          templates={templates}
+          languageTag={i18n.language}
+        />
+      ) : (
+        <ListPageFrame
+          search={{
+            value: query,
+            onChange: setQuery,
+            disabled: !tenantId || tenantLoading,
+            placeholder: t('pages.communications.searchPlaceholder'),
+          }}
+          toolbarLabel={t('app.actions.filter')}
+          toolbar={
+            <>
+              <Button type="button" variant="ghost" onClick={() => setShowFilters((value) => !value)}>
+                {showFilters ? t('app.actions.hide') : t('app.actions.filter')}
+              </Button>
+              <Button type="button" variant="ghost" onClick={handleClearAudience}>
+                {t('app.actions.clear')}
+              </Button>
+            </>
+          }
+        >
+          {showFilters ? (
+            <FiltersPanel
+              athleteStatus={athleteStatus}
+              coachId={coachId}
+              coaches={coaches}
+              familyReadiness={familyReadiness}
+              financialState={financialState}
+              groupId={groupId}
+              groups={groups}
+              needsFollowUp={needsFollowUp}
+              portalEnabledOnly={portalEnabledOnly}
+              portalPendingOnly={portalPendingOnly}
+              primaryContactsOnly={primaryContactsOnly}
+              privateLessonStatus={privateLessonStatus}
+              sessions={sessions}
+              setAthleteStatus={setAthleteStatus}
+              setCoachId={setCoachId}
+              setFamilyReadiness={setFamilyReadiness}
+              setFinancialState={setFinancialState}
+              setGroupId={(value) => {
+                setGroupId(value);
+                setTeamId('');
+              }}
+              setNeedsFollowUp={setNeedsFollowUp}
+              setPortalEnabledOnly={setPortalEnabledOnly}
+              setPortalPendingOnly={setPortalPendingOnly}
+              setPrimaryContactsOnly={setPrimaryContactsOnly}
+              setPrivateLessonStatus={setPrivateLessonStatus}
+              setTeamId={setTeamId}
+              setTrainingSessionId={setTrainingSessionId}
+              teamId={teamId}
+              trainingSessionId={trainingSessionId}
+              visibleTeams={visibleTeams}
+            />
+          ) : null}
+
+          {!tenantId && !tenantLoading ? (
+            <p className="text-sm text-amateur-muted">{t('app.errors.needTenant')}</p>
+          ) : loading && !audience ? (
+            <p className="text-sm text-amateur-muted">{t('app.states.loading')}</p>
+          ) : !audience ? (
+            <EmptyState
+              title={t('pages.communications.empty')}
+              hint={t('pages.communications.emptyHint')}
+            />
+          ) : (
+            <div className="space-y-6">
               <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="font-display text-base font-semibold text-amateur-ink">
-                      {t('pages.communications.audienceTitle')}
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amateur-muted">
+                      {t('pages.communications.audience.sourceLabel')}
+                    </p>
+                    <h2 className="mt-1 font-display text-base font-semibold text-amateur-ink">
+                      {audienceSourceLabel}
                     </h2>
-                    <p className="mt-1 text-sm text-amateur-muted">{t('pages.communications.audienceHint')}</p>
+                    <p className="mt-1 text-sm text-amateur-muted">
+                      {t('pages.communications.audience.summary', {
+                        athletes: audience.counts.athletes,
+                        guardians: audience.counts.guardians,
+                        primary: audience.counts.primaryContacts,
+                      })}
+                    </p>
                   </div>
-                  <Button type="button" variant="ghost" onClick={() => void loadAudience()}>
-                    {t('app.actions.refresh')}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                      {t('pages.communications.audience.phoneReachable', {
+                        count: reachable.guardians,
+                      })}
+                    </span>
+                    {noPhoneFamilies > 0 ? (
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                        {t('pages.communications.audience.phoneMissing', {
+                          count: noPhoneFamilies,
+                        })}
+                      </span>
+                    ) : null}
+                    {audience.counts.needingFollowUp > 0 ? (
+                      <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
+                        {t('pages.communications.audience.needFollowUp', {
+                          count: audience.counts.needingFollowUp,
+                        })}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
+              </section>
 
-                {audience.items.length === 0 ? (
-                  <div className="mt-4 space-y-4">
-                    <EmptyState
-                      title={t('pages.communications.empty')}
-                      hint={
-                        hasActiveFilters
-                          ? t('pages.communications.emptyFilteredHint')
-                          : t('pages.communications.emptyHint')
-                      }
-                    />
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {hasActiveFilters ? (
+              <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <StatCard label={t('pages.communications.summaryAthletes')} value={audience.counts.athletes} compact />
+                <StatCard
+                  label={t('pages.communications.summaryReachWhatsApp')}
+                  value={reachable.guardians}
+                  compact
+                  tone={reachable.guardians === 0 ? 'danger' : 'default'}
+                />
+                <StatCard
+                  label={t('pages.communications.summaryReachEmail')}
+                  value={audience.counts.guardiansWithEmail}
+                  compact
+                />
+                <StatCard
+                  label={t('pages.communications.summaryNeedsFollowUp')}
+                  value={audience.counts.needingFollowUp}
+                  compact
+                  tone={audience.counts.needingFollowUp > 0 ? 'danger' : 'default'}
+                />
+              </section>
+
+              {reachable.guardians === 0 && audience.counts.athletes > 0 ? (
+                <InlineAlert tone="info">
+                  {t('pages.communications.noPhoneWarning')}
+                </InlineAlert>
+              ) : null}
+
+              {savedNotice ? <InlineAlert tone="info">{savedNotice}</InlineAlert> : null}
+
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+                <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h2 className="font-display text-base font-semibold text-amateur-ink">
+                        {t('pages.communications.audience.title')}
+                      </h2>
+                      <p className="mt-1 text-sm text-amateur-muted">
+                        {t('pages.communications.recipientList.hint')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {channelButtons.map((option) => {
+                      const active = channel === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setChannel(option.value)}
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                            active
+                              ? CHANNEL_TONE[option.value]
+                              : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
+                          }`}
+                          aria-pressed={active}
+                        >
+                          {option.label}
+                          {option.value === 'whatsapp' ? ` · ${t('pages.communications.channelPrimary')}` : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 text-xs text-amateur-muted">
+                    {t(`pages.communications.channelHint.${channel}`)}
+                  </p>
+
+                  {audience.items.length === 0 ? (
+                    <div className="mt-4">
+                      <EmptyState
+                        title={t('pages.communications.empty')}
+                        hint={t('pages.communications.emptyFilteredHint')}
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {visibleRecipients.map((row) => (
+                        <RecipientCard
+                          key={row.member.athleteId}
+                          channel={channel}
+                          link={row.link}
+                          member={row.member}
+                          message={row.personalizedMessage}
+                          subject={draftSubject || draftTopic}
+                        />
+                      ))}
+                      {recipientPlan.length > visibleRecipients.length ? (
                         <Button
                           type="button"
                           variant="ghost"
-                          onClick={() => {
-                            setGroupId('');
-                            setTeamId('');
-                            setCoachId('');
-                            setAthleteStatus('');
-                            setFinancialState('');
-                            setPrivateLessonStatus('');
-                            setTrainingSessionId('');
-                            setPortalEnabledOnly(false);
-                            setPortalPendingOnly(false);
-                            setFamilyReadiness('');
-                            setNeedsFollowUp(false);
-                            setPrimaryContactsOnly(false);
-                            setAthleteIds([]);
-                            setQuery('');
-                          }}
+                          onClick={() => setRevealAllRecipients(true)}
                         >
-                          {t('app.actions.clear')}
+                          {t('pages.communications.recipientList.showMore', {
+                            count: recipientPlan.length - visibleRecipients.length,
+                          })}
+                        </Button>
+                      ) : revealAllRecipients && recipientPlan.length > 8 ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setRevealAllRecipients(false)}
+                        >
+                          {t('pages.communications.recipientList.showLess')}
                         </Button>
                       ) : null}
-                      <Button type="button" variant="ghost" onClick={() => void loadAudience()}>
-                        {t('app.actions.refresh')}
+                    </div>
+                  )}
+                </section>
+
+                <section className="space-y-4">
+                  <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                    <h2 className="font-display text-base font-semibold text-amateur-ink">
+                      {t('pages.communications.templatePickerTitle')}
+                    </h2>
+                    <p className="mt-1 text-sm text-amateur-muted">
+                      {t('pages.communications.templatePickerHint')}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleApplyTemplate(null)}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                          !templateKey
+                            ? 'border-amateur-accent bg-amateur-accent-soft text-amateur-accent'
+                            : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
+                        }`}
+                      >
+                        {t('pages.communications.templateNoneTitle')}
+                      </button>
+                      {templates.map((template) => (
+                        <button
+                          key={template.key}
+                          type="button"
+                          onClick={() => handleApplyTemplate(template)}
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                            templateKey === template.key
+                              ? 'border-amateur-accent bg-amateur-accent-soft text-amateur-accent'
+                              : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
+                          }`}
+                        >
+                          {t(template.titleKey)}
+                        </button>
+                      ))}
+                    </div>
+                    {activeTemplate?.hintKey ? (
+                      <p className="mt-3 rounded-xl bg-amateur-surface px-3 py-2 text-xs text-amateur-muted">
+                        {t(activeTemplate.hintKey)}
+                      </p>
+                    ) : (
+                      <p className="mt-3 rounded-xl bg-amateur-surface px-3 py-2 text-xs text-amateur-muted">
+                        {t('pages.communications.templateNoneHint')}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                    <h2 className="font-display text-base font-semibold text-amateur-ink">
+                      {t('pages.communications.draftPanel.title')}
+                    </h2>
+                    <p className="mt-1 text-sm text-amateur-muted">
+                      {t('pages.communications.draftPanel.hint')}
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span>{t('pages.communications.draftPanel.topicLabel')}</span>
+                        <input
+                          value={draftTopic}
+                          onChange={(e) => setDraftTopic(e.target.value)}
+                          placeholder={t('pages.communications.draftPanel.topicPlaceholder')}
+                          className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span>{t('pages.communications.draftPanel.messageLabel')}</span>
+                        <textarea
+                          value={draftBody}
+                          onChange={(e) => setDraftBody(e.target.value)}
+                          rows={8}
+                          className="resize-y rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                        />
+                        <span className="text-[11px] text-amateur-muted">
+                          {t('pages.communications.draftPanel.tokenHint')}
+                        </span>
+                      </label>
+                      {channel === 'email' ? (
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span>{t('pages.communications.draftPanel.subjectLabel')}</span>
+                          <input
+                            value={draftSubject}
+                            onChange={(e) => setDraftSubject(e.target.value)}
+                            placeholder={t('pages.communications.draftPanel.subjectPlaceholder')}
+                            className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                          />
+                        </label>
+                      ) : null}
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span>{t('pages.communications.draftPanel.noteLabel')}</span>
+                        <input
+                          value={draftNote}
+                          onChange={(e) => setDraftNote(e.target.value)}
+                          placeholder={t('pages.communications.draftPanel.notePlaceholder')}
+                          className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                        />
+                      </label>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {channel === 'whatsapp' && reachableRecipients[0]?.link ? (
+                        <a
+                          href={reachableRecipients[0].link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+                        >
+                          {t('pages.communications.actions.openWhatsAppFirst')}
+                        </a>
+                      ) : null}
+                      {channel === 'whatsapp' ? (
+                        <a
+                          href={buildWhatsAppShareLink(personalizeMessage(draftBody, '')) ?? '#'}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+                        >
+                          {t('pages.communications.actions.shareWhatsApp')}
+                        </a>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(perFamilyMessages || draftBody);
+                          setSavedNotice(t('pages.communications.actions.copyMessages'));
+                        }}
+                      >
+                        {t('pages.communications.actions.copyMessages')}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(contactLines.join('\n'));
+                          setSavedNotice(t('pages.communications.actions.copyContacts'));
+                        }}
+                        disabled={contactLines.length === 0}
+                      >
+                        {t('pages.communications.actions.copyContacts')}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => void handleLogOutreach()}
+                        disabled={savingOutreach || audience.items.length === 0}
+                      >
+                        {savingOutreach
+                          ? t('pages.communications.actions.saving')
+                          : t('pages.communications.actions.logFollowUp')}
                       </Button>
                     </div>
                   </div>
-                ) : (
-                  <div className="mt-4 space-y-3">
-                    {audience.items.map((item) => (
-                      <article key={item.athleteId} className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-amateur-ink">{item.athleteName}</p>
-                            <p className="mt-1 text-xs text-amateur-muted">
-                              {[
-                                getAthleteStatusLabel(t, item.athleteStatus),
-                                item.groupName,
-                                ...item.teamNames,
-                              ]
-                                .filter(Boolean)
-                                .join(' · ') || '—'}
-                            </p>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              <span
-                                className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                                  getFamilyReadinessTone(item.familyReadinessStatus) === 'danger'
-                                    ? 'bg-amber-100 text-amber-700'
-                                    : getFamilyReadinessTone(item.familyReadinessStatus) === 'success'
-                                      ? 'bg-emerald-100 text-emerald-700'
-                                      : 'bg-slate-100 text-slate-700'
-                                }`}
-                              >
-                                {getFamilyReadinessStatusLabel(t, item.familyReadinessStatus)}
-                              </span>
-                              {item.pendingFamilyActions > 0 ? (
-                                <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
-                                  {t('pages.communications.pendingFamilyActionsBadge', { count: item.pendingFamilyActions })}
-                                </span>
-                              ) : null}
-                              {item.awaitingStaffReview > 0 ? (
-                                <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-700">
-                                  {t('pages.communications.awaitingReviewBadge', { count: item.awaitingStaffReview })}
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-                          <div className="text-right text-xs text-amateur-muted">
-                            <p>
-                              {t('pages.communications.reasonsLabel')}:{' '}
-                              {item.reasons.map((reason) => getPrivateLessonReasonLabel(t, reason)).join(', ')}
-                            </p>
-                            <p>
-                              {t('pages.communications.overdueLabel')}: {item.overdueAmount}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-3 space-y-2">
-                          {item.guardians.length === 0 ? (
-                            <p className="text-sm text-amateur-muted">{t('pages.communications.noGuardians')}</p>
-                          ) : (
-                            item.guardians.map((guardian) => (
-                              <div key={guardian.guardianId} className="rounded-lg border border-amateur-border/70 bg-amateur-canvas px-3 py-2 text-sm">
-                                <p className="font-medium text-amateur-ink">
-                                  {guardian.name}
-                                  {guardian.isPrimaryContact ? ` · ${t('pages.athletes.primaryContact')}` : ''}
-                                </p>
-                                <p className="text-xs text-amateur-muted">
-                                  {[guardian.relationshipType, guardian.phone, guardian.email].filter(Boolean).join(' · ')}
-                                </p>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              <section className="space-y-4">
-                <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-                  <h2 className="font-display text-base font-semibold text-amateur-ink">
-                    {t('pages.communications.draftTitle')}
-                  </h2>
-                  <p className="mt-1 text-sm text-amateur-muted">{t('pages.communications.draftHint')}</p>
-                  <div className="mt-4 space-y-3">
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span>{t('pages.communications.draftSubject')}</span>
-                      <input
-                        value={draftTitle}
-                        onChange={(e) => setDraftTitle(e.target.value)}
-                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span>{t('pages.communications.draftBodyLabel')}</span>
-                      <textarea
-                        value={draftBody}
-                        onChange={(e) => setDraftBody(e.target.value)}
-                        rows={8}
-                        className="resize-y rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h2 className="font-display text-base font-semibold text-amateur-ink">
-                        {t('pages.communications.contactListTitle')}
-                      </h2>
-                      <p className="mt-1 text-sm text-amateur-muted">{t('pages.communications.contactListHint')}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(contactLines.join('\n'));
-                      }}
-                      disabled={contactLines.length === 0}
-                    >
-                      {t('pages.communications.copyContacts')}
-                    </Button>
-                  </div>
-                  {contactLines.length === 0 ? (
-                    <p className="mt-4 text-sm text-amateur-muted">{t('pages.communications.noContactLines')}</p>
-                  ) : (
-                    <div className="mt-4 max-h-72 overflow-auto rounded-xl border border-amateur-border bg-amateur-surface p-3">
-                      <pre className="whitespace-pre-wrap text-xs text-amateur-ink">{contactLines.join('\n')}</pre>
-                    </div>
-                  )}
-                </div>
-              </section>
+                </section>
+              </div>
             </div>
-          </div>
-        )}
-      </ListPageFrame>
+          )}
+        </ListPageFrame>
+      )}
     </div>
   );
+}
+
+function FiltersPanel(props: {
+  athleteStatus: AthleteStatus | '';
+  coachId: string;
+  coaches: Coach[];
+  familyReadiness: FamilyReadinessStatus | '';
+  financialState: string;
+  groupId: string;
+  groups: ClubGroup[];
+  needsFollowUp: boolean;
+  portalEnabledOnly: boolean;
+  portalPendingOnly: boolean;
+  primaryContactsOnly: boolean;
+  privateLessonStatus: string;
+  sessions: TrainingSession[];
+  setAthleteStatus: (value: AthleteStatus | '') => void;
+  setCoachId: (value: string) => void;
+  setFamilyReadiness: (value: FamilyReadinessStatus | '') => void;
+  setFinancialState: (value: string) => void;
+  setGroupId: (value: string) => void;
+  setNeedsFollowUp: (value: boolean) => void;
+  setPortalEnabledOnly: (value: boolean) => void;
+  setPortalPendingOnly: (value: boolean) => void;
+  setPrimaryContactsOnly: (value: boolean) => void;
+  setPrivateLessonStatus: (value: string) => void;
+  setTeamId: (value: string) => void;
+  setTrainingSessionId: (value: string) => void;
+  teamId: string;
+  trainingSessionId: string;
+  visibleTeams: Team[];
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="mb-4 grid gap-3 rounded-2xl border border-amateur-border bg-amateur-canvas p-4 md:grid-cols-2 xl:grid-cols-3">
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <span>{t('pages.athletes.primaryGroup')}</span>
+        <select
+          value={props.groupId}
+          onChange={(e) => props.setGroupId(e.target.value)}
+          className="bg-transparent text-amateur-ink outline-none"
+        >
+          <option value="">{t('pages.communications.allGroups')}</option>
+          {props.groups.map((group) => (
+            <option key={group.id} value={group.id}>
+              {group.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <span>{t('pages.teams.title')}</span>
+        <select
+          value={props.teamId}
+          onChange={(e) => props.setTeamId(e.target.value)}
+          className="bg-transparent text-amateur-ink outline-none"
+        >
+          <option value="">{t('pages.communications.allTeams')}</option>
+          {props.visibleTeams.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <span>{t('pages.coaches.title')}</span>
+        <select
+          value={props.coachId}
+          onChange={(e) => props.setCoachId(e.target.value)}
+          className="bg-transparent text-amateur-ink outline-none"
+        >
+          <option value="">{t('pages.communications.allCoaches')}</option>
+          {props.coaches.map((coach) => (
+            <option key={coach.id} value={coach.id}>
+              {getPersonName(coach)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <span>{t('pages.athletes.status')}</span>
+        <select
+          value={props.athleteStatus}
+          onChange={(e) => props.setAthleteStatus((e.target.value as AthleteStatus) || '')}
+          className="bg-transparent text-amateur-ink outline-none"
+        >
+          <option value="">{t('pages.communications.anyAthleteStatus')}</option>
+          {(['trial', 'active', 'paused', 'inactive', 'archived'] as AthleteStatus[]).map((value) => (
+            <option key={value} value={value}>
+              {getAthleteStatusLabel(t, value)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <span>{t('pages.communications.financialState')}</span>
+        <select
+          value={props.financialState}
+          onChange={(e) => props.setFinancialState(e.target.value)}
+          className="bg-transparent text-amateur-ink outline-none"
+        >
+          <option value="">{t('pages.communications.anyFinancialState')}</option>
+          <option value="outstanding">{t('pages.communications.financialOutstanding')}</option>
+          <option value="overdue">{t('pages.communications.financialOverdue')}</option>
+        </select>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <span>{t('pages.communications.privateLessonStatus')}</span>
+        <select
+          value={props.privateLessonStatus}
+          onChange={(e) => props.setPrivateLessonStatus(e.target.value)}
+          className="bg-transparent text-amateur-ink outline-none"
+        >
+          <option value="">{t('pages.communications.anyLessonStatus')}</option>
+          <option value="planned">{t('app.enums.trainingStatus.planned')}</option>
+          <option value="completed">{t('app.enums.trainingStatus.completed')}</option>
+          <option value="cancelled">{t('app.enums.trainingStatus.cancelled')}</option>
+        </select>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <span>{t('pages.training.detailTitle')}</span>
+        <select
+          value={props.trainingSessionId}
+          onChange={(e) => props.setTrainingSessionId(e.target.value)}
+          className="bg-transparent text-amateur-ink outline-none"
+        >
+          <option value="">{t('pages.communications.anySession')}</option>
+          {props.sessions.slice(0, 50).map((session) => (
+            <option key={session.id} value={session.id}>
+              {session.title}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <span>{t('pages.communications.familyReadiness')}</span>
+        <select
+          value={props.familyReadiness}
+          onChange={(e) =>
+            props.setFamilyReadiness((e.target.value as FamilyReadinessStatus) || '')
+          }
+          className="bg-transparent text-amateur-ink outline-none"
+        >
+          <option value="">{t('pages.communications.anyFamilyReadiness')}</option>
+          {(['incomplete', 'awaiting_guardian_action', 'awaiting_staff_review', 'complete'] as FamilyReadinessStatus[]).map(
+            (value) => (
+              <option key={value} value={value}>
+                {getFamilyReadinessStatusLabel(t, value)}
+              </option>
+            ),
+          )}
+        </select>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <input
+          type="checkbox"
+          checked={props.primaryContactsOnly}
+          onChange={(e) => props.setPrimaryContactsOnly(e.target.checked)}
+        />
+        <span>{t('pages.communications.primaryContactsOnly')}</span>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <input
+          type="checkbox"
+          checked={props.needsFollowUp}
+          onChange={(e) => props.setNeedsFollowUp(e.target.checked)}
+        />
+        <span>{t('pages.communications.needsFollowUpOnly')}</span>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <input
+          type="checkbox"
+          checked={props.portalEnabledOnly}
+          onChange={(e) => props.setPortalEnabledOnly(e.target.checked)}
+        />
+        <span>{t('pages.communications.portalEnabledOnly')}</span>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <input
+          type="checkbox"
+          checked={props.portalPendingOnly}
+          onChange={(e) => props.setPortalPendingOnly(e.target.checked)}
+        />
+        <span>{t('pages.communications.portalPendingOnly')}</span>
+      </label>
+    </div>
+  );
+}
+
+function RecipientCard({
+  channel,
+  link,
+  member,
+  message,
+  subject,
+}: {
+  channel: CommunicationChannel;
+  link: string | null;
+  member: CommunicationAudienceMember;
+  message: string;
+  subject: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <article className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-medium text-amateur-ink">{member.athleteName}</p>
+          <p className="mt-1 text-xs text-amateur-muted">
+            {[
+              getAthleteStatusLabel(t, member.athleteStatus),
+              member.groupName,
+              ...member.teamNames,
+            ]
+              .filter(Boolean)
+              .join(' · ') || '—'}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {member.reasons.slice(0, 2).map((reason) => (
+              <span
+                key={reason}
+                className="rounded-full bg-amateur-canvas px-2 py-0.5 text-[11px] text-amateur-muted"
+              >
+                {getPrivateLessonReasonLabel(t, reason)}
+              </span>
+            ))}
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                getFamilyReadinessTone(member.familyReadinessStatus) === 'danger'
+                  ? 'bg-amber-100 text-amber-700'
+                  : getFamilyReadinessTone(member.familyReadinessStatus) === 'success'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              {getFamilyReadinessStatusLabel(t, member.familyReadinessStatus)}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          {link ? (
+            <a
+              href={link}
+              target="_blank"
+              rel="noreferrer"
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                channel === 'whatsapp'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                  : channel === 'phone'
+                    ? 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100'
+                    : channel === 'email'
+                      ? 'border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
+                      : 'border-amateur-border bg-amateur-canvas text-amateur-ink'
+              }`}
+            >
+              {channel === 'whatsapp'
+                ? t('pages.communications.actions.openWhatsAppOne')
+                : channel === 'phone'
+                  ? t('pages.communications.actions.callRecipient')
+                  : channel === 'email'
+                    ? t('pages.communications.actions.openEmail')
+                    : t('pages.communications.actions.openLink')}
+            </a>
+          ) : (
+            <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700">
+              {channel === 'email'
+                ? t('pages.communications.recipientList.noEmail')
+                : t('pages.communications.recipientList.noPhone')}
+            </span>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              void navigator.clipboard.writeText(message);
+            }}
+          >
+            {t('pages.communications.actions.copyMessage')}
+          </Button>
+        </div>
+      </div>
+      <div className="mt-3 space-y-2">
+        {member.guardians.length === 0 ? (
+          <p className="text-sm text-amateur-muted">{t('pages.communications.noGuardians')}</p>
+        ) : (
+          member.guardians.map((guardian) => {
+            const reachable = isReachableForChannel(guardian, channel);
+            const guardianLink =
+              channel === 'whatsapp'
+                ? buildWhatsAppLink(guardian.phone, message)
+                : channel === 'phone'
+                  ? buildPhoneLink(guardian.phone)
+                  : channel === 'email'
+                    ? buildMailtoLink(guardian.email, subject, message)
+                    : null;
+            return (
+              <div
+                key={guardian.guardianId}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amateur-border/70 bg-amateur-canvas px-3 py-2 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-amateur-ink">
+                    {guardian.name}
+                    {guardian.isPrimaryContact ? ` · ${t('pages.communications.recipientList.primary')}` : ''}
+                  </p>
+                  <p className="text-xs text-amateur-muted">
+                    {[guardian.relationshipType, guardian.phone, guardian.email].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+                {guardianLink ? (
+                  <a
+                    href={guardianLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-semibold text-amateur-accent hover:underline"
+                  >
+                    {channel === 'whatsapp'
+                      ? t('pages.communications.actions.openWhatsAppOne')
+                      : channel === 'phone'
+                        ? t('pages.communications.actions.callRecipient')
+                        : channel === 'email'
+                          ? t('pages.communications.actions.openEmail')
+                          : t('pages.communications.actions.openLink')}
+                  </a>
+                ) : reachable ? null : (
+                  <span className="text-[11px] text-amber-700">
+                    {channel === 'email'
+                      ? t('pages.communications.recipientList.noEmail')
+                      : t('pages.communications.recipientList.noPhone')}
+                  </span>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </article>
+  );
+}
+
+function FollowUpHistory({
+  history,
+  templates,
+  languageTag,
+}: {
+  history: OutreachActivityListResponse | null;
+  templates: CommunicationTemplate[];
+  languageTag: string;
+}) {
+  const { t } = useTranslation();
+  if (!history) {
+    return <p className="text-sm text-amateur-muted">{t('app.states.loading')}</p>;
+  }
+  if (history.items.length === 0) {
+    return (
+      <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-6">
+        <EmptyState
+          title={t('pages.communications.history.title')}
+          hint={t('pages.communications.history.empty')}
+        />
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard label={t('pages.communications.channels.whatsapp')} value={history.counts.whatsapp} compact />
+        <StatCard label={t('pages.communications.channels.phone')} value={history.counts.phone} compact />
+        <StatCard label={t('pages.communications.channels.email')} value={history.counts.email} compact />
+        <StatCard label={t('pages.communications.channels.manual')} value={history.counts.manual} compact />
+      </section>
+      <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+        <h2 className="font-display text-base font-semibold text-amateur-ink">
+          {t('pages.communications.history.title')}
+        </h2>
+        <p className="mt-1 text-sm text-amateur-muted">{t('pages.communications.history.hint')}</p>
+        <ul className="mt-4 space-y-3">
+          {history.items.map((activity) => (
+            <FollowUpHistoryRow
+              key={activity.id}
+              activity={activity}
+              templates={templates}
+              languageTag={languageTag}
+            />
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+function FollowUpHistoryRow({
+  activity,
+  templates,
+  languageTag,
+}: {
+  activity: OutreachActivity;
+  templates: CommunicationTemplate[];
+  languageTag: string;
+}) {
+  const { t } = useTranslation();
+  const sourceLabel = getCommunicationSourceLabel(t, activity.sourceSurface, activity.sourceKey);
+  const channelLabel = getCommunicationChannelLabel(t, activity.channel);
+  const template = templates.find((item) => item.key === activity.templateKey) ?? null;
+  const audienceSummary = (activity.audienceSnapshot?.audienceSummary ?? null) as
+    | { contextLabel?: string }
+    | null;
+  return (
+    <li className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${CHANNEL_TONE[activity.channel as CommunicationChannel] ?? CHANNEL_TONE.manual}`}
+            >
+              {channelLabel}
+            </span>
+            <span className="rounded-full bg-amateur-canvas px-2 py-0.5 text-[11px] text-amateur-muted">
+              {sourceLabel}
+            </span>
+            {template ? (
+              <span className="rounded-full bg-amateur-canvas px-2 py-0.5 text-[11px] text-amateur-muted">
+                {t(template.titleKey)}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 font-medium text-amateur-ink">{activity.topic}</p>
+          <p className="mt-1 text-xs text-amateur-muted">
+            {formatDateTime(activity.createdAt, languageTag)} ·{' '}
+            {activity.createdByName
+              ? t('pages.communications.history.savedBy', { name: activity.createdByName })
+              : t('pages.communications.history.savedAnonymous')}
+          </p>
+        </div>
+        <div className="text-right text-xs text-amateur-muted">
+          <p>{t('pages.communications.history.recipientsCount', { count: activity.recipientCount })}</p>
+          <p>
+            {t('pages.communications.history.reachableCount', {
+              count: activity.reachableGuardianCount,
+            })}
+          </p>
+          {audienceSummary?.contextLabel ? (
+            <p className="mt-1 italic">{audienceSummary.contextLabel}</p>
+          ) : null}
+        </div>
+      </div>
+      {activity.messagePreview ? (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs font-semibold text-amateur-accent">
+            {t('pages.communications.history.messagePreviewLabel')}
+          </summary>
+          <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-amateur-canvas px-3 py-2 text-xs text-amateur-ink">
+            {activity.messagePreview}
+          </pre>
+        </details>
+      ) : null}
+      {activity.note ? (
+        <p className="mt-2 rounded-lg bg-amateur-canvas px-3 py-2 text-xs text-amateur-muted">
+          {activity.note}
+        </p>
+      ) : null}
+      {activity.sourceSurface !== 'manual' ? (
+        <div className="mt-2 text-xs">
+          <Link to={buildSourceLink(activity)} className="text-amateur-accent hover:underline">
+            {t('pages.communications.history.openOriginalSource')} →
+          </Link>
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
+function buildSourceLink(activity: OutreachActivity): string {
+  const params = new URLSearchParams();
+  params.set('source', activity.sourceSurface);
+  if (activity.sourceKey) params.set('sourceKey', activity.sourceKey);
+  if (activity.templateKey) params.set('template', activity.templateKey);
+  if (activity.channel) params.set('channel', activity.channel);
+  return `/app/communications?${params.toString()}`;
 }

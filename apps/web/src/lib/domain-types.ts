@@ -265,12 +265,91 @@ export type CommunicationAudienceResponse = {
     athletes: number;
     guardians: number;
     primaryContacts: number;
+    guardiansWithPhone: number;
+    guardiansWithEmail: number;
+    athletesWithPhoneReach: number;
+    athletesMissingPhone: number;
     withOverdueBalance: number;
     incompleteAthletes: number;
     awaitingGuardianAction: number;
     awaitingStaffReview: number;
     needingFollowUp: number;
   };
+};
+
+export type CommunicationChannel = 'whatsapp' | 'phone' | 'email' | 'manual';
+
+export type CommunicationTemplateCategory =
+  | 'finance'
+  | 'attendance'
+  | 'trial'
+  | 'session'
+  | 'group'
+  | 'general';
+
+export type CommunicationTemplate = {
+  key: string;
+  defaultChannel: CommunicationChannel;
+  category: CommunicationTemplateCategory;
+  titleKey: string;
+  bodyKey: string;
+  subjectKey?: string;
+  hintKey?: string;
+};
+
+export type CommunicationTemplatesResponse = {
+  channels: CommunicationChannel[];
+  items: CommunicationTemplate[];
+};
+
+export type OutreachActivity = {
+  id: string;
+  channel: CommunicationChannel | string;
+  sourceSurface: string;
+  sourceKey: string | null;
+  templateKey: string | null;
+  topic: string;
+  messagePreview: string | null;
+  recipientCount: number;
+  reachableGuardianCount: number;
+  audienceSnapshot: Record<string, unknown>;
+  note: string | null;
+  createdByStaffUserId: string | null;
+  createdByName: string | null;
+  createdAt: string;
+};
+
+export type OutreachActivityListResponse = {
+  items: OutreachActivity[];
+  counts: {
+    total: number;
+    whatsapp: number;
+    phone: number;
+    email: number;
+    manual: number;
+  };
+};
+
+export type LogOutreachInput = {
+  channel: CommunicationChannel;
+  sourceSurface: string;
+  sourceKey?: string;
+  templateKey?: string;
+  topic: string;
+  messagePreview?: string;
+  athleteIds?: string[];
+  guardianIds?: string[];
+  recipientCount?: number;
+  reachableGuardianCount?: number;
+  audienceSummary?: {
+    athletes?: number;
+    guardians?: number;
+    primaryContacts?: number;
+    withOverdueBalance?: number;
+    needingFollowUp?: number;
+    contextLabel?: string;
+  };
+  note?: string;
 };
 
 export type GuardianPortalActivationStatus = {

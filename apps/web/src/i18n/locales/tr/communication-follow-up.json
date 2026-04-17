@@ -1,0 +1,210 @@
+{
+  "app": {
+    "nav": {
+      "communications": "Takip"
+    }
+  },
+  "pages": {
+    "communications": {
+      "subtitle": "Bir sinyalden ailelere yumuşak bir takip mesajına geçin — amatör kulüplerin gerçekten konuştuğu şekilde.",
+      "channelPrimary": "WhatsApp",
+      "channels": {
+        "whatsapp": "WhatsApp",
+        "phone": "Telefon",
+        "email": "E-posta",
+        "manual": "Diğer"
+      },
+      "channelHint": {
+        "whatsapp": "WhatsApp'ı her aile için mesaj hazır şekilde açar.",
+        "phone": "Hızlı bir kontrol araması için telefon bağlantısı.",
+        "email": "İsteğe bağlı: WhatsApp uygun değilse e-posta taslağını açın.",
+        "manual": "Listeyi ve mesajı kopyalayıp dilediğiniz yerde kullanın."
+      },
+      "channelLabel": "Kanal",
+      "templatePickerTitle": "Bir başlangıç mesajı seçin",
+      "templatePickerHint": "Kulübe yakın, sıcak şablonlar — göndermeden önce buradan düzenleyebilirsiniz. Buradaki düzenleme yalnızca bu taslağı etkiler.",
+      "templateNoneTitle": "Boş bir mesajla başlayın",
+      "templateNoneHint": "Hedef kitle görünür kalır; mesajı siz şekillendirirsiniz.",
+      "templateApplied": "Şablon uygulandı: {{name}}",
+      "applyTemplate": "Şablonu kullan",
+      "resetTemplate": "Şablonu sıfırla",
+      "templates": {
+        "categories": {
+          "finance": "Finans",
+          "attendance": "Devamsızlık",
+          "trial": "Deneme takibi",
+          "session": "Antrenman hatırlatma",
+          "group": "Grup duyurusu",
+          "general": "Genel"
+        },
+        "overduePayment": {
+          "title": "Gecikmiş ödeme hatırlatması",
+          "subject": "Kulüp bakiyeniz hakkında nazik bir hatırlatma",
+          "body": "Merhaba,\n\n{{athleteName}} adına kulübümüzdeki açık bakiye için nazik bir hatırlatma yazıyoruz.\n\nÖdeme yoldaysa lütfen bu notu dikkate almayın. Sorularınız varsa veya farklı bir takvim isterseniz WhatsApp üzerinden yazmanız yeterli — yardımcı olmaktan mutluluk duyarız.\n\nDesteğiniz için teşekkür ederiz.",
+          "hint": "Gecikmiş bakiye hedef kitlesi veya aksiyon merkezi finans takipleri ile birlikte çok iyi çalışır."
+        },
+        "trialFollowUp": {
+          "title": "Deneme takibi",
+          "subject": "Deneme antrenmanı nasıldı?",
+          "body": "Merhaba,\n\n{{athleteName}} ile deneme antrenmanında olmak çok güzeldi. Nasıl hissettirdiğini duymak ve bir sonraki adım öncesi sorularınızı yanıtlamak isteriz.\n\nDilediğiniz an WhatsApp üzerinden yazabilirsiniz, oradan birlikte ilerleriz.",
+          "hint": "Deneme yüksek katılım izleme listesi ile birlikte güzel çalışır."
+        },
+        "attendanceCheckIn": {
+          "title": "Devamsızlık kontrolü",
+          "subject": "Sadece nasıl olduğunuzu sormak için",
+          "body": "Merhaba,\n\n{{athleteName}} son zamanlarda antrenmanlarda biraz daha az görünüyor; nasıl olduğunuzu öğrenmek istedik. Yaşadığınız bir şey varsa veya destek olabileceğimiz bir konu varsa lütfen bildirin — baskı değil, sadece ailelerimize yakın kalmayı seviyoruz.\n\nBir sonraki antrenmanda görüşmek üzere.",
+          "hint": "Devamsızlık izleme listesi ve sessizlik takipleri için tasarlandı."
+        },
+        "sessionReminder": {
+          "title": "Yaklaşan antrenman hatırlatması",
+          "subject": "Bir sonraki antrenmanınız için kısa bir hatırlatma",
+          "body": "Merhaba,\n\n{{athleteName}} için yaklaşan bir antrenman olduğunu hatırlatmak istedik. Bir değişiklik olduysa kısa bir not göndermeniz yeterli, planımızı ona göre yaparız.\n\nGörüşmek üzere!",
+          "hint": "Planlı antrenman veya deneme öncesi kullanışlıdır."
+        },
+        "groupAnnouncement": {
+          "title": "Grup duyurusu",
+          "subject": "Kulüpten kısa bir bilgilendirme",
+          "body": "Merhaba,\n\nGrubumuzdaki ailelere kısa bir not: aşağıdaki güncellemeyi inceleyin ve sorularınız olursa bize yazın.\n\nKulübümüzün bir parçası olduğunuz için teşekkür ederiz.",
+          "hint": "Grup hedef kitleleri için tek ve sıcak bir mesajla güzel çalışır."
+        },
+        "familyFollowUp": {
+          "title": "Genel aile takibi",
+          "subject": "Kulüpten kısa bir takip mesajı",
+          "body": "Merhaba,\n\n{{athleteName}} ile ilgili kulüp operasyonumuzdan kısa bir bilgilendirme paylaşmak istiyoruz.\n\nYardımcı olabileceğimiz bir konu olursa istediğiniz zaman WhatsApp üzerinden yazabilirsiniz.",
+          "hint": "Diğer şablonlar uymadığında kullanılan varsayılan başlangıç noktası."
+        }
+      },
+      "audience": {
+        "title": "Kiminle iletişim kuruyorsunuz",
+        "summary": "{{athletes}} sporcu · {{guardians}} veli · {{primary}} birincil iletişim",
+        "phoneReachable": "{{count}} kişi WhatsApp üzerinden ulaşılabilir",
+        "phoneMissing": "{{count}} kişide telefon kayıtlı değil",
+        "emailReachable": "{{count}} kişi e-posta üzerinden ulaşılabilir",
+        "needFollowUp": "{{count}} kişi takip için işaretli",
+        "sourceLabel": "Hedef kitle kaynağı",
+        "noContext": "Manuel seçim",
+        "contextOverdue": "Gecikmiş bakiye sinyalinden oluşturuldu.",
+        "contextNeedsFollowUp": "Aile takip sinyallerinden oluşturuldu.",
+        "contextTraining": "Bir antrenman kadrosundan oluşturuldu.",
+        "contextCoach": "Bir antrenör atamasından oluşturuldu.",
+        "contextGroup": "Grup · {{name}}",
+        "contextTeam": "Takım · {{name}}",
+        "contextAthlete": "Tek sporcu odağı",
+        "contextManual": "Manuel filtrelenmiş hedef kitle"
+      },
+      "draftPanel": {
+        "title": "Mesajınızı hazırlayın",
+        "hint": "Mesajınız sıcak ve düzenlenebilir kalır. Hedef kitle ve kaynak hep görünür.",
+        "messageLabel": "Mesaj",
+        "topicLabel": "Konu",
+        "topicPlaceholder": "Örn. Haziran gecikmiş bakiye, deneme takibi, U14 hatırlatma",
+        "subjectLabel": "E-posta konusu",
+        "subjectPlaceholder": "İsteğe bağlı — yalnızca e-postaya geçerseniz kullanılır",
+        "noteLabel": "Dahili not",
+        "notePlaceholder": "İsteğe bağlı — takip kaydı için",
+        "previewTitle": "Mesaj önizlemesi",
+        "previewHint": "WhatsApp satır sonlarını korur. Kulübünüze uymayan yerleri düzenleyin.",
+        "tokenHint": "{{athleteName}} yer tutucusunu kullanın; gönderim sırasında her aile için kişiselleştirilir.",
+        "interpolationHint": "İpucu: buradaki düzenlemeler tüm alıcılara uygulanır. Kişisel dokunuşlar WhatsApp içinde olur.",
+        "previewFor": "{{name}} için önizleme"
+      },
+      "actions": {
+        "openWhatsAppEach": "Her aile için WhatsApp'ı aç",
+        "openWhatsAppOne": "WhatsApp'ı aç",
+        "openWhatsAppFirst": "İlk aileyi WhatsApp'ta aç",
+        "shareWhatsApp": "WhatsApp ile paylaş",
+        "callRecipient": "Ara",
+        "openEmail": "E-posta taslağını aç",
+        "copyMessage": "Mesajı kopyala",
+        "copyMessages": "Aileye özel mesajları kopyala",
+        "copyContacts": "İletişim listesini kopyala",
+        "logFollowUp": "Takip kaydını ekle",
+        "saving": "Kaydediliyor…",
+        "saved": "Takip kaydedildi",
+        "openLink": "Aç"
+      },
+      "recipientList": {
+        "title": "Alıcılar",
+        "hint": "Bir aileye tıklayın; sohbet WhatsApp'ta mesaj hazır olarak açılır. Veya kişiselleştirilmiş mesajı kopyalayıp istediğiniz yere yapıştırın.",
+        "noPhone": "Telefon kayıtlı değil",
+        "noEmail": "E-posta kayıtlı değil",
+        "primary": "Birincil iletişim",
+        "perFamilyHint": "Aileye özel mesajlar {{athleteName}} ile doldurulur.",
+        "showMore": "Diğer alıcıları göster ({{count}})",
+        "showLess": "Daha az göster"
+      },
+      "history": {
+        "title": "Son takipler",
+        "hint": "Hangi takip hazırlandı, kim tarafından, nereden — kısa bir kayıt günlüğü.",
+        "empty": "Henüz hiç takip kaydı yok. Sağ panelden bir tane kaydedin ve iz başlasın.",
+        "channelLabel": "Kanal",
+        "topicLabel": "Konu",
+        "audienceLabel": "Hedef kitle",
+        "sourceLabel": "Kaynak",
+        "savedBy": "{{name}} tarafından",
+        "savedAnonymous": "kulüp ekibi tarafından",
+        "recipientsCount_one": "{{count}} aile",
+        "recipientsCount_other": "{{count}} aile",
+        "reachableCount_one": "{{count}} ulaşılabilir veli",
+        "reachableCount_other": "{{count}} ulaşılabilir veli",
+        "openOriginalSource": "Kaynağı yeniden aç",
+        "messagePreviewLabel": "Mesaj önizlemesi"
+      },
+      "sourceSurfaces": {
+        "manual": "Manuel hedef kitle",
+        "communications": "Takip yüzeyi",
+        "report": "Rapor",
+        "report_athletes": "Sporcu raporu",
+        "report_finance_charges": "Finans raporu",
+        "report_private_lessons": "Özel ders raporu",
+        "report_training_sessions": "Antrenman raporu",
+        "starter": "Başlangıç görünümü",
+        "watchlist": "Devamsızlık izleme",
+        "action_center": "Aksiyon merkezi",
+        "action_center_finance": "Aksiyon merkezi · Finans",
+        "action_center_family": "Aksiyon merkezi · Aile",
+        "action_center_readiness": "Aksiyon merkezi · Hazırlık",
+        "action_center_private_lessons": "Aksiyon merkezi · Özel dersler",
+        "action_center_training": "Aksiyon merkezi · Antrenman",
+        "athlete_detail": "Sporcu profili",
+        "guardian_detail": "Veli profili",
+        "finance_overdue": "Finans · Gecikmiş bakiye",
+        "finance_outstanding": "Finans · Açık bakiye",
+        "trial_high_engagement": "Deneme · Yüksek katılım",
+        "attendance_quiet": "Devamsızlık · Sessiz",
+        "attendance_drop": "Devamsızlık · Düşüş",
+        "session_reminder": "Antrenman hatırlatma",
+        "group_announcement": "Grup duyurusu",
+        "no_recent_check_in": "Yakın zamanda check-in yok",
+        "regular_without_team": "Takımsız düzenli",
+        "guardian_contact_gap": "Veli iletişim eksiği"
+      },
+      "quickScenarios": {
+        "title": "Sık kullanılan takipler",
+        "hint": "Bir başlangıç noktası seçin — hedef kitle, kanal ve şablonu sizin için ayarlarız.",
+        "overduePayment": "Gecikmiş ödeme hatırlatması",
+        "overduePaymentHint": "Gecikmiş bakiyesi olan aileler.",
+        "trialFollowUp": "Deneme takibi",
+        "trialFollowUpHint": "Son zamanlarda devamı güçlü olan deneme sporcuları.",
+        "attendanceQuiet": "Devamsızlık kontrolü",
+        "attendanceQuietHint": "Yakın zamanda check-in yapmamış sporcular.",
+        "sessionReminder": "Antrenman hatırlatma",
+        "sessionReminderHint": "Yaklaşan bir antrenman seçin.",
+        "groupAnnouncement": "Grup duyurusu",
+        "groupAnnouncementHint": "Tüm gruba sıcak bir not.",
+        "needsFollowUp": "Aile takibi",
+        "needsFollowUpHint": "Açık hazırlık veya inceleme bekleyen aileler."
+      },
+      "summaryReachWhatsApp": "WhatsApp ile ulaşılabilir",
+      "summaryReachEmail": "E-posta ile ulaşılabilir",
+      "noPhoneWarning": "Bu listede WhatsApp için kayıtlı telefonu olan veli yok. WhatsApp takibini etkinleştirmek için telefon ekleyin.",
+      "openSourceLink": "Kaynağı aç",
+      "selectionHint": "Bir alıcıya dokunun; WhatsApp doğrudan onun mesajıyla açılır.",
+      "tabs": {
+        "draft": "Taslak",
+        "history": "Son takipler"
+      },
+      "channelSwitchHint": "WhatsApp burada birincil kanaldır. Anlık ihtiyaca göre telefon veya e-postaya geçebilirsiniz."
+    }
+  }
+}

@@ -205,7 +205,7 @@ export function FinanceHubPage() {
               <p className="mt-2 text-sm text-amateur-muted">{t('pages.privateLessons.financeHint')}</p>
             </Link>
             <Link
-              to="/app/communications"
+              to="/app/communications?financialState=overdue&primaryContactsOnly=true&channel=whatsapp&template=overdue_payment_reminder&source=finance_overdue"
               className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm transition hover:border-amateur-accent/40"
             >
               <h2 className="font-display text-lg font-semibold text-amateur-ink">

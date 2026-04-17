@@ -42,7 +42,8 @@
       "cancel": "Vazgeç",
       "manage": "Yönet",
       "refresh": "Yenile",
-      "clear": "Temizle"
+      "clear": "Temizle",
+      "hide": "Gizle"
     },
     "count": {
       "rows_one": "{{count}} kayıt",

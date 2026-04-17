@@ -172,7 +172,7 @@ export function DashboardPage() {
       key: 'follow-up',
       label: t('pages.dashboard.stats.familyFollowUp'),
       value: summary?.familyWorkflow?.pendingFamilyAction ?? 0,
-      href: '/app/communications?needsFollowUp=true',
+      href: '/app/communications?needsFollowUp=true&channel=whatsapp&template=family_follow_up&source=communications&sourceKey=needs_follow_up',
     },
     {
       key: 'action-center',
@@ -970,7 +970,10 @@ export function DashboardPage() {
                 </p>
                 <p className="mt-1 text-sm text-amateur-muted">{t('pages.dashboard.familyWorkflowHint')}</p>
               </div>
-              <Link to="/app/communications?needsFollowUp=true" className="text-sm font-semibold text-amateur-accent hover:underline">
+              <Link
+                to="/app/communications?needsFollowUp=true&channel=whatsapp&template=family_follow_up&source=communications&sourceKey=needs_follow_up"
+                className="text-sm font-semibold text-amateur-accent hover:underline"
+              >
                 {t('pages.communications.openBuilder')}
               </Link>
             </div>

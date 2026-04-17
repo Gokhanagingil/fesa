@@ -603,7 +603,9 @@ export function AthleteDetailPage() {
             <h3 className="font-display text-lg font-semibold">{t('pages.athletes.familyActions.title')}</h3>
             <p className="text-sm text-amateur-muted">{t('pages.athletes.familyActions.hint')}</p>
           </div>
-          <Link to={`/app/communications?athleteIds=${athlete.id}&needsFollowUp=true`}>
+          <Link
+            to={`/app/communications?athleteIds=${athlete.id}&needsFollowUp=true&channel=whatsapp&template=family_follow_up&source=athlete_detail&sourceKey=family`}
+          >
             <Button variant="ghost">{t('pages.athletes.familyActions.openFollowUp')}</Button>
           </Link>
         </div>
@@ -1130,7 +1132,9 @@ export function AthleteDetailPage() {
             <h3 className="font-display text-lg font-semibold">{t('pages.communications.quickTitle')}</h3>
             <p className="text-sm text-amateur-muted">{t('pages.communications.quickHint')}</p>
           </div>
-          <Link to={`/app/communications?athleteIds=${athlete.id}`}>
+          <Link
+            to={`/app/communications?athleteIds=${athlete.id}&channel=whatsapp&template=family_follow_up&source=athlete_detail`}
+          >
             <Button variant="ghost">{t('pages.communications.openAudienceBuilder')}</Button>
           </Link>
         </div>
