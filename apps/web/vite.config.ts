@@ -2,7 +2,8 @@ import { execSync } from 'node:child_process';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
-import { defineConfig, type Plugin } from 'vite';
+import type { Plugin } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 type BuildInfo = {
   commit: string;
@@ -43,6 +44,13 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), emitBuildInfo(buildInfo)],
   define: {
     __FESA_WEB_BUILD__: JSON.stringify(buildInfo),
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    include: ['src/**/*.smoke.test.tsx'],
+    clearMocks: true,
+    restoreMocks: true,
   },
   resolve: {
     alias: {

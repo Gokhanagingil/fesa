@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -6,8 +6,9 @@ import { InlineAlert } from '../components/ui/InlineAlert';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
+import { Button } from '../components/ui/Button';
 import { StarterViewsPanel } from '../components/reporting/StarterViewsPanel';
-import { buildStarterLink } from '../lib/report-deep-link';
+import { buildReportBuilderLink, buildSavedViewLink, buildStarterLink } from '../lib/report-deep-link';
 import { apiGet } from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,6 +19,8 @@ import {
   getMoneyAmount,
   getPersonName,
 } from '../lib/display';
+import { listSavedViews } from '../lib/reporting-client';
+import type { SavedReportView } from '../lib/reporting-types';
 import { useTenant } from '../lib/tenant-hooks';
 import type {
   AthleteCharge,
@@ -33,6 +36,7 @@ export function ReportsPage() {
   const { tenantId, loading: tenantLoading } = useTenant();
   const [definitions, setDefinitions] = useState<ReportingDefinitionsResponse['items']>([]);
   const [report, setReport] = useState<CommandCenterResponse | null>(null);
+  const [savedViews, setSavedViews] = useState<SavedReportView[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,12 +45,14 @@ export function ReportsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [definitionRes, commandCenter] = await Promise.all([
+      const [definitionRes, commandCenter, savedViewRes] = await Promise.all([
         apiGet<ReportingDefinitionsResponse>('/api/reporting/definitions'),
         apiGet<CommandCenterResponse>('/api/reporting/command-center'),
+        listSavedViews(),
       ]);
       setDefinitions(definitionRes.items);
       setReport(commandCenter);
+      setSavedViews(savedViewRes.items);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
     } finally {
@@ -57,6 +63,88 @@ export function ReportsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const continueViews = useMemo(
+    () =>
+      [...savedViews]
+        .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+        .slice(0, 3),
+    [savedViews],
+  );
+
+  const actionableDefinitions = useMemo(
+    () =>
+      definitions.map((definition) => {
+        switch (definition.key) {
+          case 'collections-overview':
+            return {
+              ...definition,
+              href: buildStarterLink('finance.overdue'),
+              cta: t('pages.reports.definitionActions.openStarter'),
+            };
+          case 'scheduling-overview':
+            return {
+              ...definition,
+              href: buildStarterLink('lessons.byCoach'),
+              cta: t('pages.reports.definitionActions.openGrouped'),
+            };
+          case 'athlete-balances':
+            return {
+              ...definition,
+              href: buildStarterLink('athletes.outstandingBalance'),
+              cta: t('pages.reports.definitionActions.openStarter'),
+            };
+          case 'private-lessons':
+            return {
+              ...definition,
+              href: buildStarterLink('lessons.upcoming'),
+              cta: t('pages.reports.definitionActions.openStarter'),
+            };
+          case 'communication-audiences':
+            return {
+              ...definition,
+              href: buildReportBuilderLink({
+                entity: 'athletes',
+                columns: ['firstName', 'lastName', 'primaryGroup', 'outstandingTotal'],
+                sort: [{ field: 'outstandingTotal', direction: 'desc' }],
+                contextLabel: t('pages.reports.communicationReadyContext'),
+              }),
+              cta: t('pages.reports.definitionActions.openBuilder'),
+            };
+          default:
+            return {
+              ...definition,
+              href: '/app/report-builder',
+              cta: t('pages.reports.definitionActions.openBuilder'),
+            };
+        }
+      }),
+    [definitions, t],
+  );
+
+  const reportLaunchCards = useMemo(
+    () => [
+      {
+        title: t('pages.reports.launch.openStarterTitle'),
+        body: t('pages.reports.launch.openStarterBody'),
+        action: t('pages.reports.launch.openStarterAction'),
+        href: buildStarterLink('finance.overdue'),
+      },
+      {
+        title: t('pages.reports.launch.openGroupedTitle'),
+        body: t('pages.reports.launch.openGroupedBody'),
+        action: t('pages.reports.launch.openGroupedAction'),
+        href: buildStarterLink('athletes.outstandingByGroup'),
+      },
+      {
+        title: t('pages.reports.launch.openBuilderTitle'),
+        body: t('pages.reports.launch.openBuilderBody'),
+        action: t('pages.reports.launch.openBuilderAction'),
+        href: '/app/report-builder',
+      },
+    ],
+    [t],
+  );
 
   return (
     <div>
@@ -72,6 +160,124 @@ export function ReportsPage() {
           <EmptyState />
         ) : (
           <div className="space-y-6">
+            <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="max-w-3xl">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-accent">
+                    {t('pages.reports.launch.eyebrow')}
+                  </p>
+                  <h2 className="mt-2 font-display text-2xl font-semibold text-amateur-ink">
+                    {t('pages.reports.launch.title')}
+                  </h2>
+                  <p className="mt-2 text-sm text-amateur-muted">{t('pages.reports.launch.subtitle')}</p>
+                </div>
+                <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm text-amateur-muted">
+                  <p className="font-semibold text-amateur-ink">{t('pages.reports.launch.saveExportTitle')}</p>
+                  <p className="mt-1">{t('pages.reports.launch.saveExportBody')}</p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                {reportLaunchCards.map((card) => (
+                  <Link
+                    key={card.title}
+                    to={card.href}
+                    className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4 transition hover:border-amateur-accent/40 hover:shadow"
+                  >
+                    <p className="font-display text-base font-semibold text-amateur-ink">{card.title}</p>
+                    <p className="mt-2 text-sm text-amateur-muted">{card.body}</p>
+                    <span className="mt-4 inline-flex text-sm font-semibold text-amateur-accent">
+                      {card.action} →
+                    </span>
+                  </Link>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link to={buildStarterLink('finance.overdue')}>
+                  <Button type="button">{t('pages.reports.launch.primaryAction')}</Button>
+                </Link>
+                <Link to="/app/report-builder">
+                  <Button type="button" variant="ghost">
+                    {t('pages.reports.launch.secondaryAction')}
+                  </Button>
+                </Link>
+              </div>
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                      {t('pages.reports.continueTitle')}
+                    </h2>
+                    <p className="mt-1 text-sm text-amateur-muted">{t('pages.reports.continueHint')}</p>
+                  </div>
+                  <Link to="/app/report-builder" className="text-sm font-medium text-amateur-accent hover:underline">
+                    {t('pages.reports.definitionActions.openBuilder')} →
+                  </Link>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {continueViews.length === 0 ? (
+                    <EmptyState
+                      title={t('pages.reports.continueEmpty')}
+                      hint={t('pages.reports.continueEmptyHint')}
+                    />
+                  ) : (
+                    continueViews.map((view) => (
+                      <Link
+                        key={view.id}
+                        to={buildSavedViewLink(view.id)}
+                        className="block rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3 transition hover:border-amateur-accent/30"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-amateur-ink">{view.name}</p>
+                            <p className="mt-1 text-xs text-amateur-muted">
+                              {[t(`pages.reports.starter.categories.${categoryForEntity(view.entity)}`), view.visibility === 'shared' ? t('pages.reports.savedViews.shared') : t('pages.reports.savedViews.private')]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </p>
+                          </div>
+                          <span className="text-xs text-amateur-muted">
+                            {formatDateTime(view.updatedAt, i18n.language)}
+                          </span>
+                        </div>
+                        {view.description ? (
+                          <p className="mt-2 text-sm text-amateur-muted">{view.description}</p>
+                        ) : null}
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                  {t('pages.reports.availableReports')}
+                </h2>
+                <p className="mt-1 text-sm text-amateur-muted">{t('pages.reports.readyHint')}</p>
+                <div className="mt-4 grid gap-3">
+                  {actionableDefinitions.map((definition) => (
+                    <Link
+                      key={definition.key}
+                      to={definition.href}
+                      className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-4 transition hover:border-amateur-accent/40"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-amateur-ink">{t(definition.titleKey)}</p>
+                          <p className="mt-2 text-xs text-amateur-muted">
+                            {definition.domains.join(' · ')}
+                          </p>
+                        </div>
+                        <span className="text-sm font-semibold text-amateur-accent">{definition.cta} →</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </section>
+
             <StarterViewsPanel
               managementOnly
               title={t('pages.reports.management.title')}
@@ -204,26 +410,6 @@ export function ReportsPage() {
             <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
                 <h2 className="font-display text-lg font-semibold text-amateur-ink">
-                  {t('pages.reports.availableReports')}
-                </h2>
-                <p className="mt-1 text-sm text-amateur-muted">{t('pages.reports.readyHint')}</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {definitions.map((definition) => (
-                    <div
-                      key={definition.key}
-                      className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-4"
-                    >
-                      <p className="font-medium text-amateur-ink">{t(definition.titleKey)}</p>
-                      <p className="mt-2 text-xs text-amateur-muted">
-                        {definition.domains.join(' · ')}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-                <h2 className="font-display text-lg font-semibold text-amateur-ink">
                   {t('pages.reports.commandCenter.title')}
                 </h2>
                 <div className="mt-4 space-y-3">
@@ -275,10 +461,10 @@ export function ReportsPage() {
                     </p>
                   </div>
                   <Link
-                    to="/app/finance/athlete-charges?overdueOnly=true"
+                    to={buildStarterLink('finance.overdue')}
                     className="text-sm font-medium text-amateur-accent hover:underline"
                   >
-                    {t('pages.athleteCharges.viewAll')} →
+                    {t('pages.reports.definitionActions.openStarter')} →
                   </Link>
                 </div>
                 <div className="mt-4 space-y-3">
@@ -365,10 +551,10 @@ export function ReportsPage() {
                     </p>
                   </div>
                   <Link
-                    to="/app/private-lessons"
+                    to={buildStarterLink('lessons.upcoming')}
                     className="text-sm font-medium text-amateur-accent hover:underline"
                   >
-                    {t('pages.privateLessons.openBoard')} →
+                    {t('pages.reports.definitionActions.openStarter')} →
                   </Link>
                 </div>
                 <div className="mt-4 space-y-3">
@@ -518,4 +704,18 @@ export function ReportsPage() {
       </ListPageFrame>
     </div>
   );
+}
+
+function categoryForEntity(entity: SavedReportView['entity']): 'roster' | 'finance' | 'scheduling' | 'contact' {
+  switch (entity) {
+    case 'finance_charges':
+      return 'finance';
+    case 'private_lessons':
+      return 'scheduling';
+    case 'guardians':
+      return 'contact';
+    case 'athletes':
+    default:
+      return 'roster';
+  }
 }

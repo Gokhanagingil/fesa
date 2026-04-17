@@ -113,21 +113,27 @@ With the API running, exercise catalog / run / export / saved views end to end:
 npm run reporting:smoke
 ```
 
+For lightweight frontend coverage of the reporting journeys themselves:
+
+```bash
+npm run frontend:smoke
+```
+
 ## Continuous integration (GitHub Actions)
 
 CI validates the monorepo on **pull requests** and **pushes to `main`**. There is no deployment or artifact publish in CI, but the reusable validation now includes a disposable PostgreSQL-backed migration check, repeatable demo-seed validation, and an API boot smoke before staging.
 
 | Workflow | Purpose |
 |----------|---------|
-| [CI](.github/workflows/ci.yml) | Installs with `npm ci`, runs a small [repo guard](scripts/repo-guard.mjs), then `npm run lint`, `npm run i18n:check`, `npm run build`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke`. |
+| [CI](.github/workflows/ci.yml) | Installs with `npm ci`, runs a small [repo guard](scripts/repo-guard.mjs), then `npm run lint`, `npm run frontend:smoke`, `npm run i18n:check`, `npm run build`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke`. |
 | [Manual validation](.github/workflows/manual-validate.yml) | Same checks on demand via **Actions → Manual validation → Run workflow** (useful when you are not opening a PR). |
 | [Staging SSH check](.github/workflows/staging-ssh-check.yml) | Optional: verify GitHub → server SSH only (no deploy). Use when fixing `Permission denied (publickey)`. |
 
 Reusable steps live in [.github/workflows/ci-reusable.yml](.github/workflows/ci-reusable.yml) so primary CI and manual runs stay in sync.
 
-**Locally:** `npm run repo:guard` runs the structure/workspace checks only; fuller parity with CI is `npm ci`, `npm run repo:guard`, `npm run lint`, `npm run i18n:check`, `npm run build`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke` with `DATABASE_URL` pointed at a local PostgreSQL instance.
+**Locally:** `npm run repo:guard` runs the structure/workspace checks only; fuller parity with CI is `npm ci`, `npm run repo:guard`, `npm run lint`, `npm run frontend:smoke`, `npm run i18n:check`, `npm run build`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke` with `DATABASE_URL` pointed at a local PostgreSQL instance.
 
-**Limitations:** CI still uses a lightweight disposable PostgreSQL service rather than a full end-to-end environment. It now validates migration execution, repeatable seed behavior, and runtime boot, but it does not yet cover browser E2E or staging infrastructure such as Nginx.
+**Limitations:** CI still uses a lightweight disposable PostgreSQL service rather than a full end-to-end environment. It now validates frontend reporting smoke, migration execution, repeatable seed behavior, and runtime boot, but it does not yet cover full browser E2E or staging infrastructure such as Nginx.
 
 ## Staging deployment (Hetzner / manual Actions)
 

@@ -131,6 +131,26 @@ running locally (or `API_BASE` set) and validates that catalog metadata,
 filter-tree validation, tenant-isolated `run`, saved view CRUD, and CSV export
 all behave correctly across every accessible tenant.
 
+## Reporting frontend smoke
+
+Wave 12 closure adds a lightweight frontend smoke layer for the report-builder
+experience itself:
+
+```bash
+npm run frontend:smoke
+```
+
+This covers the club-facing reporting journeys that sit above the API contract:
+
+- report builder landing
+- curated starter open/apply
+- grouping enable + grouped render
+- save / duplicate / delete saved-view flow
+- dashboard drill-down into report context
+
+Use this alongside `npm run reporting:smoke` when you want confidence in both
+the reporting API contracts and the report-entry UX.
+
 ## Demo athlete fields
 
 The expansion seed also fills `Athlete.shirtSize` deterministically per athlete

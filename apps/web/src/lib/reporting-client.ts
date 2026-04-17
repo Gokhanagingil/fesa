@@ -63,6 +63,10 @@ export function listSavedViews(entity?: ReportEntityKey): Promise<SavedReportVie
   return apiGet<SavedReportViewListResponse>(path);
 }
 
+export function fetchSavedView(id: string): Promise<SavedReportView> {
+  return apiGet<SavedReportView>(`/api/reporting/saved-views/${id}`);
+}
+
 export function createSavedView(input: Partial<SavedReportView> & { entity: ReportEntityKey; name: string }) {
   return apiPost<SavedReportView>('/api/reporting/saved-views', input);
 }
