@@ -131,6 +131,7 @@ function makeHistoryResponse(): OutreachActivityListResponse {
       {
         id: 'activity-1',
         channel: 'whatsapp',
+        status: 'logged',
         sourceSurface: 'finance_overdue',
         sourceKey: null,
         templateKey: 'overdue_payment_reminder',
@@ -143,14 +144,36 @@ function makeHistoryResponse(): OutreachActivityListResponse {
         createdByStaffUserId: null,
         createdByName: 'Coach Demo',
         createdAt: '2026-04-10T10:00:00.000Z',
+        updatedAt: '2026-04-10T10:00:00.000Z',
+      },
+      {
+        id: 'activity-2',
+        channel: 'whatsapp',
+        status: 'draft',
+        sourceSurface: 'communications',
+        sourceKey: 'needs_follow_up',
+        templateKey: 'family_follow_up',
+        topic: 'Family follow-up draft',
+        messagePreview: 'Hello {{athleteName}} — quick check-in draft',
+        recipientCount: 0,
+        reachableGuardianCount: 0,
+        audienceSnapshot: { audienceSummary: { contextLabel: 'Follow-up surface' } },
+        note: null,
+        createdByStaffUserId: null,
+        createdByName: 'Coach Demo',
+        createdAt: '2026-04-11T09:00:00.000Z',
+        updatedAt: '2026-04-11T09:00:00.000Z',
       },
     ],
     counts: {
-      total: 3,
-      whatsapp: 3,
+      total: 4,
+      whatsapp: 4,
       phone: 0,
       email: 0,
       manual: 0,
+      draft: 1,
+      logged: 3,
+      archived: 0,
     },
   };
 }
@@ -159,6 +182,14 @@ function setupApiMocks(audience = makeAudienceResponse()) {
   mockApiGet.mockImplementation(async (path: string) => {
     if (path.startsWith('/api/communications/audiences')) return audience;
     if (path === '/api/communications/templates') return makeTemplatesResponse();
+    if (path.startsWith('/api/communications/outreach/activity-2')) {
+      const history = makeHistoryResponse();
+      return history.items[1];
+    }
+    if (path.startsWith('/api/communications/outreach/activity-1')) {
+      const history = makeHistoryResponse();
+      return history.items[0];
+    }
     if (path.startsWith('/api/communications/outreach')) return makeHistoryResponse();
     if (path.startsWith('/api/groups')) return { items: [] };
     if (path.startsWith('/api/teams')) return { items: [] };
@@ -166,7 +197,7 @@ function setupApiMocks(audience = makeAudienceResponse()) {
     if (path.startsWith('/api/training-sessions')) return { items: [] };
     return null;
   });
-  mockApiPost.mockResolvedValue({ ok: true });
+  mockApiPost.mockResolvedValue({ id: 'activity-new', status: 'logged' });
 }
 
 describe('communications follow-up smoke coverage', () => {
@@ -248,5 +279,53 @@ describe('communications follow-up smoke coverage', () => {
     expect(await screen.findByText('Overdue payment — May dues')).toBeInTheDocument();
     const sourceLabels = await screen.findAllByText(/Finance · Overdue balance/i);
     expect(sourceLabels.length).toBeGreaterThan(0);
+  });
+
+  it('persists a draft with the lifecycle status and surfaces the new state', async () => {
+    mockApiPost.mockResolvedValueOnce({ id: 'activity-new', status: 'draft' });
+    renderWithRoute(<CommunicationsPage />, {
+      path: '/app/communications',
+      initialEntry:
+        '/app/communications?source=finance_overdue&channel=whatsapp&template=overdue_payment_reminder&primaryContactsOnly=true',
+    });
+
+    await screen.findByText('Deniz Kaya');
+    const user = userEvent.setup();
+    const draftButton = await screen.findByRole('button', { name: /Save as draft/i });
+    await user.click(draftButton);
+
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledWith(
+        '/api/communications/outreach',
+        expect.objectContaining({
+          status: 'draft',
+          channel: 'whatsapp',
+          sourceSurface: 'finance_overdue',
+        }),
+      );
+    });
+
+    expect(await screen.findByText(/Draft saved/i)).toBeInTheDocument();
+  });
+
+  it('lets the operator continue a saved draft from the history tab', async () => {
+    renderWithRoute(<CommunicationsPage />, {
+      path: '/app/communications',
+      initialEntry: '/app/communications',
+    });
+
+    const user = userEvent.setup();
+    const historyTab = await screen.findByRole('button', { name: 'Recent follow-ups' });
+    await user.click(historyTab);
+
+    const continueButton = await screen.findByRole('button', { name: /Continue this draft/i });
+    await user.click(continueButton);
+
+    await waitFor(() => {
+      const calls = mockApiGet.mock.calls.map((args) => String(args[0]));
+      expect(calls.some((path) => path.endsWith('/api/communications/outreach/activity-2'))).toBe(true);
+    });
+
+    expect(await screen.findByText(/Draft re-opened/i)).toBeInTheDocument();
   });
 });

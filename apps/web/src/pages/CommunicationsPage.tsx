@@ -11,6 +11,7 @@ import { apiGet } from '../lib/api';
 import {
   formatDateTime,
   getAthleteStatusLabel,
+  getCoachName,
   getCommunicationChannelLabel,
   getCommunicationSourceLabel,
   getFamilyReadinessStatusLabel,
@@ -21,13 +22,19 @@ import {
 import {
   buildMailtoLink,
   buildPhoneLink,
+  buildTokenContext,
   buildWhatsAppLink,
   buildWhatsAppShareLink,
   countReachable,
+  extractTokens,
+  getOutreach,
   isReachableForChannel,
   listOutreach,
   logOutreach,
   pickBestGuardian,
+  renderTemplate,
+  setOutreachStatus,
+  updateOutreach,
 } from '../lib/communication';
 import { useTenant } from '../lib/tenant-hooks';
 import type {
@@ -39,9 +46,11 @@ import type {
   CommunicationChannel,
   CommunicationTemplate,
   CommunicationTemplatesResponse,
+  CommunicationTemplateToken,
   FamilyReadinessStatus,
   OutreachActivity,
   OutreachActivityListResponse,
+  OutreachStatus,
   Team,
   TrainingSession,
 } from '../lib/domain-types';
@@ -133,9 +142,16 @@ const CHANNEL_TONE: Record<CommunicationChannel, string> = {
   manual: 'bg-slate-100 text-slate-700 border-slate-200',
 };
 
-function personalizeMessage(template: string, athleteName: string): string {
-  return template.replace(/\{\{athleteName\}\}/g, athleteName).replace(/\{\{name\}\}/g, athleteName);
+/** Lightweight default tone for a "blank" preview when no recipient is selected. */
+function previewWithoutRecipient(template: string): string {
+  return template.replace(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g, '—');
 }
+
+const STATUS_TONE: Record<OutreachStatus, string> = {
+  draft: 'border-amber-200 bg-amber-50 text-amber-800',
+  logged: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  archived: 'border-slate-200 bg-slate-50 text-slate-600',
+};
 
 export function CommunicationsPage() {
   const { t, i18n } = useTranslation();
@@ -185,12 +201,16 @@ export function CommunicationsPage() {
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [audience, setAudience] = useState<CommunicationAudienceResponse | null>(null);
   const [templates, setTemplates] = useState<CommunicationTemplate[]>([]);
+  const [tokens, setTokens] = useState<CommunicationTemplateToken[]>([]);
   const [history, setHistory] = useState<OutreachActivityListResponse | null>(null);
+  const [historyStatus, setHistoryStatus] = useState<'all' | OutreachStatus>('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingOutreach, setSavingOutreach] = useState(false);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const [revealAllRecipients, setRevealAllRecipients] = useState(false);
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  const [activeDraftStatus, setActiveDraftStatus] = useState<OutreachStatus>('draft');
 
   useEffect(() => {
     setQuery(searchParams.get('q') ?? '');
@@ -282,12 +302,14 @@ export function CommunicationsPage() {
         setCoaches(coachRes.items);
         setSessions(sessionRes.items);
         setTemplates(templatesRes.items);
+        setTokens(templatesRes.tokens ?? []);
       } catch {
         setGroups([]);
         setTeams([]);
         setCoaches([]);
         setSessions([]);
         setTemplates([]);
+        setTokens([]);
       }
     })();
   }, [tenantId]);
@@ -295,12 +317,26 @@ export function CommunicationsPage() {
   const loadHistory = useCallback(async () => {
     if (!tenantId) return;
     try {
-      const res = await listOutreach();
+      const res = await listOutreach({
+        status: historyStatus === 'all' ? undefined : historyStatus,
+      });
       setHistory(res);
     } catch {
-      setHistory({ items: [], counts: { total: 0, whatsapp: 0, phone: 0, email: 0, manual: 0 } });
+      setHistory({
+        items: [],
+        counts: {
+          total: 0,
+          whatsapp: 0,
+          phone: 0,
+          email: 0,
+          manual: 0,
+          draft: 0,
+          logged: 0,
+          archived: 0,
+        },
+      });
     }
-  }, [tenantId]);
+  }, [historyStatus, tenantId]);
 
   useEffect(() => {
     void loadHistory();
@@ -365,6 +401,7 @@ export function CommunicationsPage() {
   );
 
   useEffect(() => {
+    if (activeDraftId) return;
     if (!activeTemplate) {
       if (!draftHydrated) {
         setDraftTopic(t('pages.communications.templates.familyFollowUp.title'));
@@ -378,7 +415,7 @@ export function CommunicationsPage() {
     setDraftBody(t(activeTemplate.bodyKey));
     setDraftSubject(activeTemplate.subjectKey ? t(activeTemplate.subjectKey) : '');
     setDraftHydrated(true);
-  }, [activeTemplate, draftHydrated, t]);
+  }, [activeDraftId, activeTemplate, draftHydrated, t]);
 
   const visibleTeams = useMemo(
     () => (groupId ? teams.filter((team) => team.groupId === groupId) : teams),
@@ -387,11 +424,35 @@ export function CommunicationsPage() {
 
   const reachable = useMemo(() => countReachable(audience, channel), [audience, channel]);
 
+  const trainingSession = useMemo(
+    () => sessions.find((s) => s.id === trainingSessionId) ?? null,
+    [sessions, trainingSessionId],
+  );
+  const tokenExtras = useMemo(() => {
+    const fallbackCoach = coachId
+      ? coaches.find((coach) => coach.id === coachId)
+      : trainingSession?.coachId
+        ? coaches.find((coach) => coach.id === trainingSession.coachId)
+        : null;
+    const coachName = fallbackCoach ? getCoachName(fallbackCoach) : null;
+    return {
+      coachName: coachName && coachName !== '—' ? coachName : null,
+      branchName: null as string | null,
+      sessionLocation: trainingSession?.location ?? null,
+      nextSession: trainingSession
+        ? formatDateTime(trainingSession.scheduledStart, i18n.language)
+        : null,
+      clubName: null as string | null,
+    };
+  }, [coachId, coaches, i18n.language, trainingSession]);
+
   const recipientPlan = useMemo(() => {
     if (!audience) return [];
     return audience.items.map((member) => {
       const guardian = pickBestGuardian(member, channel);
-      const personalizedMessage = personalizeMessage(draftBody, member.athleteName);
+      const ctx = buildTokenContext(member, tokenExtras);
+      const rendered = renderTemplate(draftBody, ctx);
+      const personalizedMessage = rendered.text;
       const link =
         channel === 'whatsapp'
           ? buildWhatsAppLink(guardian?.phone ?? null, personalizedMessage)
@@ -404,11 +465,19 @@ export function CommunicationsPage() {
         member,
         guardian,
         personalizedMessage,
+        missingTokens: rendered.missing,
         link,
         reachable: Boolean(guardian),
       };
     });
-  }, [audience, channel, draftBody, draftSubject, draftTopic]);
+  }, [audience, channel, draftBody, draftSubject, draftTopic, tokenExtras]);
+
+  const usedTokens = useMemo(() => extractTokens(draftBody), [draftBody]);
+  const aggregatedMissingTokens = useMemo(() => {
+    const set = new Set<string>();
+    recipientPlan.forEach((row) => row.missingTokens.forEach((token) => set.add(token)));
+    return Array.from(set);
+  }, [recipientPlan]);
 
   const reachableRecipients = useMemo(
     () => recipientPlan.filter((row) => row.reachable),
@@ -497,56 +566,121 @@ export function CommunicationsPage() {
     setAudienceSource({ surface: 'manual' });
   }, []);
 
-  const handleLogOutreach = useCallback(async () => {
-    if (!audience) return;
-    setSavingOutreach(true);
+  const persistOutreach = useCallback(
+    async (status: OutreachStatus) => {
+      if (!audience) return;
+      setSavingOutreach(true);
+      setSavedNotice(null);
+      try {
+        const guardianIds = audience.items
+          .flatMap((item) => item.guardians.map((guardian) => guardian.guardianId))
+          .filter(Boolean);
+        const audienceSummary = {
+          athletes: audience.counts.athletes,
+          guardians: audience.counts.guardians,
+          primaryContacts: audience.counts.primaryContacts,
+          withOverdueBalance: audience.counts.withOverdueBalance,
+          needingFollowUp: audience.counts.needingFollowUp,
+          contextLabel: getCommunicationSourceLabel(t, audienceSource.surface, audienceSource.key),
+        };
+        const payload = {
+          channel,
+          status,
+          sourceSurface: audienceSource.surface,
+          sourceKey: audienceSource.key ?? undefined,
+          templateKey: templateKey ?? undefined,
+          topic: draftTopic.trim() || t('pages.communications.templates.familyFollowUp.title'),
+          messagePreview: draftBody.trim().slice(0, 4000) || undefined,
+          athleteIds: audience.items.map((item) => item.athleteId),
+          guardianIds,
+          recipientCount: audience.counts.athletes,
+          reachableGuardianCount: reachable.guardians,
+          audienceSummary,
+          note: draftNote.trim() || undefined,
+        };
+        const saved = activeDraftId
+          ? await updateOutreach(activeDraftId, payload)
+          : await logOutreach(payload);
+        setActiveDraftId(saved.id);
+        setActiveDraftStatus((saved.status as OutreachStatus) ?? status);
+        setSavedNotice(
+          status === 'draft'
+            ? t('pages.communications.actions.draftSaved')
+            : t('pages.communications.actions.saved'),
+        );
+        await loadHistory();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
+      } finally {
+        setSavingOutreach(false);
+      }
+    },
+    [
+      activeDraftId,
+      audience,
+      audienceSource.key,
+      audienceSource.surface,
+      channel,
+      draftBody,
+      draftNote,
+      draftTopic,
+      loadHistory,
+      reachable.guardians,
+      t,
+      templateKey,
+    ],
+  );
+
+  const handleLogOutreach = useCallback(() => persistOutreach('logged'), [persistOutreach]);
+  const handleSaveDraft = useCallback(() => persistOutreach('draft'), [persistOutreach]);
+
+  const handleStartNewDraft = useCallback(() => {
+    setActiveDraftId(null);
+    setActiveDraftStatus('draft');
     setSavedNotice(null);
+  }, []);
+
+  const handleArchiveDraft = useCallback(async () => {
+    if (!activeDraftId) return;
     try {
-      const guardianIds = audience.items
-        .flatMap((item) => item.guardians.map((guardian) => guardian.guardianId))
-        .filter(Boolean);
-      const audienceSummary = {
-        athletes: audience.counts.athletes,
-        guardians: audience.counts.guardians,
-        primaryContacts: audience.counts.primaryContacts,
-        withOverdueBalance: audience.counts.withOverdueBalance,
-        needingFollowUp: audience.counts.needingFollowUp,
-        contextLabel: getCommunicationSourceLabel(t, audienceSource.surface, audienceSource.key),
-      };
-      await logOutreach({
-        channel,
-        sourceSurface: audienceSource.surface,
-        sourceKey: audienceSource.key ?? undefined,
-        templateKey: templateKey ?? undefined,
-        topic: draftTopic.trim() || t('pages.communications.templates.familyFollowUp.title'),
-        messagePreview: draftBody.trim().slice(0, 4000) || undefined,
-        athleteIds: audience.items.map((item) => item.athleteId),
-        guardianIds,
-        recipientCount: audience.counts.athletes,
-        reachableGuardianCount: reachable.guardians,
-        audienceSummary,
-        note: draftNote.trim() || undefined,
-      });
-      setSavedNotice(t('pages.communications.actions.saved'));
+      await setOutreachStatus(activeDraftId, 'archived');
+      setSavedNotice(t('pages.communications.actions.archived'));
+      setActiveDraftStatus('archived');
       await loadHistory();
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
-    } finally {
-      setSavingOutreach(false);
     }
-  }, [
-    audience,
-    audienceSource.key,
-    audienceSource.surface,
-    channel,
-    draftBody,
-    draftNote,
-    draftTopic,
-    loadHistory,
-    reachable.guardians,
-    t,
-    templateKey,
-  ]);
+  }, [activeDraftId, loadHistory, t]);
+
+  const handleReopenActivity = useCallback(
+    async (activity: OutreachActivity) => {
+      try {
+        const fresh = await getOutreach(activity.id);
+        setActiveDraftId(fresh.id);
+        setActiveDraftStatus((fresh.status as OutreachStatus) ?? 'draft');
+        setChannel((fresh.channel as CommunicationChannel) ?? 'whatsapp');
+        setTemplateKey(fresh.templateKey);
+        setDraftTopic(fresh.topic);
+        setDraftBody(fresh.messagePreview ?? '');
+        setDraftNote(fresh.note ?? '');
+        setDraftHydrated(true);
+        const snapshot = (fresh.audienceSnapshot ?? {}) as {
+          athleteIds?: string[];
+        };
+        setAthleteIds(Array.isArray(snapshot.athleteIds) ? snapshot.athleteIds : []);
+        setAudienceSource({ surface: fresh.sourceSurface, key: fresh.sourceKey });
+        setTab('draft');
+        setSavedNotice(
+          fresh.status === 'draft'
+            ? t('pages.communications.actions.draftReopened')
+            : t('pages.communications.actions.followUpReopened'),
+        );
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
+      }
+    },
+    [t],
+  );
 
   const audienceSourceLabel = getCommunicationSourceLabel(
     t,
@@ -571,13 +705,31 @@ export function CommunicationsPage() {
         title={t('pages.communications.title')}
         subtitle={t('pages.communications.subtitle')}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="ghost" onClick={() => setTab('draft')}>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setTab('draft')}
+              aria-pressed={tab === 'draft'}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                tab === 'draft'
+                  ? 'border-amateur-accent bg-amateur-accent-soft text-amateur-accent'
+                  : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
+              }`}
+            >
               {t('pages.communications.tabs.draft')}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setTab('history')}>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('history')}
+              aria-pressed={tab === 'history'}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                tab === 'history'
+                  ? 'border-amateur-accent bg-amateur-accent-soft text-amateur-accent'
+                  : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
+              }`}
+            >
               {t('pages.communications.tabs.history')}
-            </Button>
+            </button>
             <Button type="button" variant="ghost" onClick={() => void loadAudience()}>
               {t('app.actions.refresh')}
             </Button>
@@ -625,6 +777,9 @@ export function CommunicationsPage() {
           history={history}
           templates={templates}
           languageTag={i18n.language}
+          statusFilter={historyStatus}
+          onChangeStatusFilter={setHistoryStatus}
+          onReopen={(activity) => void handleReopenActivity(activity)}
         />
       ) : (
         <ListPageFrame
@@ -707,6 +862,12 @@ export function CommunicationsPage() {
                         athletes: audience.counts.athletes,
                         guardians: audience.counts.guardians,
                         primary: audience.counts.primaryContacts,
+                      })}
+                    </p>
+                    <p className="mt-1 text-xs text-amateur-muted">
+                      {t('pages.communications.audience.reachSummary', {
+                        reachableAthletes: reachable.athletes,
+                        totalAthletes: audience.counts.athletes,
                       })}
                     </p>
                   </div>
@@ -817,6 +978,7 @@ export function CommunicationsPage() {
                           link={row.link}
                           member={row.member}
                           message={row.personalizedMessage}
+                          missingTokens={row.missingTokens}
                           subject={draftSubject || draftTopic}
                         />
                       ))}
@@ -890,12 +1052,62 @@ export function CommunicationsPage() {
                   </div>
 
                   <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-                    <h2 className="font-display text-base font-semibold text-amateur-ink">
-                      {t('pages.communications.draftPanel.title')}
-                    </h2>
-                    <p className="mt-1 text-sm text-amateur-muted">
-                      {t('pages.communications.draftPanel.hint')}
-                    </p>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <h2 className="font-display text-base font-semibold text-amateur-ink">
+                          {t('pages.communications.draftPanel.title')}
+                        </h2>
+                        <p className="mt-1 text-sm text-amateur-muted">
+                          {t('pages.communications.draftPanel.hint')}
+                        </p>
+                      </div>
+                      {activeDraftId ? (
+                        <span
+                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${STATUS_TONE[activeDraftStatus]}`}
+                        >
+                          {t(`pages.communications.lifecycle.${activeDraftStatus}`)}
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-amateur-border bg-amateur-surface px-2.5 py-0.5 text-[11px] font-medium text-amateur-muted">
+                          {t('pages.communications.lifecycle.unsaved')}
+                        </span>
+                      )}
+                    </div>
+                    {tokens.length > 0 ? (
+                      <div className="mt-3 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
+                          {t('pages.communications.draftPanel.tokensTitle')}
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {tokens.map((token) => {
+                            const inUse = usedTokens.includes(token.key);
+                            const reliable = token.alwaysAvailable;
+                            return (
+                              <button
+                                key={token.key}
+                                type="button"
+                                onClick={() =>
+                                  setDraftBody((value) => `${value}{{${token.key}}}`)
+                                }
+                                title={t(token.hintKey)}
+                                className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition ${
+                                  inUse
+                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                    : reliable
+                                      ? 'border-amateur-border bg-amateur-canvas text-amateur-ink hover:border-emerald-200 hover:bg-emerald-50'
+                                      : 'border-amber-200 bg-amber-50/70 text-amber-800 hover:bg-amber-50'
+                                }`}
+                              >
+                                {`{{${token.key}}}`}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="mt-1 text-[11px] text-amateur-muted">
+                          {t('pages.communications.draftPanel.tokensHint')}
+                        </p>
+                      </div>
+                    ) : null}
                     <div className="mt-4 space-y-3">
                       <label className="flex flex-col gap-1 text-sm">
                         <span>{t('pages.communications.draftPanel.topicLabel')}</span>
@@ -952,7 +1164,7 @@ export function CommunicationsPage() {
                       ) : null}
                       {channel === 'whatsapp' ? (
                         <a
-                          href={buildWhatsAppShareLink(personalizeMessage(draftBody, '')) ?? '#'}
+                          href={buildWhatsAppShareLink(previewWithoutRecipient(draftBody)) ?? '#'}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
@@ -983,6 +1195,18 @@ export function CommunicationsPage() {
                       </Button>
                       <Button
                         type="button"
+                        variant="ghost"
+                        onClick={() => void handleSaveDraft()}
+                        disabled={savingOutreach || audience.items.length === 0}
+                      >
+                        {savingOutreach
+                          ? t('pages.communications.actions.saving')
+                          : activeDraftId
+                            ? t('pages.communications.actions.updateDraft')
+                            : t('pages.communications.actions.saveDraft')}
+                      </Button>
+                      <Button
+                        type="button"
                         onClick={() => void handleLogOutreach()}
                         disabled={savingOutreach || audience.items.length === 0}
                       >
@@ -990,7 +1214,30 @@ export function CommunicationsPage() {
                           ? t('pages.communications.actions.saving')
                           : t('pages.communications.actions.logFollowUp')}
                       </Button>
+                      {activeDraftId ? (
+                        <>
+                          <Button type="button" variant="ghost" onClick={handleStartNewDraft}>
+                            {t('pages.communications.actions.startNewDraft')}
+                          </Button>
+                          {activeDraftStatus !== 'archived' ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => void handleArchiveDraft()}
+                            >
+                              {t('pages.communications.actions.archive')}
+                            </Button>
+                          ) : null}
+                        </>
+                      ) : null}
                     </div>
+                    {aggregatedMissingTokens.length > 0 ? (
+                      <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        {t('pages.communications.draftPanel.missingTokensWarning', {
+                          tokens: aggregatedMissingTokens.map((tk) => `{{${tk}}}`).join(', '),
+                        })}
+                      </p>
+                    ) : null}
                   </div>
                 </section>
               </div>
@@ -1195,20 +1442,51 @@ function RecipientCard({
   link,
   member,
   message,
+  missingTokens,
   subject,
 }: {
   channel: CommunicationChannel;
   link: string | null;
   member: CommunicationAudienceMember;
   message: string;
+  missingTokens: string[];
   subject: string;
 }) {
   const { t } = useTranslation();
+  const reachState =
+    member.guardians.length === 0
+      ? 'no_guardian'
+      : link
+        ? 'reachable'
+        : channel === 'email'
+          ? 'no_email'
+          : 'no_phone';
+  const reachToneClass =
+    reachState === 'reachable'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : reachState === 'no_guardian'
+        ? 'border-rose-200 bg-rose-50 text-rose-700'
+        : 'border-amber-200 bg-amber-50 text-amber-800';
+  const reachLabel =
+    reachState === 'reachable'
+      ? t(`pages.communications.recipientList.reach.${channel}`)
+      : reachState === 'no_guardian'
+        ? t('pages.communications.recipientList.reach.no_guardian')
+        : reachState === 'no_email'
+          ? t('pages.communications.recipientList.reach.no_email')
+          : t('pages.communications.recipientList.reach.no_phone');
   return (
-    <article className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3">
+    <article className="rounded-2xl border border-amateur-border bg-amateur-surface px-4 py-3 shadow-sm sm:px-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-medium text-amateur-ink">{member.athleteName}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-medium text-amateur-ink">{member.athleteName}</p>
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${reachToneClass}`}
+            >
+              {reachLabel}
+            </span>
+          </div>
           <p className="mt-1 text-xs text-amateur-muted">
             {[
               getAthleteStatusLabel(t, member.athleteStatus),
@@ -1239,14 +1517,21 @@ function RecipientCard({
               {getFamilyReadinessStatusLabel(t, member.familyReadinessStatus)}
             </span>
           </div>
+          {missingTokens.length > 0 ? (
+            <p className="mt-2 text-[11px] text-amber-800">
+              {t('pages.communications.recipientList.missingTokens', {
+                tokens: missingTokens.map((token) => `{{${token}}}`).join(', '),
+              })}
+            </p>
+          ) : null}
         </div>
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
           {link ? (
             <a
               href={link}
               target="_blank"
               rel="noreferrer"
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+              className={`inline-flex min-h-[40px] items-center rounded-xl border px-3 py-2 text-xs font-semibold transition ${
                 channel === 'whatsapp'
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                   : channel === 'phone'
@@ -1345,48 +1630,86 @@ function FollowUpHistory({
   history,
   templates,
   languageTag,
+  statusFilter,
+  onChangeStatusFilter,
+  onReopen,
 }: {
   history: OutreachActivityListResponse | null;
   templates: CommunicationTemplate[];
   languageTag: string;
+  statusFilter: 'all' | OutreachStatus;
+  onChangeStatusFilter: (status: 'all' | OutreachStatus) => void;
+  onReopen: (activity: OutreachActivity) => void;
 }) {
   const { t } = useTranslation();
   if (!history) {
     return <p className="text-sm text-amateur-muted">{t('app.states.loading')}</p>;
   }
-  if (history.items.length === 0) {
-    return (
-      <div className="rounded-2xl border border-amateur-border bg-amateur-canvas p-6">
-        <EmptyState
-          title={t('pages.communications.history.title')}
-          hint={t('pages.communications.history.empty')}
-        />
-      </div>
-    );
-  }
+  const counts = history.counts;
+  const filterButtons: Array<{ value: 'all' | OutreachStatus; count?: number }> = [
+    { value: 'all', count: (counts.draft ?? 0) + (counts.logged ?? 0) },
+    { value: 'draft', count: counts.draft ?? 0 },
+    { value: 'logged', count: counts.logged ?? 0 },
+    { value: 'archived', count: counts.archived ?? 0 },
+  ];
   return (
     <div className="space-y-4">
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t('pages.communications.channels.whatsapp')} value={history.counts.whatsapp} compact />
-        <StatCard label={t('pages.communications.channels.phone')} value={history.counts.phone} compact />
-        <StatCard label={t('pages.communications.channels.email')} value={history.counts.email} compact />
-        <StatCard label={t('pages.communications.channels.manual')} value={history.counts.manual} compact />
+        <StatCard label={t('pages.communications.lifecycle.draft')} value={counts.draft ?? 0} compact />
+        <StatCard label={t('pages.communications.lifecycle.logged')} value={counts.logged ?? 0} compact />
+        <StatCard label={t('pages.communications.channels.whatsapp')} value={counts.whatsapp} compact />
+        <StatCard label={t('pages.communications.channels.email')} value={counts.email} compact />
       </section>
       <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-        <h2 className="font-display text-base font-semibold text-amateur-ink">
-          {t('pages.communications.history.title')}
-        </h2>
-        <p className="mt-1 text-sm text-amateur-muted">{t('pages.communications.history.hint')}</p>
-        <ul className="mt-4 space-y-3">
-          {history.items.map((activity) => (
-            <FollowUpHistoryRow
-              key={activity.id}
-              activity={activity}
-              templates={templates}
-              languageTag={languageTag}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-base font-semibold text-amateur-ink">
+              {t('pages.communications.history.title')}
+            </h2>
+            <p className="mt-1 text-sm text-amateur-muted">{t('pages.communications.history.hint')}</p>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {filterButtons.map((button) => {
+              const active = statusFilter === button.value;
+              return (
+                <button
+                  key={button.value}
+                  type="button"
+                  onClick={() => onChangeStatusFilter(button.value)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    active
+                      ? 'border-amateur-accent bg-amateur-accent-soft text-amateur-accent'
+                      : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
+                  }`}
+                  aria-pressed={active}
+                >
+                  {t(`pages.communications.history.filter.${button.value}`)}
+                  {typeof button.count === 'number' ? ` · ${button.count}` : ''}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {history.items.length === 0 ? (
+          <div className="mt-4">
+            <EmptyState
+              title={t('pages.communications.history.title')}
+              hint={t('pages.communications.history.empty')}
             />
-          ))}
-        </ul>
+          </div>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {history.items.map((activity) => (
+              <FollowUpHistoryRow
+                key={activity.id}
+                activity={activity}
+                templates={templates}
+                languageTag={languageTag}
+                onReopen={onReopen}
+              />
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
@@ -1396,10 +1719,12 @@ function FollowUpHistoryRow({
   activity,
   templates,
   languageTag,
+  onReopen,
 }: {
   activity: OutreachActivity;
   templates: CommunicationTemplate[];
   languageTag: string;
+  onReopen: (activity: OutreachActivity) => void;
 }) {
   const { t } = useTranslation();
   const sourceLabel = getCommunicationSourceLabel(t, activity.sourceSurface, activity.sourceKey);
@@ -1408,11 +1733,17 @@ function FollowUpHistoryRow({
   const audienceSummary = (activity.audienceSnapshot?.audienceSummary ?? null) as
     | { contextLabel?: string }
     | null;
+  const status = (activity.status ?? 'logged') as OutreachStatus;
   return (
-    <li className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3">
+    <li className="rounded-2xl border border-amateur-border bg-amateur-surface px-4 py-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${STATUS_TONE[status]}`}
+            >
+              {t(`pages.communications.lifecycle.${status}`)}
+            </span>
             <span
               className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${CHANNEL_TONE[activity.channel as CommunicationChannel] ?? CHANNEL_TONE.manual}`}
             >
@@ -1427,7 +1758,7 @@ function FollowUpHistoryRow({
               </span>
             ) : null}
           </div>
-          <p className="mt-1 font-medium text-amateur-ink">{activity.topic}</p>
+          <p className="mt-2 font-medium text-amateur-ink">{activity.topic}</p>
           <p className="mt-1 text-xs text-amateur-muted">
             {formatDateTime(activity.createdAt, languageTag)} ·{' '}
             {activity.createdByName
@@ -1462,13 +1793,22 @@ function FollowUpHistoryRow({
           {activity.note}
         </p>
       ) : null}
-      {activity.sourceSurface !== 'manual' ? (
-        <div className="mt-2 text-xs">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => onReopen(activity)}
+        >
+          {status === 'draft'
+            ? t('pages.communications.history.continueDraft')
+            : t('pages.communications.history.reuseContext')}
+        </Button>
+        {activity.sourceSurface !== 'manual' ? (
           <Link to={buildSourceLink(activity)} className="text-amateur-accent hover:underline">
             {t('pages.communications.history.openOriginalSource')} →
           </Link>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </li>
   );
 }
