@@ -77,6 +77,7 @@
       "audience": {
         "title": "Kiminle iletişim kuruyorsunuz",
         "summary": "{{athletes}} sporcu · {{guardians}} veli · {{primary}} birincil iletişim",
+        "reachSummary": "{{totalAthletes}} aileden {{reachableAthletes}} tanesi WhatsApp ile doğrudan açılabiliyor.",
         "phoneReachable": "{{count}} kişi WhatsApp üzerinden ulaşılabilir",
         "phoneMissing": "{{count}} kişide telefon kayıtlı değil",
         "emailReachable": "{{count}} kişi e-posta üzerinden ulaşılabilir",
@@ -104,9 +105,64 @@
         "notePlaceholder": "İsteğe bağlı — takip kaydı için",
         "previewTitle": "Mesaj önizlemesi",
         "previewHint": "WhatsApp satır sonlarını korur. Kulübünüze uymayan yerleri düzenleyin.",
-        "tokenHint": "{{athleteName}} yer tutucusunu kullanın; gönderim sırasında her aile için kişiselleştirilir.",
+        "tokenHint": "{{athleteName}} gibi yer tutucuları kullanın; WhatsApp açılmadan önce her aile için kişiselleştirilir.",
         "interpolationHint": "İpucu: buradaki düzenlemeler tüm alıcılara uygulanır. Kişisel dokunuşlar WhatsApp içinde olur.",
-        "previewFor": "{{name}} için önizleme"
+        "previewFor": "{{name}} için önizleme",
+        "tokensTitle": "Kişiselleştirme",
+        "tokensHint": "Eklemek için bir etikete dokunun. Yeşil etiketler herkeste çalışır; kehribar etiketler eksikse sessizce “—” olur.",
+        "missingTokensWarning": "Bazı aileler için {{tokens}} alanları boş — mesajda “—” olarak görünür."
+      },
+      "lifecycle": {
+        "draft": "Taslak",
+        "logged": "Kaydedildi",
+        "archived": "Arşivlendi",
+        "unsaved": "Kaydedilmedi"
+      },
+      "tokens": {
+        "athleteName": {
+          "label": "Sporcu adı",
+          "hint": "Her satırdaki sporcuya çözümlenir."
+        },
+        "guardianName": {
+          "label": "Veli adı",
+          "hint": "Kayıtlı en uygun birincil veli."
+        },
+        "groupName": {
+          "label": "Grup",
+          "hint": "Sporcunun birincil grubu varsa."
+        },
+        "teamName": {
+          "label": "Takım",
+          "hint": "Sporcunun aktif olduğu ilk takım."
+        },
+        "coachName": {
+          "label": "Antrenör",
+          "hint": "Seçili antrenör veya antrenman antrenörü, kitle oradan geliyorsa."
+        },
+        "branchName": {
+          "label": "Branş",
+          "hint": "Hedef kitle için branş biliniyorsa."
+        },
+        "sessionLocation": {
+          "label": "Konum",
+          "hint": "Kitle bir antrenmandan oluşturulduğunda dolar."
+        },
+        "nextSession": {
+          "label": "Bir sonraki antrenman",
+          "hint": "Seçili antrenmanın tarihi/saati, dile göre biçimlendirilir."
+        },
+        "outstandingAmount": {
+          "label": "Açık bakiye",
+          "hint": "Bu sporcuya ait açık bakiye."
+        },
+        "overdueAmount": {
+          "label": "Gecikmiş",
+          "hint": "Bu sporcuya ait gecikmiş bakiye."
+        },
+        "clubName": {
+          "label": "Kulüp",
+          "hint": "Kulüp ayarlarında belirtildiğinde kulüp adı."
+        }
       },
       "actions": {
         "openWhatsAppEach": "Her aile için WhatsApp'ı aç",
@@ -119,24 +175,42 @@
         "copyMessages": "Aileye özel mesajları kopyala",
         "copyContacts": "İletişim listesini kopyala",
         "logFollowUp": "Takip kaydını ekle",
+        "saveDraft": "Taslak olarak kaydet",
+        "updateDraft": "Taslağı güncelle",
+        "draftSaved": "Taslak kaydedildi — istediğiniz zaman geri dönebilirsiniz.",
+        "draftReopened": "Taslak yeniden açıldı — kaldığınız yerden devam edin.",
+        "followUpReopened": "Takip aynı bağlamla yeniden açıldı.",
+        "startNewDraft": "Yeni taslak başlat",
+        "archive": "Arşivle",
+        "archived": "Arşive taşındı.",
         "saving": "Kaydediliyor…",
         "saved": "Takip kaydedildi",
         "openLink": "Aç"
       },
       "recipientList": {
         "title": "Alıcılar",
-        "hint": "Bir aileye tıklayın; sohbet WhatsApp'ta mesaj hazır olarak açılır. Veya kişiselleştirilmiş mesajı kopyalayıp istediğiniz yere yapıştırın.",
+        "hint": "Bir aileye dokunun; sohbet WhatsApp'ta mesaj hazır olarak açılır. Veya kişiselleştirilmiş mesajı kopyalayıp istediğiniz yere yapıştırın.",
         "noPhone": "Telefon kayıtlı değil",
         "noEmail": "E-posta kayıtlı değil",
         "primary": "Birincil iletişim",
         "perFamilyHint": "Aileye özel mesajlar {{athleteName}} ile doldurulur.",
         "showMore": "Diğer alıcıları göster ({{count}})",
-        "showLess": "Daha az göster"
+        "showLess": "Daha az göster",
+        "missingTokens": "Bu aile için eksik: {{tokens}}",
+        "reach": {
+          "whatsapp": "WhatsApp ile ulaşılabilir",
+          "phone": "Telefonu kayıtlı",
+          "email": "E-postası kayıtlı",
+          "manual": "Ulaşılabilir",
+          "no_phone": "Telefon kayıtlı değil",
+          "no_email": "E-posta kayıtlı değil",
+          "no_guardian": "Veli bağlantısı yok"
+        }
       },
       "history": {
         "title": "Son takipler",
-        "hint": "Hangi takip hazırlandı, kim tarafından, nereden — kısa bir kayıt günlüğü.",
-        "empty": "Henüz hiç takip kaydı yok. Sağ panelden bir tane kaydedin ve iz başlasın.",
+        "hint": "Devam edebileceğiniz taslaklar ve hazırladığınız takipler bir arada.",
+        "empty": "Henüz takip yok. Sağ panelden bir tane kaydedin ve iz başlasın.",
         "channelLabel": "Kanal",
         "topicLabel": "Konu",
         "audienceLabel": "Hedef kitle",
@@ -148,7 +222,15 @@
         "reachableCount_one": "{{count}} ulaşılabilir veli",
         "reachableCount_other": "{{count}} ulaşılabilir veli",
         "openOriginalSource": "Kaynağı yeniden aç",
-        "messagePreviewLabel": "Mesaj önizlemesi"
+        "messagePreviewLabel": "Mesaj önizlemesi",
+        "continueDraft": "Bu taslağa devam et",
+        "reuseContext": "Bu bağlamı tekrar kullan",
+        "filter": {
+          "all": "Aktif",
+          "draft": "Taslaklar",
+          "logged": "Kaydedilenler",
+          "archived": "Arşiv"
+        }
       },
       "sourceSurfaces": {
         "manual": "Manuel hedef kitle",

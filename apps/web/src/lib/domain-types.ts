@@ -297,14 +297,25 @@ export type CommunicationTemplate = {
   hintKey?: string;
 };
 
+export type CommunicationTemplateToken = {
+  key: string;
+  labelKey: string;
+  hintKey: string;
+  alwaysAvailable: boolean;
+};
+
 export type CommunicationTemplatesResponse = {
   channels: CommunicationChannel[];
   items: CommunicationTemplate[];
+  tokens?: CommunicationTemplateToken[];
 };
+
+export type OutreachStatus = 'draft' | 'logged' | 'archived';
 
 export type OutreachActivity = {
   id: string;
   channel: CommunicationChannel | string;
+  status?: OutreachStatus;
   sourceSurface: string;
   sourceKey: string | null;
   templateKey: string | null;
@@ -317,6 +328,7 @@ export type OutreachActivity = {
   createdByStaffUserId: string | null;
   createdByName: string | null;
   createdAt: string;
+  updatedAt?: string;
 };
 
 export type OutreachActivityListResponse = {
@@ -327,11 +339,15 @@ export type OutreachActivityListResponse = {
     phone: number;
     email: number;
     manual: number;
+    draft?: number;
+    logged?: number;
+    archived?: number;
   };
 };
 
 export type LogOutreachInput = {
   channel: CommunicationChannel;
+  status?: OutreachStatus;
   sourceSurface: string;
   sourceKey?: string;
   templateKey?: string;

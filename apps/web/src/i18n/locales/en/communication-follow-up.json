@@ -77,6 +77,7 @@
       "audience": {
         "title": "Who you're contacting",
         "summary": "{{athletes}} athletes · {{guardians}} guardians · {{primary}} primary contacts",
+        "reachSummary": "{{reachableAthletes}} of {{totalAthletes}} families can be opened directly on WhatsApp.",
         "phoneReachable": "{{count}} reachable on WhatsApp",
         "phoneMissing": "{{count}} without a phone on file",
         "emailReachable": "{{count}} reachable by email",
@@ -104,9 +105,64 @@
         "notePlaceholder": "Optional — for the follow-up log",
         "previewTitle": "Message preview",
         "previewHint": "WhatsApp keeps line breaks. Edit anything that doesn't sound like your club.",
-        "tokenHint": "Use {{athleteName}} as a placeholder; we'll personalise per family at send time.",
+        "tokenHint": "Use placeholders like {{athleteName}}; we'll personalise per family before opening WhatsApp.",
         "interpolationHint": "Tip: edits here apply to every recipient. Personal touches happen in WhatsApp.",
-        "previewFor": "Preview for {{name}}"
+        "previewFor": "Preview for {{name}}",
+        "tokensTitle": "Personalisation",
+        "tokensHint": "Tap a chip to insert it. Green chips work for everyone; amber chips fall back to “—” when missing.",
+        "missingTokensWarning": "Some recipients are missing values for {{tokens}} — they'll show a quiet “—” in the message."
+      },
+      "lifecycle": {
+        "draft": "Draft",
+        "logged": "Logged",
+        "archived": "Archived",
+        "unsaved": "Unsaved"
+      },
+      "tokens": {
+        "athleteName": {
+          "label": "Athlete name",
+          "hint": "Resolves to the athlete on each row."
+        },
+        "guardianName": {
+          "label": "Guardian name",
+          "hint": "Best primary guardian we have on file."
+        },
+        "groupName": {
+          "label": "Group",
+          "hint": "Athlete's primary group, if any."
+        },
+        "teamName": {
+          "label": "Team",
+          "hint": "First active team the athlete belongs to."
+        },
+        "coachName": {
+          "label": "Coach",
+          "hint": "Selected coach or session coach, when the audience comes from one."
+        },
+        "branchName": {
+          "label": "Branch",
+          "hint": "Sport branch, when known for the audience."
+        },
+        "sessionLocation": {
+          "label": "Location",
+          "hint": "Resolves when the audience is built from a training session."
+        },
+        "nextSession": {
+          "label": "Next session",
+          "hint": "Selected session date and time, formatted for the locale."
+        },
+        "outstandingAmount": {
+          "label": "Outstanding",
+          "hint": "Outstanding family balance for this athlete."
+        },
+        "overdueAmount": {
+          "label": "Overdue",
+          "hint": "Overdue family balance for this athlete."
+        },
+        "clubName": {
+          "label": "Club",
+          "hint": "Club name, when set in club settings."
+        }
       },
       "actions": {
         "openWhatsAppEach": "Open WhatsApp per family",
@@ -119,24 +175,42 @@
         "copyMessages": "Copy per-family messages",
         "copyContacts": "Copy contact list",
         "logFollowUp": "Save to follow-up log",
+        "saveDraft": "Save as draft",
+        "updateDraft": "Update draft",
+        "draftSaved": "Draft saved — you can come back anytime.",
+        "draftReopened": "Draft re-opened — pick up where you left off.",
+        "followUpReopened": "Follow-up re-opened with the same context.",
+        "startNewDraft": "Start a new draft",
+        "archive": "Archive",
+        "archived": "Moved to archive.",
         "saving": "Saving…",
         "saved": "Follow-up saved",
         "openLink": "Open"
       },
       "recipientList": {
         "title": "Recipients",
-        "hint": "Click WhatsApp to open the chat with the message ready, or copy a personalised message to paste anywhere.",
+        "hint": "Tap WhatsApp to open the chat with the message ready, or copy a personalised message to paste anywhere.",
         "noPhone": "No phone on file",
         "noEmail": "No email on file",
         "primary": "Primary contact",
         "perFamilyHint": "Per-family messages are pre-filled with {{athleteName}}.",
         "showMore": "Show more recipients ({{count}})",
-        "showLess": "Show fewer"
+        "showLess": "Show fewer",
+        "missingTokens": "Missing for this family: {{tokens}}",
+        "reach": {
+          "whatsapp": "Reachable on WhatsApp",
+          "phone": "Phone on file",
+          "email": "Email on file",
+          "manual": "Reachable",
+          "no_phone": "No phone on file",
+          "no_email": "No email on file",
+          "no_guardian": "No guardian linked"
+        }
       },
       "history": {
         "title": "Recent follow-ups",
-        "hint": "A short audit log of what was prepared, by whom, and where it came from.",
-        "empty": "No follow-ups have been logged yet. Save one from the right panel to start the trail.",
+        "hint": "Drafts you can come back to and follow-ups you've already prepared, side by side.",
+        "empty": "No follow-ups yet. Save one from the right panel to start the trail.",
         "channelLabel": "Channel",
         "topicLabel": "Topic",
         "audienceLabel": "Audience",
@@ -148,7 +222,15 @@
         "reachableCount_one": "{{count}} reachable guardian",
         "reachableCount_other": "{{count}} reachable guardians",
         "openOriginalSource": "Re-open the original list",
-        "messagePreviewLabel": "Message preview"
+        "messagePreviewLabel": "Message preview",
+        "continueDraft": "Continue this draft",
+        "reuseContext": "Reuse this context",
+        "filter": {
+          "all": "Active",
+          "draft": "Drafts",
+          "logged": "Logged",
+          "archived": "Archived"
+        }
       },
       "sourceSurfaces": {
         "manual": "Manual audience",
