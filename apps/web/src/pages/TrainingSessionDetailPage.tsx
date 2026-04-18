@@ -25,6 +25,17 @@ import { useTenant } from '../lib/tenant-hooks';
 const attendanceOptions: AttendanceStatus[] = ['present', 'absent', 'excused', 'late'];
 type DraftAttendanceStatus = AttendanceStatus | 'unset';
 
+/**
+ * Roster page size for attendance.
+ *
+ * The athletes list endpoint caps `limit` at 500 (see
+ * `ListAthletesQueryDto`).  A single training session in an amateur club
+ * is comfortably below that — the cap is here to keep the UI honest
+ * rather than to truncate real rosters.  If a club ever exceeds it we
+ * surface a soft warning instead of silently losing names.
+ */
+const ATTENDANCE_ROSTER_LIMIT = 500;
+
 export function TrainingSessionDetailPage() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
@@ -41,21 +52,23 @@ export function TrainingSessionDetailPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rosterTruncated, setRosterTruncated] = useState(false);
 
   const load = useCallback(async () => {
     if (!tenantId || !id) return;
     setLoading(true);
     setError(null);
+    setRosterTruncated(false);
     try {
       const s = await apiGet<TrainingSession>(`/api/training-sessions/${id}`);
       const athleteParams = new URLSearchParams({
         primaryGroupId: s.groupId,
-        limit: '500',
+        limit: String(ATTENDANCE_ROSTER_LIMIT),
       });
       if (s.teamId) athleteParams.set('teamId', s.teamId);
       const [att, athletes] = await Promise.all([
         apiGet<AttendanceRow[]>(`/api/training-sessions/${id}/attendance`),
-        apiGet<{ items: Athlete[] }>(`/api/athletes?${athleteParams.toString()}`),
+        apiGet<{ items: Athlete[]; total: number }>(`/api/athletes?${athleteParams.toString()}`),
       ]);
       const [groupRes, teamRes, coachRes] = await Promise.all([
         apiGet<{ items: ClubGroup[] }>('/api/groups?limit=200'),
@@ -65,6 +78,9 @@ export function TrainingSessionDetailPage() {
       setSession(s);
       setAttendance(att);
       setRoster(athletes.items);
+      setRosterTruncated(
+        typeof athletes.total === 'number' && athletes.total > athletes.items.length,
+      );
       setGroups(groupRes.items);
       setTeams(teamRes.items);
       setCoaches(coachRes.items);
@@ -195,6 +211,11 @@ export function TrainingSessionDetailPage() {
         </div>
         {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
         {message ? <p className="mt-2 text-sm text-amateur-accent">{message}</p> : null}
+        {rosterTruncated ? (
+          <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {t('pages.training.rosterTruncatedHint', { count: ATTENDANCE_ROSTER_LIMIT })}
+          </div>
+        ) : null}
         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm text-amateur-muted">
             <span>{t('app.actions.search')}</span>
@@ -241,22 +262,21 @@ export function TrainingSessionDetailPage() {
             </div>
           ))}
         </div>
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[480px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-amateur-border text-amateur-muted">
-                <th className="pb-2 font-medium">{t('pages.athletes.name')}</th>
-                <th className="pb-2 font-medium">{t('pages.training.attendance')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ athlete: a, attendanceId }) => {
-                const isUnset = (draft[a.id] ?? 'unset') === 'unset';
-                return (
-                <tr key={a.id} className="border-b border-amateur-border/60 last:border-0">
-                  <td className="py-2 pr-2">
-                    <div className="flex items-center gap-2">
-                      <span>{getPersonName(a)}</span>
+        <ul className="mt-4 space-y-2">
+          {rows.map(({ athlete: a, attendanceId }) => {
+            const current = draft[a.id] ?? 'unset';
+            const isUnset = current === 'unset';
+            return (
+              <li
+                key={a.id}
+                className="rounded-2xl border border-amateur-border bg-amateur-canvas px-3 py-3 sm:px-4"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-amateur-ink">
+                      {getPersonName(a)}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
                       {attendanceId ? (
                         <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
                           {t('pages.training.recordedBadge')}
@@ -266,33 +286,57 @@ export function TrainingSessionDetailPage() {
                         <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
                           {t('pages.training.unmarkedBadge')}
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="rounded-full border border-amateur-border bg-amateur-surface px-2 py-0.5 text-[11px] font-medium text-amateur-muted">
+                          {getAttendanceStatusLabel(t, current as AttendanceStatus)}
+                        </span>
+                      )}
                     </div>
-                  </td>
-                  <td className="py-2">
-                    <select
-                      value={draft[a.id] ?? 'unset'}
-                      onChange={(e) =>
-                        setDraft((d) => ({ ...d, [a.id]: e.target.value as DraftAttendanceStatus }))
-                      }
-                      className="rounded-lg border border-amateur-border bg-amateur-canvas px-2 py-1 text-sm"
-                    >
-                      <option value="unset">{t('pages.training.attendanceUnset')}</option>
-                      {attendanceOptions.map((o) => (
-                        <option key={o} value={o}>
-                          {getAttendanceStatusLabel(t, o)}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              )})}
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 sm:justify-end">
+                    {(['unset', ...attendanceOptions] as DraftAttendanceStatus[]).map((value) => {
+                      const active = current === value;
+                      const label =
+                        value === 'unset'
+                          ? t('pages.training.attendanceUnset')
+                          : getAttendanceStatusLabel(t, value);
+                      const tone =
+                        value === 'present'
+                          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                          : value === 'absent'
+                            ? 'border-rose-300 bg-rose-50 text-rose-700'
+                            : value === 'late'
+                              ? 'border-amber-300 bg-amber-50 text-amber-800'
+                              : value === 'excused'
+                                ? 'border-sky-300 bg-sky-50 text-sky-700'
+                                : 'border-amateur-border bg-amateur-surface text-amateur-muted';
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() =>
+                            setDraft((d) => ({ ...d, [a.id]: value }))
+                          }
+                          aria-pressed={active}
+                          className={`min-h-[36px] min-w-[44px] rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                            active
+                              ? tone
+                              : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="sticky bottom-2 mt-4 flex flex-wrap gap-2 rounded-2xl border border-amateur-border bg-amateur-surface/90 px-3 py-2 shadow-sm backdrop-blur sm:static sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none">
           <Button type="button" onClick={() => void save()} disabled={saving}>
-            {t('pages.training.saveAttendance')}
+            {saving ? t('app.states.saving') : t('pages.training.saveAttendance')}
           </Button>
           <Link to="/app/training">
             <Button type="button" variant="ghost">
