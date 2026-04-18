@@ -43,6 +43,18 @@ export class OutreachActivity {
   @Column({ type: 'varchar', length: 32 })
   channel!: string;
 
+  /**
+   * Lifecycle status:
+   *  - "draft"     — work in progress, kept for the operator to come back to
+   *  - "logged"    — outreach intent recorded (the assisted "sent" state)
+   *  - "archived"  — superseded or no longer relevant; hidden by default
+   *
+   * Stored as varchar (not a Postgres enum) so the lifecycle can grow
+   * without a destructive migration.
+   */
+  @Column({ type: 'varchar', length: 16, default: 'logged' })
+  status!: string;
+
   /** Source surface that produced this outreach (eg. action_center, report, manual). */
   @Column({ type: 'varchar', length: 64 })
   sourceSurface!: string;
