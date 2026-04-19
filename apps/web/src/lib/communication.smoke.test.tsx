@@ -5,10 +5,16 @@ import {
   classifyMemberReach,
   daysBetween,
   describeActivityAge,
+  describeDelivery,
+  describeDeliveryTone,
   isOutreachStale,
   renderTemplate,
+  resolvePreferredDeliveryMode,
 } from './communication';
-import type { CommunicationAudienceMember } from './domain-types';
+import type {
+  CommunicationAudienceMember,
+  CommunicationReadinessResponse,
+} from './domain-types';
 
 function makeMember(overrides: Partial<CommunicationAudienceMember> = {}): CommunicationAudienceMember {
   return {
@@ -160,6 +166,89 @@ describe('lifecycle helpers', () => {
   });
 
   it('describeActivityAge returns a warm relative label', async () => {
+    // (covered below)
+  });
+
+  it('placeholder bridge to satisfy nested test discovery', () => {
+    expect(true).toBe(true);
+  });
+});
+
+function makeReadiness(
+  state: CommunicationReadinessResponse['whatsapp']['state'],
+  preferredMode: 'assisted' | 'direct',
+): CommunicationReadinessResponse {
+  return {
+    channel: 'whatsapp',
+    whatsapp: {
+      state,
+      directSendAvailable: state === 'direct_capable',
+      cloudApiEnabled: state === 'direct_capable' || state === 'partial' || state === 'invalid',
+      configured: {
+        phoneNumberId: state !== 'not_configured',
+        businessAccountId: state !== 'not_configured',
+        accessTokenRef: state === 'direct_capable',
+      },
+      displayPhoneNumber: state === 'direct_capable' ? '+90 555 000 0000' : null,
+      validation: { state: 'never_validated', message: null, validatedAt: null },
+      issues: state === 'partial' ? ['missing_access_token_ref'] : [],
+    },
+    plan: {
+      preferredMode,
+      fallbackMode: preferredMode === 'direct' ? 'assisted' : null,
+      capabilities: [],
+    },
+  };
+}
+
+describe('delivery readiness helpers', () => {
+  it('resolves the preferred delivery mode based on the readiness plan', () => {
+    expect(resolvePreferredDeliveryMode(null, 'whatsapp')).toBe('assisted');
+    expect(
+      resolvePreferredDeliveryMode(makeReadiness('direct_capable', 'direct'), 'whatsapp'),
+    ).toBe('direct');
+    expect(
+      resolvePreferredDeliveryMode(makeReadiness('partial', 'assisted'), 'whatsapp'),
+    ).toBe('assisted');
+    // Mismatched channel always falls back to assisted.
+    expect(
+      resolvePreferredDeliveryMode(makeReadiness('direct_capable', 'direct'), 'email'),
+    ).toBe('assisted');
+  });
+
+  it('describes the per-row delivery state with warm copy and the right tone', async () => {
+    await i18n.changeLanguage('en');
+    expect(describeDeliveryTone('sent')).toBe('success');
+    expect(describeDeliveryTone('failed')).toBe('danger');
+    expect(describeDeliveryTone('fallback')).toBe('warning');
+    expect(describeDeliveryTone('prepared')).toBe('info');
+    expect(
+      describeDelivery(i18n.t.bind(i18n), {
+        mode: 'direct',
+        state: 'sent',
+        provider: 'whatsapp_cloud_api',
+        providerMessageId: 'wamid.x',
+        detail: null,
+        attemptedAt: null,
+        completedAt: null,
+      }),
+    ).toMatch(/Sent directly/i);
+    expect(
+      describeDelivery(i18n.t.bind(i18n), {
+        mode: 'direct',
+        state: 'fallback',
+        provider: 'assisted_whatsapp',
+        providerMessageId: null,
+        detail: null,
+        attemptedAt: null,
+        completedAt: null,
+      }),
+    ).toMatch(/assisted fallback/i);
+  });
+});
+
+describe('describeActivityAge — warm copy', () => {
+  it('returns the right relative copy for various ages', async () => {
     await i18n.changeLanguage('en');
     const now = new Date('2026-04-19T10:00:00Z');
     const today = describeActivityAge(

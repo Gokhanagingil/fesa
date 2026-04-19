@@ -1,5 +1,168 @@
 # Communication & Follow-up
 
+## Wave 15 — WhatsApp Integration Readiness / Cloud API Pack
+
+This wave does **not** ship live WhatsApp delivery.  It ships the
+architecture, state model, readiness layer and UX honesty needed for
+real WhatsApp Cloud API delivery to plug in cleanly later — without
+breaking the assisted, WhatsApp-first flow that operators rely on
+today.
+
+> from "we can prepare a WhatsApp-first follow-up"
+> to "we are architecturally and operationally ready to support real
+> WhatsApp delivery safely and honestly"
+
+### What ships in v15
+
+| Area | Change |
+|------|--------|
+| Delivery state model | `OutreachActivity` gains four small columns: `deliveryMode` (`assisted` / `direct`), `deliveryState` (`prepared` / `sent` / `failed` / `fallback`), `deliveryProvider` (eg. `whatsapp_cloud_api`), and a tight set of attempt/completion timestamps and a free-form `deliveryDetail` for short, calm operator-friendly notes.  Existing rows backfill to `assisted` / `prepared` so the v1.x history view continues to read as "we prepared a follow-up". |
+| Provider abstraction | New `DeliveryProvider` interface in `apps/api/src/modules/communication/delivery/types.ts` with two implementations: `AssistedDeliveryProvider` (the historical wa.me deep-link path) and `WhatsAppCloudApiProvider` (the future direct path).  A thin `CommunicationDeliveryService` orchestrator routes a single delivery request to the most appropriate provider and runs an honest assisted fallback when direct fails or is not ready. |
+| Readiness model | New `tenant_communication_configs` table (1:1 with `tenants`) records intent + configuration shape.  `WhatsAppReadinessService` classifies each tenant as `not_configured`, `assisted_only`, `partial`, `direct_capable`, or `invalid`.  Secrets are **never stored** — the access token lives behind an opaque reference (`env:WHATSAPP_CLOUD_API_TOKEN`) so the host environment supplies the actual credential. |
+| Honest fallback | `CommunicationDeliveryService.deliver()` always returns one of `prepared` / `sent` / `failed` / `fallback`.  Direct failure followed by assisted preparation emits the unique `fallback` state, which the UX surfaces calmly ("Direct send didn't go through — assisted fallback is ready.") so we never imply a real send when there wasn't one. |
+| API surface | New endpoints under `/api/communications`, all behind `TenantGuard`: `GET /readiness?channel=whatsapp` returns the current capability plan; `PUT /readiness/whatsapp` saves the configuration shape; `POST /readiness/whatsapp/validate` runs the lightweight readiness check; `POST /outreach/:id/deliver` executes the orchestrator's deliver path against an existing follow-up row.  `GET /outreach`, `GET /outreach/:id`, `POST /outreach`, `PUT /outreach/:id`, `PATCH /outreach/:id/status` continue to work unchanged. |
+| Mode-aware UX | `/app/communications` loads readiness on mount and renders a small mode banner near the WhatsApp action ("Assisted" or "Direct send" with a one-line hint).  When direct send is configured the operator sees a primary `Send via WhatsApp` button alongside the existing assisted controls; assisted mode keeps `Open WhatsApp` as the primary action.  Direct attempts attach delivery state to the persisted follow-up row and surface a calm fallback notice when direct couldn't go through. |
+| Honest history | Each row in the Recent follow-ups list shows a delivery state chip (`Prepared`, `Sent directly`, `Direct send failed`, `Used assisted fallback`).  The chip is colour-toned but never alarmist; tooltips carry the short provider detail. |
+| Admin readiness surface | The Settings page gains a calm `WhatsApp delivery readiness` panel that shows the current state, the operator-facing fallback note, and a club-friendly form for the configuration shape (phone number id, business account id, access token reference, optional display number) plus a `Run readiness check` button.  No raw secrets are ever rendered back; instead a "●●●●" hint appears next to fields that are already on file. |
+| Tone | Every new copy string is warm, calm, and operator-friendly.  No CRM lifecycle states, no provider jargon, no fake "delivered" claims. |
+
+### Delivery mode + state vocabulary
+
+The lifecycle stays intentionally tiny.
+
+| Mode | When it applies |
+|------|-----------------|
+| `assisted` | Operator opens WhatsApp via a deep link or copies the message — the platform itself does NOT send. |
+| `direct`   | The platform attempted delivery via a real provider (eg. WhatsApp Cloud API). |
+
+| State | Meaning |
+|-------|---------|
+| `prepared` | Assisted draft is ready (no real send happened). |
+| `sent`     | Direct send succeeded. |
+| `failed`   | Direct send was attempted and failed. |
+| `fallback` | Direct send was attempted, failed, and assisted preparation was used instead. |
+
+`fallback` is the keystone: it lets the system degrade gracefully
+without ever lying.  Operators can immediately see in history that the
+message was *prepared* through the assisted path, not sent.
+
+### Provider abstraction
+
+`DeliveryProvider` is a tiny contract:
+
+- `key` — stable identifier persisted on every row that goes through it.
+- `mode` — `assisted` or `direct`.
+- `capability(tenantId, channel)` — returns whether the provider can
+  handle this tenant + channel right now.
+- `deliver(request)` — performs (or simulates) the actual send and
+  returns a `DeliveryResult` with per-recipient outcomes.
+
+Today there are exactly two providers:
+
+- `assisted_whatsapp` — always available; `deliver()` returns
+  `prepared` per recipient (the operator opens the message).
+- `whatsapp_cloud_api` — `direct` mode; `capability()` only reports
+  `direct_capable` when readiness is green; `deliver()` returns
+  `failed` with `provider_not_live` until the live integration ships.
+
+`CommunicationDeliveryService` is the only application-layer entry
+point.  It calls the right provider, runs the assisted fallback when
+direct fails or is unavailable, and never leaks provider identifiers
+into the operator UX.
+
+### Readiness model
+
+`tenant_communication_configs` (1:1 with `tenants`) stores:
+
+- `whatsappCloudApiEnabled` — operator intent.  Even with all fields
+  filled, direct send stays paused while this is `false`.
+- `whatsappPhoneNumberId`, `whatsappBusinessAccountId` — Cloud API
+  identifiers required for direct send.
+- `whatsappAccessTokenRef` — opaque reference (eg.
+  `env:WHATSAPP_CLOUD_API_TOKEN`).  The actual secret is never stored.
+- `whatsappDisplayPhoneNumber` — optional display string surfaced to
+  staff so they can verify which line will deliver direct messages.
+- `whatsappValidationState` / `whatsappValidationMessage` /
+  `whatsappValidatedAt` — outcome of the lightweight readiness check.
+
+`WhatsAppReadinessService.classify()` derives one of:
+
+| State | Meaning |
+|-------|---------|
+| `not_configured` | No row, or no fields filled.  Direct paused. |
+| `assisted_only`  | Operator declined direct send intentionally; setup may be partial. |
+| `partial`        | Direct send enabled but configuration is incomplete or unresolved. |
+| `direct_capable` | Direct send enabled, configuration complete, validation succeeded. |
+| `invalid`        | Direct send enabled but validation rejected the configuration. |
+
+Only `direct_capable` lets a delivery attempt go through the Cloud API
+path.  Every other state flows through assisted with the appropriate
+honest copy.
+
+### Token resolution & security boundaries
+
+- `whatsappAccessTokenRef` is an opaque reference, NOT the secret.
+- `WhatsAppReadinessService.resolveAccessToken()` only supports the
+  `env:NAME` scheme today (returns `null` for any other scheme,
+  treating it as "not yet supported").
+- Future iterations can plug in a real secret-manager resolver by
+  extending that single function — no schema changes required.
+- The admin UX never reads back the token reference; it shows a
+  "●●●●" badge next to fields that are already on file.
+
+### Mode-aware UX
+
+| Surface | Behaviour |
+|---------|-----------|
+| Communications draft panel | Loads readiness once on mount and renders a small mode banner above the action row.  When `direct_capable`, the primary `Send via WhatsApp` button appears alongside `Open WhatsApp` (which becomes "Open WhatsApp instead"). |
+| Direct send action | Persists the row first if it isn't yet saved, then calls `POST /outreach/:id/deliver` with `mode: 'direct'`.  Result state (`sent` / `fallback` / `failed`) drives a calm `InlineAlert` so the operator immediately sees what happened. |
+| History | Each row shows a delivery state chip with the short provider detail in the tooltip.  History filters and lifecycle filters from v1.2 keep working unchanged. |
+| Settings | Adds the readiness panel — current mode, fallback note, save form for the configuration shape, and a `Run readiness check` button. |
+
+### API endpoints (new in v15)
+
+All behind `TenantGuard`:
+
+- `GET  /api/communications/readiness?channel=whatsapp` — capability plan + WhatsApp summary.
+- `PUT  /api/communications/readiness/whatsapp` — save configuration shape (intent + identifiers + token reference + display number).
+- `POST /api/communications/readiness/whatsapp/validate` — run readiness check (local resolution + token-ref check).
+- `POST /api/communications/outreach/:id/deliver` — orchestrator-driven delivery attempt with auto-fallback.
+
+### Migration
+
+`Wave15WhatsAppIntegrationReadiness1746100000000` adds:
+
+- the seven new `delivery*` columns on `outreach_activities` with safe
+  defaults (`assisted` / `prepared`) and an index on
+  `(tenantId, deliveryState)` for future delivery dashboards;
+- the `tenant_communication_configs` table with a unique index on
+  `tenantId` and a `FK ... ON DELETE CASCADE` to `tenants`.
+
+Existing rows backfill to `deliveryMode='assisted'` /
+`deliveryState='prepared'`, preserving the v1.x meaning of every
+historical row.
+
+### Validation surface
+
+- `npm run lint` — clean.
+- `npm run build` — full TS build (covers the new entity / DTOs / providers / orchestrator).
+- `npm run i18n:check` — locale parity preserved (TR + EN).
+- `npm run repo:guard` — workspace structure unchanged.
+- `npm run frontend:smoke` — extends `communication.smoke.test.tsx` with delivery-mode resolution and delivery-state copy/tone tests.
+
+### Intentionally deferred (still)
+
+- A live WhatsApp Cloud API integration that actually flips
+  `deliveryState` to `sent` (the orchestrator + provider stub are
+  ready to host it).
+- Per-recipient delivery dashboards and provider failure analytics.
+- A real secret-management plane (only `env:NAME` references resolve
+  today; the resolver function is the single seam to extend).
+- Inbox / reply tracking.
+- Direct send for channels other than WhatsApp.
+
+---
+
 ## Wave 13.2 — Communication & Follow-up Pack v1.2
 
 This refinement layers on top of v1.1 without introducing a parallel

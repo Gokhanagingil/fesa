@@ -3,9 +3,15 @@ import type {
   CommunicationAudienceMember,
   CommunicationAudienceResponse,
   CommunicationChannel,
+  CommunicationReadinessResponse,
+  DeliverOutreachInput,
+  DeliveryMode,
+  DeliveryState,
   LogOutreachInput,
   OutreachActivity,
   OutreachActivityListResponse,
+  OutreachDelivery,
+  WhatsAppReadinessSummary,
 } from './domain-types';
 import { apiGet, apiPatch, apiPost, apiPut } from './api';
 
@@ -116,6 +122,81 @@ export function setOutreachStatus(
   status: 'draft' | 'logged' | 'archived',
 ): Promise<OutreachActivity> {
   return apiPatch<OutreachActivity>(`/api/communications/outreach/${id}/status`, { status });
+}
+
+export function getCommunicationReadiness(
+  channel: CommunicationChannel = 'whatsapp',
+): Promise<CommunicationReadinessResponse> {
+  const params = new URLSearchParams({ channel });
+  return apiGet<CommunicationReadinessResponse>(
+    `/api/communications/readiness?${params.toString()}`,
+  );
+}
+
+export function saveWhatsAppReadiness(payload: {
+  cloudApiEnabled?: boolean;
+  phoneNumberId?: string | null;
+  businessAccountId?: string | null;
+  accessTokenRef?: string | null;
+  displayPhoneNumber?: string | null;
+}): Promise<WhatsAppReadinessSummary> {
+  return apiPut<WhatsAppReadinessSummary>('/api/communications/readiness/whatsapp', payload);
+}
+
+export function validateWhatsAppReadiness(): Promise<WhatsAppReadinessSummary> {
+  return apiPost<WhatsAppReadinessSummary>(
+    '/api/communications/readiness/whatsapp/validate',
+    {},
+  );
+}
+
+export function attemptOutreachDelivery(
+  id: string,
+  payload: DeliverOutreachInput,
+): Promise<OutreachActivity> {
+  return apiPost<OutreachActivity>(`/api/communications/outreach/${id}/deliver`, payload);
+}
+
+/**
+ * Determine the delivery mode that should be offered to the operator
+ * for a given channel given the readiness response.  Direct send only
+ * surfaces when the WhatsApp Cloud API plan reports `direct_capable`.
+ *
+ * Kept intentionally tiny — UX wording is decided by the page.
+ */
+export function resolvePreferredDeliveryMode(
+  readiness: CommunicationReadinessResponse | null | undefined,
+  channel: CommunicationChannel,
+): DeliveryMode {
+  if (!readiness) return 'assisted';
+  if (readiness.channel !== channel) return 'assisted';
+  return readiness.plan.preferredMode;
+}
+
+export function describeDelivery(
+  t: TFunction,
+  delivery: OutreachDelivery | null | undefined,
+): string {
+  if (!delivery) return t('pages.communications.delivery.history.prepared');
+  const key = `pages.communications.delivery.history.${delivery.state}`;
+  return t(key, { defaultValue: t('pages.communications.delivery.history.prepared') });
+}
+
+export function describeDeliveryTone(
+  state: DeliveryState | undefined,
+): 'success' | 'info' | 'danger' | 'warning' | 'default' {
+  switch (state) {
+    case 'sent':
+      return 'success';
+    case 'failed':
+      return 'danger';
+    case 'fallback':
+      return 'warning';
+    case 'prepared':
+      return 'info';
+    default:
+      return 'default';
+  }
 }
 
 /**

@@ -318,7 +318,86 @@
         "draft": "Draft",
         "history": "Recent follow-ups"
       },
-      "channelSwitchHint": "WhatsApp is the primary channel here. Switch to phone or email if it fits the moment better."
+      "channelSwitchHint": "WhatsApp is the primary channel here. Switch to phone or email if it fits the moment better.",
+      "delivery": {
+        "modeBadge": {
+          "assisted": "Assisted",
+          "direct": "Direct send",
+          "loading": "Checking…"
+        },
+        "modeHint": {
+          "assisted": "We'll prepare the message and open WhatsApp for you.",
+          "direct": "Direct send is configured for this club. We'll send via the WhatsApp Cloud API and fall back to assisted if anything goes wrong.",
+          "fallback": "Direct send isn't ready right now — we'll fall back to opening WhatsApp for you.",
+          "loading": "Checking how this follow-up will reach the families…"
+        },
+        "actions": {
+          "sendDirect": "Send via WhatsApp",
+          "sendDirectShort": "Send",
+          "sending": "Sending…",
+          "openWhatsAppInstead": "Open WhatsApp instead",
+          "preparingDirect": "Preparing the direct send…",
+          "directSent": "Direct send completed for {{count}} family.",
+          "directSent_other": "Direct send completed for {{count}} families.",
+          "directFallback": "Direct send didn't go through — assisted fallback is ready.",
+          "directFailed": "Direct send didn't complete. The assisted path is still available."
+        },
+        "history": {
+          "prepared": "Prepared",
+          "sent": "Sent directly",
+          "failed": "Direct send failed",
+          "fallback": "Used assisted fallback"
+        },
+        "readiness": {
+          "title": "WhatsApp delivery readiness",
+          "hint": "How follow-ups reach families today. Assisted means we open WhatsApp for you; direct means we send through the WhatsApp Cloud API for this club.",
+          "states": {
+            "not_configured": "Assisted only",
+            "assisted_only": "Assisted only",
+            "partial": "Setup incomplete",
+            "direct_capable": "Direct send ready",
+            "invalid": "Setup needs attention"
+          },
+          "stateHints": {
+            "not_configured": "No direct integration is configured. Follow-ups will open WhatsApp for the operator.",
+            "assisted_only": "This club has chosen to keep assisted-only follow-ups. Operators open WhatsApp themselves.",
+            "partial": "Some integration details are missing or unresolved. Direct send is paused until setup completes.",
+            "direct_capable": "Direct send is configured and validated. Assisted remains available as a fallback.",
+            "invalid": "The current configuration could not be validated. Direct send is paused until it is corrected."
+          },
+          "fallbackNote": "Assisted WhatsApp will always remain available as a calm fallback.",
+          "issues": {
+            "missing_phone_number_id": "WhatsApp phone number ID is missing.",
+            "missing_business_account_id": "WhatsApp business account ID is missing.",
+            "missing_access_token_ref": "Access token reference is missing.",
+            "access_token_ref_unresolved": "Access token reference cannot be resolved in this environment.",
+            "no_config_row": "Direct delivery has not been set up for this club yet."
+          }
+        },
+        "config": {
+          "title": "Direct WhatsApp delivery (Cloud API)",
+          "hint": "Optional. When configured, follow-ups can be sent via the WhatsApp Cloud API instead of opening WhatsApp manually. Assisted mode always remains available.",
+          "enabledLabel": "Enable direct send for this club",
+          "enabledHint": "Turn this on once the integration is ready. Until then we'll keep follow-ups in assisted mode.",
+          "phoneNumberIdLabel": "Phone number ID",
+          "phoneNumberIdPlaceholder": "Cloud API phone number id",
+          "businessAccountIdLabel": "Business account ID",
+          "businessAccountIdPlaceholder": "Cloud API business account id",
+          "accessTokenRefLabel": "Access token reference",
+          "accessTokenRefPlaceholder": "env:WHATSAPP_CLOUD_API_TOKEN",
+          "accessTokenRefHint": "We never store the token itself. Use a reference like env:NAME so the host environment supplies the secret.",
+          "displayPhoneNumberLabel": "Display phone number",
+          "displayPhoneNumberPlaceholder": "+90 555 …",
+          "displayPhoneNumberHint": "Shown to club staff so they can verify which number will deliver direct messages.",
+          "saveAction": "Save delivery setup",
+          "saving": "Saving…",
+          "saved": "Delivery setup saved.",
+          "validateAction": "Run readiness check",
+          "validating": "Checking…",
+          "validatedAt": "Last checked: {{when}}",
+          "neverValidated": "Not checked yet."
+        }
+      }
     }
   }
 }

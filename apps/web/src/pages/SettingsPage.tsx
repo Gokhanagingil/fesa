@@ -5,13 +5,14 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { Button } from '../components/ui/Button';
+import { CommunicationDeliveryReadinessPanel } from '../components/communication/CommunicationDeliveryReadinessPanel';
 import { useAuth } from '../lib/auth-context';
 import { apiGet } from '../lib/api';
 import { useTenant } from '../lib/tenant-hooks';
 import type { ClubOverviewResponse, PlatformOverviewResponse } from '../lib/overview-types';
 
 export function SettingsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { session, staffUser } = useAuth();
   const { tenants, tenantId, setTenantId } = useTenant();
   const activeTenant = useMemo(
@@ -363,6 +364,8 @@ export function SettingsPage() {
             </div>
           </section>
         ) : null}
+
+        <CommunicationDeliveryReadinessPanel tenantId={tenantId} languageTag={i18n.language} />
 
         <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
           <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
