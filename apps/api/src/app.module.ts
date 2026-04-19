@@ -24,6 +24,7 @@ import { ActionCenterModule } from './modules/action-center/action-center.module
 import { GuardianPortalModule } from './modules/guardian-portal/guardian-portal.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
+import { ImportsModule } from './modules/imports/imports.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
     ActionCenterModule,
     GuardianPortalModule,
     InventoryModule,
+    ImportsModule,
   ],
 })
 export class AppModule {}
