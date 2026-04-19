@@ -20,6 +20,7 @@ import {
   AssignInventoryDto,
   ReturnInventoryAssignmentDto,
 } from './dto/assign-inventory.dto';
+import { BulkReturnInventoryDto } from './dto/bulk-return-inventory.dto';
 import { CreateInventoryItemDto } from './dto/create-inventory-item.dto';
 import { CreateInventoryVariantDto } from './dto/create-inventory-variant.dto';
 import { ListInventoryItemsQueryDto } from './dto/list-inventory-items-query.dto';
@@ -820,6 +821,47 @@ export class InventoryService {
       },
     );
     return this.formatAssignment(saved, item);
+  }
+
+  async bulkReturn(
+    tenantId: string,
+    dto: BulkReturnInventoryDto,
+    staffUserId: string | null,
+  ): Promise<{
+    requested: number;
+    returned: number;
+    skipped: number;
+    skippedIds: string[];
+  }> {
+    const ids = Array.from(new Set(dto.assignmentIds));
+    const candidates = await this.assignments.find({
+      where: { tenantId, id: In(ids) },
+      relations: ['athlete', 'inventoryVariant'],
+    });
+    const skippedIds: string[] = [];
+    let returned = 0;
+    for (const assignment of candidates) {
+      if (assignment.returnedAt) {
+        skippedIds.push(assignment.id);
+        continue;
+      }
+      await this.returnAssignment(
+        tenantId,
+        assignment.id,
+        { note: dto.note },
+        staffUserId,
+      );
+      returned += 1;
+    }
+    const missingIds = ids.filter(
+      (id) => !candidates.some((candidate) => candidate.id === id),
+    );
+    return {
+      requested: ids.length,
+      returned,
+      skipped: skippedIds.length + missingIds.length,
+      skippedIds: [...skippedIds, ...missingIds],
+    };
   }
 
   async listAssignmentsForAthlete(
