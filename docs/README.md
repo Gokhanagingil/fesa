@@ -12,6 +12,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 | [i18n.md](./i18n.md) | Multilingual approach (TR/EN day one) |
 | [reporting.md](./reporting.md) | Reporting and bulk-operation placeholders |
 | [communication.md](./communication.md) | Communication & Follow-up Pack v1 — WhatsApp-first follow-up surface |
+| [inventory.md](./inventory.md) | Inventory & Assignment Pack v1 — stock visibility, athlete assignments, movement history |
 | [bootstrap.md](./bootstrap.md) | Demo seed, idempotency, demo tenant id, staff login fixtures |
 | [staging-deploy.md](./staging-deploy.md) | Manual GitHub Actions deploy to Ubuntu staging (SSH troubleshooting, PM2, Nginx) |
 | [release-operations.md](./release-operations.md) | Pre-deploy gates, troubleshooting flow, and branch/hotfix discipline |
@@ -50,7 +51,8 @@ Release and hotfix workflow guidance: [release-operations.md](./release-operatio
 ## Deferred (intentionally)
 
 - Fine-grained internal staff RBAC beyond the current global-admin / club-admin / membership foundation
-- Tournament engine, statistics ingestion, inventory
+- Tournament engine, statistics ingestion
+- Inventory finance linkage (charge auto-creation from inventory) is intentionally out of v1 scope
 - Payment capture, recommendations
 - Advanced reporting execution and exports
 - Accounting ledger, automated billing runs

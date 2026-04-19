@@ -23,6 +23,7 @@ import { ActionCenterPage } from './pages/ActionCenterPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { ReportBuilderPage } from './pages/ReportBuilderPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { InventoryPage } from './pages/InventoryPage';
 import { PortalShell } from './components/layout/PortalShell';
 import { GuardianPortalLoginPage } from './pages/GuardianPortalLoginPage';
 import { GuardianPortalActivationPage } from './pages/GuardianPortalActivationPage';
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="/app/finance/charge-items" element={<ChargeItemsPage />} />
             <Route path="/app/finance/athlete-charges" element={<AthleteChargesPage />} />
             <Route path="/app/finance" element={<FinanceHubPage />} />
+            <Route path="/app/inventory" element={<InventoryPage />} />
             <Route path="/app/reports" element={<ReportsPage />} />
             <Route path="/app/report-builder" element={<ReportBuilderPage />} />
             <Route path="/app/settings" element={<SettingsPage />} />

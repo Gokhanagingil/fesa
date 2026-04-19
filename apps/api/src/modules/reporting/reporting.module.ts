@@ -15,6 +15,8 @@ import { Guardian } from '../../database/entities/guardian.entity';
 import { AthleteGuardian } from '../../database/entities/athlete-guardian.entity';
 import { AthleteTeamMembership } from '../../database/entities/athlete-team-membership.entity';
 import { StaffUser } from '../../database/entities/staff-user.entity';
+import { InventoryItem } from '../../database/entities/inventory-item.entity';
+import { InventoryVariant } from '../../database/entities/inventory-variant.entity';
 import { ActionCenterModule } from '../action-center/action-center.module';
 import { CommunicationModule } from '../communication/communication.module';
 import { FamilyActionModule } from '../family-action/family-action.module';
@@ -45,6 +47,8 @@ import { SavedViewsService } from './saved-views.service';
       AthleteGuardian,
       AthleteTeamMembership,
       StaffUser,
+      InventoryItem,
+      InventoryVariant,
     ]),
   ],
   controllers: [ReportingController],

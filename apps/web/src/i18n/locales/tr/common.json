@@ -22,6 +22,7 @@
       "training": "Antrenman",
       "privateLessons": "Özel dersler",
       "finance": "Finans",
+      "inventory": "Envanter",
       "communications": "İletişim",
       "reports": "Raporlar",
       "reportBuilder": "Rapor oluşturucu",
@@ -507,7 +508,13 @@
         "returnToGuardian": "Aileye geri gönder",
         "portalApproved": "Veli gönderimi onaylandı ve profile işlendi.",
         "portalRejected": "Veliye yeni bir yanıt için geri gönderildi."
-      }
+      },
+      "inventoryTitle": "Sporcuda bulunan kulüp envanteri",
+      "inventoryHint": "Bu sporcunun şu anda taşıdığı kulüp stoğu kalemleri.",
+      "inventoryEmpty": "Şu anda bu sporcuya atanmış kulüp envanteri yok.",
+      "inventoryReturn": "İade olarak işaretle",
+      "inventoryReturned": "Envanter kalemi iade edildi.",
+      "inventoryOpen": "Envanteri aç"
     },
     "coaches": {
       "title": "Antrenörler",
@@ -1025,7 +1032,8 @@
         "athletes": "Sporcular",
         "guardians": "Veliler",
         "privateLessons": "Özel dersler",
-        "finance": "Finans"
+        "finance": "Finans",
+        "inventory": "Envanter"
       },
       "operators": {
         "is": "eşittir",
@@ -1168,7 +1176,8 @@
           "finance": "Finans",
           "scheduling": "Planlama",
           "contact": "İletişim",
-          "management": "Yönetim"
+          "management": "Yönetim",
+          "inventory": "Envanter"
         },
         "athletes": {
           "activeWithoutTeam": {
@@ -1240,6 +1249,24 @@
           "overdueByCategory": {
             "title": "Kategoriye göre gecikme yükü",
             "description": "Gecikmiş ücretleri kategoriye göre özetleyin."
+          }
+        },
+        "inventory": {
+          "lowStock": {
+            "title": "Stoğu azalan envanter",
+            "description": "Aktif varyantlar arasında uygun adet eşik değerine düşmüş olanlar."
+          },
+          "outOfStock": {
+            "title": "Stokta kalmamış envanter",
+            "description": "Mevcut stoğun tamamı sporculara atanmış varyantlar."
+          },
+          "byCategory": {
+            "title": "Kategoriye göre envanter",
+            "description": "Varyant sayısı, stok ve atamalar envanter kategorisine göre."
+          },
+          "assignedBySize": {
+            "title": "Bedene göre aktif atamalar",
+            "description": "Şu anda kullanılan bedenler — kıt malzemeleri planlamak için."
           }
         }
       },
@@ -1314,6 +1341,22 @@
           "isOverdue": "Gecikmiş",
           "fromPrivateLesson": "Özel dersten",
           "billingPeriodLabel": "Dönem"
+        },
+        "inventory": {
+          "id": "ID",
+          "itemName": "Kalem",
+          "itemCategory": "Kategori",
+          "itemSportBranchName": "Spor branşı",
+          "size": "Beden",
+          "number": "Numara",
+          "color": "Renk",
+          "stockOnHand": "Mevcut stok",
+          "assignedCount": "Atanan",
+          "available": "Uygun",
+          "lowStockThreshold": "Düşük stok eşiği",
+          "isLowStock": "Düşük stok",
+          "isOutOfStock": "Stok yok",
+          "isActive": "Aktif"
         }
       }
     },
@@ -1417,6 +1460,94 @@
         "trainingPrep": "{{count}} antrenman hazırlık girdisi eksik.",
         "trainingAttendance": "Yoklama henüz kapanmadı."
       }
+    },
+    "inventory": {
+      "title": "Envanter",
+      "subtitle": "Forma, sweatshirt, top ve ekipman için stok ve sporcu atamaları.",
+      "newItem": "Yeni envanter kalemi",
+      "newItemHint": "Kataloğa, opsiyonel beden veya numara varyantlarıyla bir kalem ekleyin.",
+      "searchPlaceholder": "Envanterde ara…",
+      "filterAllCategories": "Tüm kategoriler",
+      "filterLowOnly": "Sadece düşük / tükenmiş",
+      "filterIncludeInactive": "Pasifleri de göster",
+      "category": {
+        "apparel": "Giysi",
+        "balls": "Top",
+        "equipment": "Ekipman",
+        "gear": "Antrenman donanımı",
+        "other": "Diğer"
+      },
+      "fieldName": "Kalem adı",
+      "fieldCategory": "Kategori",
+      "fieldBranch": "Spor branşı",
+      "fieldBranchAny": "Tüm branşlar",
+      "fieldDescription": "Açıklama",
+      "fieldLowStockThreshold": "Düşük stok eşiği",
+      "fieldHasVariants": "Bu kalemde beden / numara varyantları var",
+      "fieldTrackAssignment": "Sporculara tek tek atanabilir",
+      "fieldInitialStock": "Başlangıç stoğu",
+      "fieldSize": "Beden",
+      "fieldNumber": "Numara",
+      "fieldColor": "Renk",
+      "variantsHeader": "Varyantlar",
+      "addVariant": "Varyant ekle",
+      "removeVariant": "Kaldır",
+      "statActive": "Aktif kalemler",
+      "statActiveHelper": "Katalogda {{count}} pasif",
+      "statLow": "Düşük stok",
+      "statLowHelper": "Eşik altındaki varyantlar",
+      "statOut": "Stok yok",
+      "statOutHelper": "Uygun adedi sıfır olan varyantlar",
+      "statAssigned": "Atanmış adet",
+      "statAssignedHelper": "Şu anda sporcularda",
+      "statTotal": "Stok",
+      "statAvailable": "Uygun",
+      "statAssignedShort": "Atanan",
+      "statActiveItems": "Aktif kalemler",
+      "lowStock": "Düşük",
+      "outOfStock": "Tükendi",
+      "healthy": "Sağlıklı",
+      "lowStockBadge": "{{count}} düşük",
+      "outOfStockBadge": "{{count}} tükendi",
+      "inactive": "Pasif",
+      "open": "Detay aç",
+      "close": "Detayı kapat",
+      "markActive": "Aktife al",
+      "markInactive": "Pasife al",
+      "delete": "Kalemi sil",
+      "deleteConfirm": "\"{{name}}\" envanter kalemini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+      "created": "Envanter kalemi oluşturuldu.",
+      "updated": "Envanter kalemi güncellendi.",
+      "deleted": "Envanter kalemi silindi.",
+      "stockUpdated": "Stok güncellendi.",
+      "assigned": "Kalem sporcuya atandı.",
+      "returned": "Atama kapatıldı.",
+      "adjustStock": "Stoğu güncelle",
+      "adjustDelta": "Değişim",
+      "adjustDeltaInvalid": "Sıfır olmayan tam sayı girin (pozitif veya negatif).",
+      "adjustNote": "Not (isteğe bağlı)",
+      "assignTitle": "Sporcuya ata",
+      "assignChooseAthlete": "Sporcu seç",
+      "assignNote": "Not (isteğe bağlı)",
+      "assignButton": "Ata",
+      "assignAvailable": "{{count}} uygun",
+      "activeAssignments": "Şu anda atanmış",
+      "noActiveAssignments": "Bu kalemi şu anda taşıyan sporcu yok.",
+      "returnButton": "İade / geri al",
+      "recentMovements": "Son hareketler",
+      "noMovements": "Henüz hareket geçmişi yok.",
+      "variantStockSummary": "Stok {{stock}} · Atanan {{assigned}} · Uygun {{available}}",
+      "defaultVariant": "Varsayılan",
+      "movement": {
+        "stock_added": "Stok eklendi",
+        "stock_removed": "Stok düşüldü",
+        "stock_adjusted": "Stok düzeltildi",
+        "assigned": "Atandı",
+        "returned": "İade",
+        "retired": "Hizmet dışı"
+      },
+      "emptyTitle": "Henüz envanter yok",
+      "emptyHint": "İlk kaleminizi ekleyin — antrenman forması, sweatshirt veya top kovası — stok takibine başlamak için."
     },
     "communications": {
       "title": "İletişim",

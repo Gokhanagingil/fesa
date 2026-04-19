@@ -14,6 +14,7 @@
       "privateLessons": "Private lessons",
       "communications": "Communications",
       "finance": "Finance",
+      "inventory": "Inventory",
       "reports": "Reports",
       "reportBuilder": "Report builder",
       "settings": "Settings"
@@ -499,7 +500,13 @@
         "returnToGuardian": "Send back to family",
         "portalApproved": "Guardian submission approved and applied.",
         "portalRejected": "Guardian submission sent back for another family response."
-      }
+      },
+      "inventoryTitle": "Club inventory in their hands",
+      "inventoryHint": "Items currently checked out to this athlete from club stock.",
+      "inventoryEmpty": "No club inventory is currently assigned to this athlete.",
+      "inventoryReturn": "Mark returned",
+      "inventoryReturned": "Inventory item returned.",
+      "inventoryOpen": "Open inventory"
     },
     "guardians": {
       "title": "Guardians",
@@ -1056,7 +1063,8 @@
         "athletes": "Athletes",
         "guardians": "Guardians",
         "privateLessons": "Private lessons",
-        "finance": "Finance"
+        "finance": "Finance",
+        "inventory": "Inventory"
       },
       "operators": {
         "is": "is",
@@ -1199,7 +1207,8 @@
           "finance": "Finance",
           "scheduling": "Scheduling",
           "contact": "Contact",
-          "management": "Management"
+          "management": "Management",
+          "inventory": "Inventory"
         },
         "athletes": {
           "activeWithoutTeam": {
@@ -1272,6 +1281,24 @@
             "title": "Overdue load by category",
             "description": "Group overdue charges by category to plan outreach."
           }
+        },
+        "inventory": {
+          "lowStock": {
+            "title": "Inventory running low",
+            "description": "Active variants whose available stock is at or below the low-stock threshold."
+          },
+          "outOfStock": {
+            "title": "Inventory out of stock",
+            "description": "Variants where everything on hand is currently assigned to athletes."
+          },
+          "byCategory": {
+            "title": "Inventory by category",
+            "description": "Variant count, stock and assignments grouped by inventory category."
+          },
+          "assignedBySize": {
+            "title": "Active assignments by size",
+            "description": "Where the kit demand sits — sizes that are currently in use."
+          }
         }
       },
       "management": {
@@ -1339,6 +1366,22 @@
           "isOverdue": "Overdue",
           "fromPrivateLesson": "From private lesson",
           "billingPeriodLabel": "Billing period"
+        },
+        "inventory": {
+          "id": "ID",
+          "itemName": "Item",
+          "itemCategory": "Category",
+          "itemSportBranchName": "Sport branch",
+          "size": "Size",
+          "number": "Number",
+          "color": "Colour",
+          "stockOnHand": "Stock on hand",
+          "assignedCount": "Assigned",
+          "available": "Available",
+          "lowStockThreshold": "Low stock threshold",
+          "isLowStock": "Low stock",
+          "isOutOfStock": "Out of stock",
+          "isActive": "Active"
         }
       }
     },
@@ -1447,6 +1490,94 @@
         "trainingPrep": "{{count}} training prep details need attention",
         "trainingAttendance": "Attendance has not been recorded yet"
       }
+    },
+    "inventory": {
+      "title": "Inventory",
+      "subtitle": "Stock and athlete-assignment for jerseys, sweatshirts, balls, and equipment.",
+      "newItem": "New inventory item",
+      "newItemHint": "Add a product to the catalogue, optionally with size or numbered variants.",
+      "searchPlaceholder": "Search inventory…",
+      "filterAllCategories": "All categories",
+      "filterLowOnly": "Low / out of stock only",
+      "filterIncludeInactive": "Include inactive",
+      "category": {
+        "apparel": "Apparel",
+        "balls": "Balls",
+        "equipment": "Equipment",
+        "gear": "Gear",
+        "other": "Other"
+      },
+      "fieldName": "Item name",
+      "fieldCategory": "Category",
+      "fieldBranch": "Sport branch",
+      "fieldBranchAny": "Any branch",
+      "fieldDescription": "Description",
+      "fieldLowStockThreshold": "Low-stock threshold",
+      "fieldHasVariants": "This item has size / number variants",
+      "fieldTrackAssignment": "Athletes can be individually assigned",
+      "fieldInitialStock": "Initial stock",
+      "fieldSize": "Size",
+      "fieldNumber": "Number",
+      "fieldColor": "Colour",
+      "variantsHeader": "Variants",
+      "addVariant": "Add variant",
+      "removeVariant": "Remove",
+      "statActive": "Active items",
+      "statActiveHelper": "{{count}} inactive in catalogue",
+      "statLow": "Low stock",
+      "statLowHelper": "Variants below threshold",
+      "statOut": "Out of stock",
+      "statOutHelper": "Variants with zero available units",
+      "statAssigned": "Assigned units",
+      "statAssignedHelper": "Currently in athlete hands",
+      "statTotal": "Stock",
+      "statAvailable": "Available",
+      "statAssignedShort": "Assigned",
+      "statActiveItems": "Active items",
+      "lowStock": "Low",
+      "outOfStock": "Out",
+      "healthy": "Healthy",
+      "lowStockBadge": "{{count}} low",
+      "outOfStockBadge": "{{count}} out",
+      "inactive": "Inactive",
+      "open": "Open details",
+      "close": "Close details",
+      "markActive": "Mark active",
+      "markInactive": "Mark inactive",
+      "delete": "Delete item",
+      "deleteConfirm": "Delete the inventory item \"{{name}}\"? This cannot be undone.",
+      "created": "Inventory item created.",
+      "updated": "Inventory item updated.",
+      "deleted": "Inventory item deleted.",
+      "stockUpdated": "Stock updated.",
+      "assigned": "Item assigned to athlete.",
+      "returned": "Assignment closed.",
+      "adjustStock": "Adjust stock",
+      "adjustDelta": "Change",
+      "adjustDeltaInvalid": "Enter a non-zero positive or negative integer.",
+      "adjustNote": "Note (optional)",
+      "assignTitle": "Assign to athlete",
+      "assignChooseAthlete": "Choose an athlete",
+      "assignNote": "Note (optional)",
+      "assignButton": "Assign",
+      "assignAvailable": "{{count}} available",
+      "activeAssignments": "Currently assigned",
+      "noActiveAssignments": "No athletes currently hold this item.",
+      "returnButton": "Return / release",
+      "recentMovements": "Recent movements",
+      "noMovements": "No movement history yet.",
+      "variantStockSummary": "Stock {{stock}} · Assigned {{assigned}} · Available {{available}}",
+      "defaultVariant": "Default",
+      "movement": {
+        "stock_added": "Stock added",
+        "stock_removed": "Stock removed",
+        "stock_adjusted": "Stock adjusted",
+        "assigned": "Assigned",
+        "returned": "Returned",
+        "retired": "Retired"
+      },
+      "emptyTitle": "No inventory yet",
+      "emptyHint": "Add your first item — a training jersey, sweatshirt, or balls bucket — to start tracking stock."
     },
     "settings": {
       "title": "Settings",

@@ -23,6 +23,7 @@ import { FamilyActionModule } from './modules/family-action/family-action.module
 import { ActionCenterModule } from './modules/action-center/action-center.module';
 import { GuardianPortalModule } from './modules/guardian-portal/guardian-portal.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { AuthModule } from './modules/auth/auth.module';
     FamilyActionModule,
     ActionCenterModule,
     GuardianPortalModule,
+    InventoryModule,
   ],
 })
 export class AppModule {}

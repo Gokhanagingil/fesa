@@ -27,6 +27,10 @@ import { OutreachActivity } from './outreach-activity.entity';
 import { StaffUser } from './staff-user.entity';
 import { TenantMembership } from './tenant-membership.entity';
 import { StaffSession } from './staff-session.entity';
+import { InventoryItem } from './inventory-item.entity';
+import { InventoryVariant } from './inventory-variant.entity';
+import { InventoryAssignment } from './inventory-assignment.entity';
+import { InventoryMovement } from './inventory-movement.entity';
 
 export const domainEntities = [
   Tenant,
@@ -58,6 +62,10 @@ export const domainEntities = [
   StaffUser,
   TenantMembership,
   StaffSession,
+  InventoryItem,
+  InventoryVariant,
+  InventoryAssignment,
+  InventoryMovement,
 ];
 
 export {
@@ -90,4 +98,8 @@ export {
   StaffUser,
   TenantMembership,
   StaffSession,
+  InventoryItem,
+  InventoryVariant,
+  InventoryAssignment,
+  InventoryMovement,
 };
