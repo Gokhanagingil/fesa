@@ -213,6 +213,8 @@ export function AthleteChargesPage() {
       Object.values(paymentForm.allocations).reduce((sum, value) => sum + (value ? Number.parseFloat(value) || 0 : 0), 0),
     [paymentForm.allocations],
   );
+  const selectedAthletePreview = selectedAthletes.slice(0, 6);
+  const hasSelection = selectedAthleteIds.length > 0;
 
   function toggleSelection(athlete: Athlete) {
     setSelectedAthleteIds((current) =>
@@ -487,9 +489,9 @@ export function AthleteChargesPage() {
               </div>
             ) : null}
 
-            <div className="mb-6 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+            <div className="mb-6 space-y-4">
               <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h2 className="font-display text-base font-semibold text-amateur-ink">
                       {t('pages.athleteCharges.bulkTitle')}
@@ -500,36 +502,72 @@ export function AthleteChargesPage() {
                     <Button variant="ghost">{t('pages.athletes.title')}</Button>
                   </Link>
                 </div>
-                <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+                <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                   <div className="rounded-xl border border-amateur-border bg-amateur-surface p-4">
                     <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
                       {t('pages.athleteCharges.selectAthletes')}
                     </p>
-                    <div className="mt-3 grid gap-2 md:grid-cols-2">
-                      {athletes.map((athlete) => (
-                        <label
-                          key={athlete.id}
-                          className="flex items-start gap-3 rounded-xl border border-amateur-border px-3 py-2 text-sm"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedAthleteIds.includes(athlete.id)}
-                            onChange={() => toggleSelection(athlete)}
-                          />
-                          <span>
-                            <span className="block font-medium text-amateur-ink">{getPersonName(athlete)}</span>
-                            <span className="block text-xs text-amateur-muted">
+                    <p className="mt-2 text-sm text-amateur-muted">
+                      {hasSelection
+                        ? t('pages.athleteCharges.selectedCount', { count: selectedAthletes.length })
+                        : t('pages.athleteCharges.bulkHint')}
+                    </p>
+                    {hasSelection ? (
+                      <ul className="mt-3 space-y-2">
+                        {selectedAthletePreview.map((athlete) => (
+                          <li
+                            key={athlete.id}
+                            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-3"
+                          >
+                            <p className="font-medium text-amateur-ink">{getPersonName(athlete)}</p>
+                            <p className="text-xs text-amateur-muted">
                               {athlete.primaryGroupId
                                 ? groupMap.get(athlete.primaryGroupId) ?? '—'
                                 : t('pages.athletes.noGroup')}
+                            </p>
+                          </li>
+                        ))}
+                        {selectedAthletes.length > selectedAthletePreview.length ? (
+                          <li className="text-xs text-amateur-muted">
+                            +{selectedAthletes.length - selectedAthletePreview.length}
+                          </li>
+                        ) : null}
+                      </ul>
+                    ) : null}
+                    <details className="mt-4 rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
+                      <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
+                        {t('pages.athleteCharges.selectAthletes')}
+                      </summary>
+                      <div className="mt-3 grid gap-2 md:grid-cols-2">
+                        {athletes.map((athlete) => (
+                          <label
+                            key={athlete.id}
+                            className="flex items-start gap-3 rounded-xl border border-amateur-border px-3 py-2 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedAthleteIds.includes(athlete.id)}
+                              onChange={() => toggleSelection(athlete)}
+                            />
+                            <span>
+                              <span className="block font-medium text-amateur-ink">{getPersonName(athlete)}</span>
+                              <span className="block text-xs text-amateur-muted">
+                                {athlete.primaryGroupId
+                                  ? groupMap.get(athlete.primaryGroupId) ?? '—'
+                                  : t('pages.athletes.noGroup')}
+                              </span>
                             </span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
+                          </label>
+                        ))}
+                      </div>
+                    </details>
                   </div>
-                  <div className="rounded-xl border border-amateur-border bg-amateur-surface p-4">
-                    <div className="space-y-3">
+                  <div className="space-y-4">
+                    <details className="rounded-xl border border-amateur-border bg-amateur-surface p-4" open>
+                      <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
+                        {t('pages.athleteCharges.bulkTitle')}
+                      </summary>
+                      <div className="mt-3 space-y-3">
                       <label className="flex flex-col gap-1 text-sm">
                         <span>{t('pages.athleteCharges.bulkTargetType')}</span>
                         <select
@@ -665,21 +703,15 @@ export function AthleteChargesPage() {
                       >
                         {t('pages.athleteCharges.assignBulk')}
                       </Button>
-                    </div>
-                  </div>
-                </div>
-              </section>
+                      </div>
+                    </details>
 
-              <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="font-display text-base font-semibold text-amateur-ink">
-                      {t('pages.athleteCharges.periodicTitle')}
-                    </h2>
-                    <p className="mt-1 text-sm text-amateur-muted">{t('pages.athleteCharges.periodicHint')}</p>
-                  </div>
-                </div>
-                <div className="mt-4 space-y-3">
+                    <details className="rounded-xl border border-amateur-border bg-amateur-surface p-4">
+                      <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
+                        {t('pages.athleteCharges.periodicTitle')}
+                      </summary>
+                      <p className="mt-2 text-sm text-amateur-muted">{t('pages.athleteCharges.periodicHint')}</p>
+                      <div className="mt-4 space-y-3">
                   <label className="flex flex-col gap-1 text-sm">
                     <span>{t('pages.athleteCharges.targetType')}</span>
                     <select
@@ -865,50 +897,48 @@ export function AthleteChargesPage() {
                     </div>
                   ) : null}
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => void previewPeriodicCharges()}
-                      disabled={
-                        periodicLoading ||
-                        !periodicChargeItemId ||
-                        !periodicKey.trim() ||
-                        !periodicLabel.trim() ||
-                        (periodicTargetType === 'selected' && selectedAthleteIds.length === 0) ||
-                        (periodicTargetType === 'group' && !periodicGroupId) ||
-                        (periodicTargetType === 'team' && !periodicTeamId)
-                      }
-                    >
-                      {t('pages.athleteCharges.previewPeriodic')}
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => void generatePeriodicCharges()}
-                      disabled={
-                        periodicSaving ||
-                        !periodicChargeItemId ||
-                        !periodicKey.trim() ||
-                        !periodicLabel.trim() ||
-                        (periodicTargetType === 'selected' && selectedAthleteIds.length === 0) ||
-                        (periodicTargetType === 'group' && !periodicGroupId) ||
-                        (periodicTargetType === 'team' && !periodicTeamId)
-                      }
-                    >
-                      {t('pages.athleteCharges.generatePeriodic')}
-                    </Button>
-                  </div>
-                </div>
-              </section>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => void previewPeriodicCharges()}
+                            disabled={
+                              periodicLoading ||
+                              !periodicChargeItemId ||
+                              !periodicKey.trim() ||
+                              !periodicLabel.trim() ||
+                              (periodicTargetType === 'selected' && selectedAthleteIds.length === 0) ||
+                              (periodicTargetType === 'group' && !periodicGroupId) ||
+                              (periodicTargetType === 'team' && !periodicTeamId)
+                            }
+                          >
+                            {t('pages.athleteCharges.previewPeriodic')}
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => void generatePeriodicCharges()}
+                            disabled={
+                              periodicSaving ||
+                              !periodicChargeItemId ||
+                              !periodicKey.trim() ||
+                              !periodicLabel.trim() ||
+                              (periodicTargetType === 'selected' && selectedAthleteIds.length === 0) ||
+                              (periodicTargetType === 'group' && !periodicGroupId) ||
+                              (periodicTargetType === 'team' && !periodicTeamId)
+                            }
+                          >
+                            {t('pages.athleteCharges.generatePeriodic')}
+                          </Button>
+                        </div>
+                      </div>
+                    </details>
 
-              <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-                <div>
-                  <h2 className="font-display text-base font-semibold text-amateur-ink">
-                    {t('pages.athleteCharges.paymentTitle')}
-                  </h2>
-                  <p className="mt-1 text-sm text-amateur-muted">{t('pages.athleteCharges.paymentHint')}</p>
-                </div>
-                <div className="mt-4 space-y-3">
+                    <details className="rounded-xl border border-amateur-border bg-amateur-surface p-4">
+                      <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
+                        {t('pages.athleteCharges.paymentTitle')}
+                      </summary>
+                      <p className="mt-2 text-sm text-amateur-muted">{t('pages.athleteCharges.paymentHint')}</p>
+                      <div className="mt-4 space-y-3">
                   <label className="flex flex-col gap-1 text-sm">
                     <span>{t('pages.athleteCharges.athlete')}</span>
                     <select
@@ -1017,13 +1047,16 @@ export function AthleteChargesPage() {
                   <div className="rounded-xl border border-dashed border-amateur-border px-3 py-2 text-sm text-amateur-muted">
                     {t('pages.athleteCharges.paymentTotal')}: {paymentForm.currency} {paymentTotal.toFixed(2)}
                   </div>
-                  <Button
-                    type="button"
-                    onClick={() => void submitPayment()}
-                    disabled={!paymentForm.athleteId || paymentTotal <= 0 || paymentSaving}
-                  >
-                    {t('pages.athleteCharges.recordPayment')}
-                  </Button>
+                        <Button
+                          type="button"
+                          onClick={() => void submitPayment()}
+                          disabled={!paymentForm.athleteId || paymentTotal <= 0 || paymentSaving}
+                        >
+                          {t('pages.athleteCharges.recordPayment')}
+                        </Button>
+                      </div>
+                    </details>
+                  </div>
                 </div>
               </section>
             </div>
@@ -1041,63 +1074,101 @@ export function AthleteChargesPage() {
           <EmptyState title={t('pages.athleteCharges.empty')} hint={t('pages.finance.hubBody')} />
         ) : (
           <div className="space-y-6">
-            <section className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-amateur-border text-amateur-muted">
-                    <th className="pb-2 font-medium">{t('pages.athleteCharges.item')}</th>
-                    <th className="pb-2 font-medium">{t('pages.athleteCharges.amount')}</th>
-                    <th className="pb-2 font-medium">{t('pages.athleteCharges.remaining')}</th>
-                    <th className="pb-2 font-medium">{t('pages.athleteCharges.due')}</th>
-                    <th className="pb-2 font-medium">{t('pages.athleteCharges.status')}</th>
-                    <th className="pb-2 font-medium">{t('pages.athleteCharges.athlete')}</th>
-                    <th className="pb-2 font-medium">{t('app.actions.update')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((c) => (
-                    <tr key={c.id} className="border-b border-amateur-border/70 last:border-0">
-                      <td className="py-3 font-medium">{c.chargeItem?.name ?? c.chargeItemId}</td>
-                      <td className="py-3">{getChargeCurrencyAmount(c)}</td>
-                      <td className="py-3">
-                        {(c.chargeItem?.currency ?? '')} {c.remainingAmount}
-                      </td>
-                      <td className="py-3">
-                        {formatDate(c.dueDate, i18n.language)}
-                        {c.isOverdue ? (
-                          <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                            {t('pages.athleteCharges.overdue')}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="py-3 text-amateur-muted">
-                        {getChargeStatusLabel(t, c.derivedStatus ?? c.status)}
-                      </td>
-                      <td className="py-3">
-                        <Link
-                          to={`/app/athletes/${c.athleteId}`}
-                          className="font-medium text-amateur-accent hover:underline"
-                        >
-                          {c.athlete ? getPersonName(c.athlete) : t('pages.athleteCharges.openAthlete')}
-                        </Link>
-                      </td>
-                      <td className="py-3">
-                        <select
-                          value={c.status}
-                          onChange={(e) => void updateChargeStatus(c.id, e.target.value as AthleteChargeStatus)}
-                          className="rounded-lg border border-amateur-border bg-amateur-canvas px-2 py-1"
-                        >
-                          {chargeStatuses.map((chargeStatus) => (
-                            <option key={chargeStatus} value={chargeStatus}>
-                              {getChargeStatusLabel(t, chargeStatus)}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
+            <section>
+              <div className="space-y-3 md:hidden">
+                {items.map((charge) => (
+                  <article key={charge.id} className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-amateur-ink">{charge.chargeItem?.name ?? charge.chargeItemId}</p>
+                        <p className="mt-1 text-sm text-amateur-muted">{getChargeCurrencyAmount(charge)}</p>
+                      </div>
+                      <span className="text-xs font-medium text-amateur-muted">{formatDate(charge.dueDate, i18n.language)}</span>
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm text-amateur-muted">
+                      <p>
+                        {t('pages.athleteCharges.remaining')}: {(charge.chargeItem?.currency ?? '')} {charge.remainingAmount}
+                      </p>
+                      <p>{getChargeStatusLabel(t, charge.derivedStatus ?? charge.status)}</p>
+                      <Link
+                        to={`/app/athletes/${charge.athleteId}`}
+                        className="inline-flex font-medium text-amateur-accent hover:underline"
+                      >
+                        {charge.athlete ? getPersonName(charge.athlete) : t('pages.athleteCharges.openAthlete')}
+                      </Link>
+                    </div>
+                    <select
+                      value={charge.status}
+                      onChange={(e) => void updateChargeStatus(charge.id, e.target.value as AthleteChargeStatus)}
+                      className="mt-3 w-full rounded-lg border border-amateur-border bg-amateur-surface px-3 py-2 text-sm"
+                    >
+                      {chargeStatuses.map((chargeStatus) => (
+                        <option key={chargeStatus} value={chargeStatus}>
+                          {getChargeStatusLabel(t, chargeStatus)}
+                        </option>
+                      ))}
+                    </select>
+                  </article>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[760px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-amateur-border text-amateur-muted">
+                      <th className="pb-2 font-medium">{t('pages.athleteCharges.item')}</th>
+                      <th className="pb-2 font-medium">{t('pages.athleteCharges.amount')}</th>
+                      <th className="pb-2 font-medium">{t('pages.athleteCharges.remaining')}</th>
+                      <th className="pb-2 font-medium">{t('pages.athleteCharges.due')}</th>
+                      <th className="pb-2 font-medium">{t('pages.athleteCharges.status')}</th>
+                      <th className="pb-2 font-medium">{t('pages.athleteCharges.athlete')}</th>
+                      <th className="pb-2 font-medium">{t('app.actions.update')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {items.map((c) => (
+                      <tr key={c.id} className="border-b border-amateur-border/70 last:border-0">
+                        <td className="py-3 font-medium">{c.chargeItem?.name ?? c.chargeItemId}</td>
+                        <td className="py-3">{getChargeCurrencyAmount(c)}</td>
+                        <td className="py-3">
+                          {(c.chargeItem?.currency ?? '')} {c.remainingAmount}
+                        </td>
+                        <td className="py-3">
+                          {formatDate(c.dueDate, i18n.language)}
+                          {c.isOverdue ? (
+                            <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                              {t('pages.athleteCharges.overdue')}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="py-3 text-amateur-muted">
+                          {getChargeStatusLabel(t, c.derivedStatus ?? c.status)}
+                        </td>
+                        <td className="py-3">
+                          <Link
+                            to={`/app/athletes/${c.athleteId}`}
+                            className="font-medium text-amateur-accent hover:underline"
+                          >
+                            {c.athlete ? getPersonName(c.athlete) : t('pages.athleteCharges.openAthlete')}
+                          </Link>
+                        </td>
+                        <td className="py-3">
+                          <select
+                            value={c.status}
+                            onChange={(e) => void updateChargeStatus(c.id, e.target.value as AthleteChargeStatus)}
+                            className="rounded-lg border border-amateur-border bg-amateur-canvas px-2 py-1"
+                          >
+                            {chargeStatuses.map((chargeStatus) => (
+                              <option key={chargeStatus} value={chargeStatus}>
+                                {getChargeStatusLabel(t, chargeStatus)}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
 
             <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
@@ -1114,31 +1185,51 @@ export function AthleteChargesPage() {
                   {t('pages.athleteCharges.noPayments')}
                 </div>
               ) : (
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full min-w-[560px] text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-amateur-border text-amateur-muted">
-                        <th className="pb-2 font-medium">{t('pages.athleteCharges.athlete')}</th>
-                        <th className="pb-2 font-medium">{t('pages.athleteCharges.amount')}</th>
-                        <th className="pb-2 font-medium">{t('pages.athleteCharges.paymentDate')}</th>
-                        <th className="pb-2 font-medium">{t('pages.athleteCharges.paymentMethod')}</th>
-                        <th className="pb-2 font-medium">{t('pages.athleteCharges.reference')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {payments.map((payment) => (
-                        <tr key={payment.id} className="border-b border-amateur-border/70 last:border-0">
-                          <td className="py-3">{payment.athlete ? getPersonName(payment.athlete) : '—'}</td>
-                          <td className="py-3">
-                            {payment.currency} {payment.amount}
-                          </td>
-                          <td className="py-3">{formatDate(payment.paidAt, i18n.language)}</td>
-                          <td className="py-3">{payment.method || '—'}</td>
-                          <td className="py-3">{payment.reference || '—'}</td>
+                <div className="mt-4">
+                  <div className="space-y-3 md:hidden">
+                    {payments.map((payment) => (
+                      <article key={payment.id} className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-4">
+                        <p className="font-medium text-amateur-ink">
+                          {payment.athlete ? getPersonName(payment.athlete) : '—'}
+                        </p>
+                        <p className="mt-1 text-sm text-amateur-muted">
+                          {payment.currency} {payment.amount}
+                        </p>
+                        <p className="mt-2 text-xs text-amateur-muted">
+                          {formatDate(payment.paidAt, i18n.language)} · {payment.method || '—'}
+                        </p>
+                        {payment.reference ? (
+                          <p className="mt-1 text-xs text-amateur-muted">{payment.reference}</p>
+                        ) : null}
+                      </article>
+                    ))}
+                  </div>
+                  <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full min-w-[560px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-amateur-border text-amateur-muted">
+                          <th className="pb-2 font-medium">{t('pages.athleteCharges.athlete')}</th>
+                          <th className="pb-2 font-medium">{t('pages.athleteCharges.amount')}</th>
+                          <th className="pb-2 font-medium">{t('pages.athleteCharges.paymentDate')}</th>
+                          <th className="pb-2 font-medium">{t('pages.athleteCharges.paymentMethod')}</th>
+                          <th className="pb-2 font-medium">{t('pages.athleteCharges.reference')}</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {payments.map((payment) => (
+                          <tr key={payment.id} className="border-b border-amateur-border/70 last:border-0">
+                            <td className="py-3">{payment.athlete ? getPersonName(payment.athlete) : '—'}</td>
+                            <td className="py-3">
+                              {payment.currency} {payment.amount}
+                            </td>
+                            <td className="py-3">{formatDate(payment.paidAt, i18n.language)}</td>
+                            <td className="py-3">{payment.method || '—'}</td>
+                            <td className="py-3">{payment.reference || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </section>

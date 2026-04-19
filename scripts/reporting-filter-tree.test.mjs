@@ -5,11 +5,19 @@
  * Nest. Failures print and exit non-zero.
  */
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const distPath = resolve(here, '..', 'apps', 'api', 'dist', 'modules', 'reporting', 'filter-tree.js');
+
+if (!existsSync(distPath)) {
+  console.error('reporting-filter-tree.test could not find the compiled reporting validator.');
+  console.error(`Expected build output at: ${distPath}`);
+  console.error('Run `npm run build` before running this check.');
+  process.exit(1);
+}
 
 const { validateFilterTree } = await import(distPath);
 

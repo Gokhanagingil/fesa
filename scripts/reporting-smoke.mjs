@@ -22,6 +22,20 @@ const API_BASE = (process.env.API_BASE ?? 'http://localhost:3000').replace(/\/$/
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'platform.admin@amateur.local';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'Admin123!';
 
+function formatDependencyHelp() {
+  return [
+    'reporting-smoke needs a running API with a reachable database and seeded staff login.',
+    `Checked API base: ${API_BASE}`,
+    'Expected setup:',
+    '  1. cp apps/api/.env.example apps/api/.env',
+    '  2. npm run build',
+    '  3. npm run migration:run -w @amateur/api',
+    '  4. npm run seed:demo',
+    '  5. npm run start:dev -w @amateur/api',
+    'You can override API_BASE, ADMIN_EMAIL, and ADMIN_PASSWORD for staging or another local runtime.',
+  ].join('\n');
+}
+
 let cookieHeader = '';
 
 function captureCookies(setCookie) {
@@ -115,8 +129,8 @@ async function main() {
     },
     tenants[0].id,
   );
-  if (badFilter.status === 200) {
-    failures.push(`expected 400 for invalid operator, got 200`);
+  if (badFilter.status !== 400) {
+    failures.push(`expected 400 for invalid operator, got ${badFilter.status}`);
   }
 
   // Tenant isolation: run athletes for each tenant and ensure totals look sane
@@ -247,7 +261,9 @@ async function main() {
     },
     tenant.id,
   );
-  if (badGroup.status === 200) failures.push('grouped run accepted non-groupable field');
+  if (badGroup.status !== 400) {
+    failures.push(`expected 400 for non-groupable field, got ${badGroup.status}`);
+  }
 
   // Save a grouped view and round-trip
   const groupedView = await request(
@@ -316,6 +332,11 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.stack ?? error.message : String(error));
+  const message = error instanceof Error ? error.stack ?? error.message : String(error);
+  console.error(message);
+  if (message.includes('fetch failed') || message.includes('ECONNREFUSED') || message.includes('Login failed')) {
+    console.error('');
+    console.error(formatDependencyHelp());
+  }
   process.exit(1);
 });

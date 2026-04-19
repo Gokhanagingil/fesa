@@ -70,6 +70,7 @@ export function AthleteDetailPage() {
   const [requestDueDate, setRequestDueDate] = useState('');
   const [requestType, setRequestType] = useState<FamilyActionRequestType>('contact_details_completion');
   const [requestGuardianId, setRequestGuardianId] = useState('');
+  const [selectedLifecycleStatus, setSelectedLifecycleStatus] = useState<Athlete['status']>('trial');
 
   const load = useCallback(async () => {
     if (!id || !tenantId) return;
@@ -110,6 +111,13 @@ export function AthleteDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!athlete) {
+      return;
+    }
+    setSelectedLifecycleStatus(athlete.status);
+  }, [athlete]);
 
   async function linkGuardian() {
     if (!id || !guardianId) return;
@@ -243,7 +251,7 @@ export function AthleteDetailPage() {
     try {
       await apiPatch(`/api/athletes/${id}`, { status: nextStatus });
       setMessage(
-        t('pages.athletes.statusUpdated', {
+        t('pages.athletes.lifecycleStatusSuccess', {
           status: getAthleteStatusLabel(t, nextStatus),
         }),
       );
@@ -417,30 +425,35 @@ export function AthleteDetailPage() {
                 </p>
                 <p className="mt-1 text-sm text-amateur-muted">{t('pages.athletes.lifecycleHint')}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {athlete.status !== 'trial' ? (
-                  <Button type="button" variant="ghost" onClick={() => void updateAthleteProfileStatus('trial')}>
-                    {t('pages.athletes.lifecycleToTrial')}
+              <div className="min-w-[14rem]">
+                <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+                  {t('pages.athletes.lifecycleStatusLabel')}
+                </p>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <select
+                    value={selectedLifecycleStatus}
+                    onChange={(e) => setSelectedLifecycleStatus(e.target.value as Athlete['status'])}
+                    className="min-w-0 flex-1 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-ink"
+                  >
+                    {(['trial', 'active', 'paused', 'inactive', 'archived'] as Athlete['status'][]).map((statusOption) => (
+                      <option key={statusOption} value={statusOption}>
+                        {getAthleteStatusLabel(t, statusOption)}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    onClick={() => void updateAthleteProfileStatus(selectedLifecycleStatus)}
+                    disabled={selectedLifecycleStatus === athlete.status}
+                  >
+                    {t('pages.athletes.lifecycleApplyStatus')}
                   </Button>
-                ) : null}
-                {athlete.status !== 'active' ? (
-                  <Button type="button" variant="ghost" onClick={() => void updateAthleteProfileStatus('active')}>
-                    {t('pages.athletes.lifecycleToActive')}
-                  </Button>
-                ) : null}
-                {athlete.status !== 'paused' ? (
-                  <Button type="button" variant="ghost" onClick={() => void updateAthleteProfileStatus('paused')}>
-                    {t('pages.athletes.lifecycleToPaused')}
-                  </Button>
-                ) : null}
-                {athlete.status !== 'inactive' ? (
-                  <Button type="button" variant="ghost" onClick={() => void updateAthleteProfileStatus('inactive')}>
-                    {t('pages.athletes.lifecycleToInactive')}
-                  </Button>
-                ) : null}
+                </div>
               </div>
             </div>
-            <p className="mt-3 text-xs text-amateur-muted">{t('pages.athletes.lifecycleSideEffectHint')}</p>
+            <p className="mt-3 text-xs text-amateur-muted">
+              {t('pages.athletes.readinessStatus')}: {getAthleteStatusLabel(t, athlete.status)}
+            </p>
           </div>
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <div>
@@ -471,40 +484,55 @@ export function AthleteDetailPage() {
         </section>
 
         <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
-          <h3 className="font-display font-semibold text-amateur-ink">{t('pages.athleteCharges.quickAssign')}</h3>
-          <p className="mt-1 text-xs text-amateur-muted">{t('pages.athleteCharges.quickAssignHint')}</p>
-          <div className="mt-4 flex flex-col gap-2">
-            <select
-              value={chargeItemId}
-              onChange={(e) => setChargeItemId(e.target.value)}
-              className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm"
-            >
-              <option value="">{t('pages.athleteCharges.item')}</option>
-              {chargeItems.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.currency} {c.defaultAmount})
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder={t('pages.athleteCharges.amount')}
-              value={chargeAmount}
-              onChange={(e) => setChargeAmount(e.target.value)}
-              className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm"
-            />
-            <Button type="button" onClick={() => void addCharge()} disabled={!chargeItemId || !chargeAmount}>
-              {t('pages.athleteCharges.new')}
-            </Button>
-            <Link
-              to={`/app/finance/athlete-charges?athleteId=${athlete.id}`}
-              className="text-center text-sm font-medium text-amateur-accent hover:underline"
-            >
-              {t('pages.finance.athleteChargesLink')} →
+          <h3 className="font-display font-semibold text-amateur-ink">{t('pages.finance.athleteChargesLink')}</h3>
+          <p className="mt-1 text-sm text-amateur-muted">
+            {outstandingTotal > 0
+              ? t('pages.athletes.readinessFinanceOpen', {
+                  amount: getMoneyAmount(
+                    outstandingTotal,
+                    charges.find((charge) => charge.chargeItem?.currency)?.chargeItem?.currency ?? 'TRY',
+                  ),
+                })
+              : t('pages.athletes.readinessFinanceReady')}
+          </p>
+          <p className="mt-2 text-xs text-amateur-muted">{t('pages.athleteCharges.profileHint')}</p>
+          <div className="mt-4">
+            <Link to={`/app/finance/athlete-charges?athleteId=${athlete.id}`}>
+              <Button className="w-full">{t('pages.athleteCharges.viewAll')}</Button>
             </Link>
           </div>
+          <details className="mt-4 rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
+            <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
+              {t('pages.athleteCharges.quickAssign')}
+            </summary>
+            <p className="mt-2 text-xs text-amateur-muted">{t('pages.athleteCharges.quickAssignHint')}</p>
+            <div className="mt-3 flex flex-col gap-2">
+              <select
+                value={chargeItemId}
+                onChange={(e) => setChargeItemId(e.target.value)}
+                className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm"
+              >
+                <option value="">{t('pages.athleteCharges.item')}</option>
+                {chargeItems.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.currency} {c.defaultAmount})
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder={t('pages.athleteCharges.amount')}
+                value={chargeAmount}
+                onChange={(e) => setChargeAmount(e.target.value)}
+                className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm"
+              />
+              <Button type="button" onClick={() => void addCharge()} disabled={!chargeItemId || !chargeAmount}>
+                {t('pages.athleteCharges.new')}
+              </Button>
+            </div>
+          </details>
         </section>
       </div>
 
@@ -631,77 +659,79 @@ export function AthleteDetailPage() {
 
         <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
           <div className="rounded-xl border border-amateur-border bg-amateur-canvas p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
-              {t('pages.athletes.familyActions.newRequest')}
-            </p>
-            <div className="mt-3 space-y-3">
-              <label className="flex flex-col gap-1 text-sm">
-                <span>{t('pages.athletes.familyActions.requestType')}</span>
-                <select
-                  value={requestType}
-                  onChange={(e) => setRequestType(e.target.value as FamilyActionRequestType)}
-                  className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                >
-                  {(
-                    [
-                      'contact_details_completion',
-                      'guardian_profile_update',
-                      'consent_acknowledgement',
-                      'enrollment_readiness',
-                      'profile_correction',
-                    ] as FamilyActionRequestType[]
-                  ).map((value) => (
-                    <option key={value} value={value}>
-                      {getFamilyActionTypeLabel(t, value)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span>{t('pages.athletes.familyActions.requestGuardian')}</span>
-                <select
-                  value={requestGuardianId}
-                  onChange={(e) => setRequestGuardianId(e.target.value)}
-                  className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                >
-                  <option value="">{t('pages.athletes.familyActions.anyLinkedGuardian')}</option>
-                  {availableActionGuardians.map((guardian) => (
-                    <option key={guardian.id} value={guardian.id}>
-                      {getPersonName(guardian)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span>{t('pages.athletes.familyActions.requestTitle')}</span>
-                <input
-                  value={requestTitle}
-                  onChange={(e) => setRequestTitle(e.target.value)}
-                  className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span>{t('pages.athletes.familyActions.requestDueDate')}</span>
-                <input
-                  type="date"
-                  value={requestDueDate}
-                  onChange={(e) => setRequestDueDate(e.target.value)}
-                  className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span>{t('pages.athletes.familyActions.requestDescription')}</span>
-                <textarea
-                  rows={4}
-                  value={requestDescription}
-                  onChange={(e) => setRequestDescription(e.target.value)}
-                  className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                />
-              </label>
-              <Button type="button" onClick={() => void createFamilyActionRequest()} disabled={!requestTitle.trim()}>
-                {t('pages.athletes.familyActions.create')}
-              </Button>
-            </div>
+            <details>
+              <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
+                {t('pages.athletes.familyActions.newRequest')}
+              </summary>
+              <div className="mt-3 space-y-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span>{t('pages.athletes.familyActions.requestType')}</span>
+                  <select
+                    value={requestType}
+                    onChange={(e) => setRequestType(e.target.value as FamilyActionRequestType)}
+                    className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                  >
+                    {(
+                      [
+                        'contact_details_completion',
+                        'guardian_profile_update',
+                        'consent_acknowledgement',
+                        'enrollment_readiness',
+                        'profile_correction',
+                      ] as FamilyActionRequestType[]
+                    ).map((value) => (
+                      <option key={value} value={value}>
+                        {getFamilyActionTypeLabel(t, value)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span>{t('pages.athletes.familyActions.requestGuardian')}</span>
+                  <select
+                    value={requestGuardianId}
+                    onChange={(e) => setRequestGuardianId(e.target.value)}
+                    className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                  >
+                    <option value="">{t('pages.athletes.familyActions.anyLinkedGuardian')}</option>
+                    {availableActionGuardians.map((guardian) => (
+                      <option key={guardian.id} value={guardian.id}>
+                        {getPersonName(guardian)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span>{t('pages.athletes.familyActions.requestTitle')}</span>
+                  <input
+                    value={requestTitle}
+                    onChange={(e) => setRequestTitle(e.target.value)}
+                    className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span>{t('pages.athletes.familyActions.requestDueDate')}</span>
+                  <input
+                    type="date"
+                    value={requestDueDate}
+                    onChange={(e) => setRequestDueDate(e.target.value)}
+                    className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span>{t('pages.athletes.familyActions.requestDescription')}</span>
+                  <textarea
+                    rows={4}
+                    value={requestDescription}
+                    onChange={(e) => setRequestDescription(e.target.value)}
+                    className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                  />
+                </label>
+                <Button type="button" onClick={() => void createFamilyActionRequest()} disabled={!requestTitle.trim()}>
+                  {t('pages.athletes.familyActions.create')}
+                </Button>
+              </div>
+            </details>
           </div>
 
           <div className="rounded-xl border border-amateur-border bg-amateur-canvas p-4">
@@ -711,117 +741,12 @@ export function AthleteDetailPage() {
             {familyReadiness?.actions.length ? (
               <div className="mt-3 space-y-3">
                 {familyReadiness.actions.map((request) => (
-                  <article key={request.id} className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-4">
-                    {(() => {
-                      const portalEvent = request.events.find((event) => event.actor === 'family');
-                      const portalSubmission =
-                        request.payload?.portalSubmission && typeof request.payload.portalSubmission === 'object'
-                          ? (request.payload.portalSubmission as {
-                              source?: string;
-                              suggestedUpdates?: { phone?: string; email?: string; notes?: string };
-                            })
-                          : null;
-
-                      return (
-                        <>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-amateur-ink">{request.title}</p>
-                        <p className="mt-1 text-xs text-amateur-muted">
-                          {[
-                            getFamilyActionTypeLabel(t, request.type),
-                            request.guardianName,
-                            request.dueDate ? formatDate(request.dueDate, i18n.language) : null,
-                          ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </p>
-                        {portalEvent ? (
-                          <p className="mt-2 text-xs font-medium text-sky-700">
-                            {t('pages.athletes.familyActions.portalOriginLabel', {
-                              actor: getFamilyActionActorLabel(t, portalEvent.actor),
-                            })}
-                          </p>
-                        ) : null}
-                      </div>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                        {getFamilyActionStatusLabel(t, request.status)}
-                      </span>
-                    </div>
-                    {request.description ? (
-                      <p className="mt-2 text-sm text-amateur-muted">{request.description}</p>
-                    ) : null}
-                    {request.latestResponseText ? (
-                      <p className="mt-2 text-sm text-amateur-muted">
-                        {t('pages.athletes.familyActions.latestResponse')}: {request.latestResponseText}
-                      </p>
-                    ) : null}
-                    {portalSubmission?.source === 'guardian_portal' ? (
-                      <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-3 text-sm text-sky-900">
-                        <p className="font-medium">{t('pages.athletes.familyActions.portalSubmissionTitle')}</p>
-                        <ul className="mt-2 space-y-1 text-xs">
-                          {portalSubmission.suggestedUpdates?.phone ? (
-                            <li>
-                              {t('pages.athletes.phone')}: {portalSubmission.suggestedUpdates.phone}
-                            </li>
-                          ) : null}
-                          {portalSubmission.suggestedUpdates?.email ? (
-                            <li>
-                              {t('pages.athletes.email')}: {portalSubmission.suggestedUpdates.email}
-                            </li>
-                          ) : null}
-                          {portalSubmission.suggestedUpdates?.notes ? (
-                            <li>
-                              {t('pages.athletes.notes')}: {portalSubmission.suggestedUpdates.notes}
-                            </li>
-                          ) : null}
-                        </ul>
-                      </div>
-                    ) : null}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {request.status === 'pending_family_action' || request.status === 'open' || request.status === 'rejected' ? (
-                        <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'submitted')}>
-                          {t('pages.athletes.familyActions.markSubmitted')}
-                        </Button>
-                      ) : null}
-                      {request.status === 'submitted' ? (
-                        <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'under_review')}>
-                          {t('pages.athletes.familyActions.startReview')}
-                        </Button>
-                      ) : null}
-                      {request.status === 'submitted' || request.status === 'under_review' ? (
-                        <>
-                          {portalEvent ? (
-                            <>
-                              <Button type="button" variant="ghost" onClick={() => void reviewPortalSubmission(request, 'approved')}>
-                                {t('pages.athletes.familyActions.applyPortalSubmission')}
-                              </Button>
-                              <Button type="button" variant="ghost" onClick={() => void reviewPortalSubmission(request, 'rejected')}>
-                                {t('pages.athletes.familyActions.returnToGuardian')}
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'approved')}>
-                                {t('pages.athletes.familyActions.approve')}
-                              </Button>
-                              <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'rejected')}>
-                                {t('pages.athletes.familyActions.reject')}
-                              </Button>
-                            </>
-                          )}
-                        </>
-                      ) : null}
-                      {request.status === 'approved' ? (
-                        <Button type="button" variant="ghost" onClick={() => void transitionFamilyAction(request, 'completed')}>
-                          {t('pages.athletes.familyActions.complete')}
-                        </Button>
-                      ) : null}
-                    </div>
-                        </>
-                      );
-                    })()}
-                  </article>
+                  <FamilyActionQueueCard
+                    key={request.id}
+                    request={request}
+                    onTransition={(statusOption) => transitionFamilyAction(request, statusOption)}
+                    onPortalReview={(decision) => reviewPortalSubmission(request, decision)}
+                  />
                 ))}
               </div>
             ) : (
@@ -1035,45 +960,78 @@ export function AthleteDetailPage() {
             {t('pages.athleteCharges.empty')}
           </div>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[540px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-amateur-border text-amateur-muted">
-                  <th className="pb-2 font-medium">{t('pages.athleteCharges.item')}</th>
-                  <th className="pb-2 font-medium">{t('pages.athleteCharges.amount')}</th>
-                  <th className="pb-2 font-medium">{t('pages.athleteCharges.due')}</th>
-                  <th className="pb-2 font-medium">{t('pages.athleteCharges.status')}</th>
-                  <th className="pb-2 font-medium">{t('app.actions.update')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {charges.map((charge) => (
-                  <tr key={charge.id} className="border-b border-amateur-border/70 last:border-0">
-                    <td className="py-3 font-medium">{charge.chargeItem?.name ?? charge.chargeItemId}</td>
-                    <td className="py-3">{getChargeCurrencyAmount(charge)}</td>
-                    <td className="py-3">{formatDate(charge.dueDate, i18n.language)}</td>
-                    <td className="py-3 text-amateur-muted">
-                      {getChargeStatusLabel(t, charge.derivedStatus ?? charge.status)}
-                    </td>
-                    <td className="py-3">
-                      <select
-                        value={charge.status}
-                        onChange={(e) => void updateChargeStatus(charge.id, e.target.value as AthleteCharge['status'])}
-                        className="rounded-lg border border-amateur-border bg-amateur-canvas px-2 py-1"
-                      >
-                        {(
-                          ['pending', 'partially_paid', 'paid', 'cancelled'] as AthleteCharge['status'][]
-                        ).map((statusOption) => (
-                          <option key={statusOption} value={statusOption}>
-                            {getChargeStatusLabel(t, statusOption)}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
+          <div className="mt-4">
+            <div className="space-y-3 md:hidden">
+              {charges.map((charge) => (
+                <article key={charge.id} className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-amateur-ink">{charge.chargeItem?.name ?? charge.chargeItemId}</p>
+                      <p className="mt-1 text-sm text-amateur-muted">{getChargeCurrencyAmount(charge)}</p>
+                    </div>
+                    <span className="text-xs font-medium text-amateur-muted">
+                      {formatDate(charge.dueDate, i18n.language)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-amateur-muted">
+                    {getChargeStatusLabel(t, charge.derivedStatus ?? charge.status)}
+                  </p>
+                  <select
+                    value={charge.status}
+                    onChange={(e) => void updateChargeStatus(charge.id, e.target.value as AthleteCharge['status'])}
+                    className="mt-3 w-full rounded-lg border border-amateur-border bg-amateur-surface px-3 py-2 text-sm"
+                  >
+                    {(
+                      ['pending', 'partially_paid', 'paid', 'cancelled'] as AthleteCharge['status'][]
+                    ).map((statusOption) => (
+                      <option key={statusOption} value={statusOption}>
+                        {getChargeStatusLabel(t, statusOption)}
+                      </option>
+                    ))}
+                  </select>
+                </article>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[540px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-amateur-border text-amateur-muted">
+                    <th className="pb-2 font-medium">{t('pages.athleteCharges.item')}</th>
+                    <th className="pb-2 font-medium">{t('pages.athleteCharges.amount')}</th>
+                    <th className="pb-2 font-medium">{t('pages.athleteCharges.due')}</th>
+                    <th className="pb-2 font-medium">{t('pages.athleteCharges.status')}</th>
+                    <th className="pb-2 font-medium">{t('app.actions.update')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {charges.map((charge) => (
+                    <tr key={charge.id} className="border-b border-amateur-border/70 last:border-0">
+                      <td className="py-3 font-medium">{charge.chargeItem?.name ?? charge.chargeItemId}</td>
+                      <td className="py-3">{getChargeCurrencyAmount(charge)}</td>
+                      <td className="py-3">{formatDate(charge.dueDate, i18n.language)}</td>
+                      <td className="py-3 text-amateur-muted">
+                        {getChargeStatusLabel(t, charge.derivedStatus ?? charge.status)}
+                      </td>
+                      <td className="py-3">
+                        <select
+                          value={charge.status}
+                          onChange={(e) => void updateChargeStatus(charge.id, e.target.value as AthleteCharge['status'])}
+                          className="rounded-lg border border-amateur-border bg-amateur-canvas px-2 py-1"
+                        >
+                          {(
+                            ['pending', 'partially_paid', 'paid', 'cancelled'] as AthleteCharge['status'][]
+                          ).map((statusOption) => (
+                            <option key={statusOption} value={statusOption}>
+                              {getChargeStatusLabel(t, statusOption)}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>
@@ -1093,35 +1051,54 @@ export function AthleteDetailPage() {
             {t('pages.privateLessons.empty')}
           </div>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-amateur-border text-amateur-muted">
-                  <th className="pb-2 font-medium">{t('pages.training.scheduled')}</th>
-                  <th className="pb-2 font-medium">{t('pages.coaches.title')}</th>
-                  <th className="pb-2 font-medium">{t('pages.privateLessons.focus')}</th>
-                  <th className="pb-2 font-medium">{t('pages.privateLessons.status')}</th>
-                  <th className="pb-2 font-medium">{t('pages.athleteCharges.status')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {privateLessons.map((lesson) => (
-                  <tr key={lesson.id} className="border-b border-amateur-border/70 last:border-0">
-                    <td className="py-3 text-amateur-muted">
-                      {formatDateTime(lesson.scheduledStart, i18n.language)}
-                    </td>
-                    <td className="py-3 font-medium text-amateur-ink">
-                      {lesson.coach ? `${lesson.coach.preferredName || lesson.coach.firstName} ${lesson.coach.lastName}` : '—'}
-                    </td>
-                    <td className="py-3 text-amateur-muted">{lesson.focus || '—'}</td>
-                    <td className="py-3 text-amateur-muted">{getLessonStatusLabel(t, lesson.status)}</td>
-                    <td className="py-3 text-amateur-muted">
-                      {lesson.charge ? getChargeStatusLabel(t, lesson.charge.derivedStatus ?? lesson.charge.status) : '—'}
-                    </td>
+          <div className="mt-4">
+            <div className="space-y-3 md:hidden">
+              {privateLessons.map((lesson) => (
+                <article key={lesson.id} className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-4">
+                  <p className="font-medium text-amateur-ink">
+                    {formatDateTime(lesson.scheduledStart, i18n.language)}
+                  </p>
+                  <p className="mt-2 text-sm text-amateur-muted">
+                    {lesson.coach ? `${lesson.coach.preferredName || lesson.coach.firstName} ${lesson.coach.lastName}` : '—'}
+                  </p>
+                  <p className="mt-1 text-sm text-amateur-muted">{lesson.focus || '—'}</p>
+                  <p className="mt-2 text-sm text-amateur-muted">{getLessonStatusLabel(t, lesson.status)}</p>
+                  <p className="mt-1 text-xs text-amateur-muted">
+                    {lesson.charge ? getChargeStatusLabel(t, lesson.charge.derivedStatus ?? lesson.charge.status) : '—'}
+                  </p>
+                </article>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[620px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-amateur-border text-amateur-muted">
+                    <th className="pb-2 font-medium">{t('pages.training.scheduled')}</th>
+                    <th className="pb-2 font-medium">{t('pages.coaches.title')}</th>
+                    <th className="pb-2 font-medium">{t('pages.privateLessons.focus')}</th>
+                    <th className="pb-2 font-medium">{t('pages.privateLessons.status')}</th>
+                    <th className="pb-2 font-medium">{t('pages.athleteCharges.status')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {privateLessons.map((lesson) => (
+                    <tr key={lesson.id} className="border-b border-amateur-border/70 last:border-0">
+                      <td className="py-3 text-amateur-muted">
+                        {formatDateTime(lesson.scheduledStart, i18n.language)}
+                      </td>
+                      <td className="py-3 font-medium text-amateur-ink">
+                        {lesson.coach ? `${lesson.coach.preferredName || lesson.coach.firstName} ${lesson.coach.lastName}` : '—'}
+                      </td>
+                      <td className="py-3 text-amateur-muted">{lesson.focus || '—'}</td>
+                      <td className="py-3 text-amateur-muted">{getLessonStatusLabel(t, lesson.status)}</td>
+                      <td className="py-3 text-amateur-muted">
+                        {lesson.charge ? getChargeStatusLabel(t, lesson.charge.derivedStatus ?? lesson.charge.status) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>
@@ -1187,5 +1164,153 @@ export function AthleteDetailPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+type FamilyActionQueueCardProps = {
+  request: FamilyActionRequest;
+  onTransition: (status: FamilyActionRequestStatus) => Promise<void>;
+  onPortalReview: (decision: GuardianPortalActionReviewRequest['decision']) => Promise<void>;
+};
+
+function FamilyActionQueueCard({ request, onTransition, onPortalReview }: FamilyActionQueueCardProps) {
+  const { t, i18n } = useTranslation();
+  const portalEvent = request.events.find((event) => event.actor === 'family');
+  const portalSubmission =
+    request.payload?.portalSubmission && typeof request.payload.portalSubmission === 'object'
+      ? (request.payload.portalSubmission as {
+          source?: string;
+          suggestedUpdates?: { phone?: string; email?: string; notes?: string };
+        })
+      : null;
+
+  const inlineAction = (() => {
+    if (request.status === 'pending_family_action' || request.status === 'open' || request.status === 'rejected') {
+      return (
+        <Button type="button" onClick={() => void onTransition('submitted')}>
+          {t('pages.athletes.familyActions.markSubmitted')}
+        </Button>
+      );
+    }
+    if (request.status === 'submitted') {
+      return (
+        <Button type="button" onClick={() => void onTransition('under_review')}>
+          {t('pages.athletes.familyActions.startReview')}
+        </Button>
+      );
+    }
+    if (request.status === 'under_review') {
+      return portalEvent ? (
+        <Button type="button" onClick={() => void onPortalReview('approved')}>
+          {t('pages.athletes.familyActions.applyPortalSubmission')}
+        </Button>
+      ) : (
+        <Button type="button" onClick={() => void onTransition('approved')}>
+          {t('pages.athletes.familyActions.approve')}
+        </Button>
+      );
+    }
+    if (request.status === 'approved') {
+      return (
+        <Button type="button" onClick={() => void onTransition('completed')}>
+          {t('pages.athletes.familyActions.complete')}
+        </Button>
+      );
+    }
+    return null;
+  })();
+
+  const showMoreActions =
+    request.status === 'submitted' || request.status === 'under_review';
+
+  return (
+    <article className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-medium text-amateur-ink">{request.title}</p>
+          <p className="mt-1 text-xs text-amateur-muted">
+            {[
+              getFamilyActionTypeLabel(t, request.type),
+              request.guardianName,
+              request.dueDate ? formatDate(request.dueDate, i18n.language) : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+          {portalEvent ? (
+            <p className="mt-2 text-xs font-medium text-sky-700">
+              {getFamilyActionActorLabel(t, portalEvent.actor)}
+            </p>
+          ) : null}
+        </div>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+          {getFamilyActionStatusLabel(t, request.status)}
+        </span>
+      </div>
+      {request.description ? (
+        <p className="mt-2 text-sm text-amateur-muted">{request.description}</p>
+      ) : null}
+      {request.latestResponseText ? (
+        <p className="mt-2 text-sm text-amateur-muted">
+          {t('pages.athletes.familyActions.latestResponse')}: {request.latestResponseText}
+        </p>
+      ) : null}
+      {portalSubmission?.source === 'guardian_portal' ? (
+        <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-3 text-sm text-sky-900">
+          <p className="font-medium">{t('pages.athletes.familyActions.portalSubmissionTitle')}</p>
+          <ul className="mt-2 space-y-1 text-xs">
+            {portalSubmission.suggestedUpdates?.phone ? (
+              <li>
+                {t('pages.athletes.phone')}: {portalSubmission.suggestedUpdates.phone}
+              </li>
+            ) : null}
+            {portalSubmission.suggestedUpdates?.email ? (
+              <li>
+                {t('pages.athletes.email')}: {portalSubmission.suggestedUpdates.email}
+              </li>
+            ) : null}
+            {portalSubmission.suggestedUpdates?.notes ? (
+              <li>
+                {t('pages.athletes.notes')}: {portalSubmission.suggestedUpdates.notes}
+              </li>
+            ) : null}
+          </ul>
+        </div>
+      ) : null}
+      {(inlineAction || showMoreActions) ? (
+        <div className="mt-4 space-y-3">
+          {inlineAction}
+          {showMoreActions ? (
+            <details className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-3">
+              <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">{t('app.actions.more')}</summary>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {request.status === 'submitted' || request.status === 'under_review' ? (
+                  portalEvent ? (
+                    <Button type="button" variant="ghost" onClick={() => void onPortalReview('rejected')}>
+                      {t('pages.athletes.familyActions.returnToGuardian')}
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="ghost" onClick={() => void onTransition('rejected')}>
+                      {t('pages.athletes.familyActions.reject')}
+                    </Button>
+                  )
+                ) : null}
+                {request.status === 'submitted' ? (
+                  portalEvent ? (
+                    <Button type="button" variant="ghost" onClick={() => void onPortalReview('approved')}>
+                      {t('pages.athletes.familyActions.applyPortalSubmission')}
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="ghost" onClick={() => void onTransition('approved')}>
+                      {t('pages.athletes.familyActions.approve')}
+                    </Button>
+                  )
+                ) : null}
+              </div>
+            </details>
+          ) : null}
+        </div>
+      ) : null}
+    </article>
   );
 }

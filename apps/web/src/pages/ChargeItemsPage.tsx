@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
+import { InlineAlert } from '../components/ui/InlineAlert';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
@@ -141,7 +142,11 @@ export function ChargeItemsPage() {
           </>
         }
       >
-        {message ? <p className="mb-4 text-sm text-amateur-accent">{message}</p> : null}
+        {message ? (
+          <InlineAlert tone="success" className="mb-4">
+            {message}
+          </InlineAlert>
+        ) : null}
         <div className="mb-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
             <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
@@ -234,7 +239,11 @@ export function ChargeItemsPage() {
             </Button>
           </form>
         ) : null}
-        {error ? <p className="text-sm text-red-700">{error}</p> : null}
+        {error ? (
+          <InlineAlert tone="error" className="mb-4">
+            {error}
+          </InlineAlert>
+        ) : null}
         {loading ? (
           <p className="text-sm text-amateur-muted">{t('app.states.loading')}</p>
         ) : items.length === 0 ? (

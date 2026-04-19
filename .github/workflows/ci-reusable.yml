@@ -64,6 +64,12 @@ jobs:
       - name: Build (workspaces)
         run: npm run build
 
+      - name: Reporting filter validator smoke
+        run: npm run reporting:filter-tree:test
+
+      - name: Reporting starter-view integrity smoke
+        run: npm run reporting:starter-views:test
+
       - name: Migration readiness (disposable PostgreSQL)
         run: npm run migration:run -w @amateur/api
 

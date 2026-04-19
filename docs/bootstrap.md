@@ -118,18 +118,21 @@ Override `API_BASE`, `ADMIN_EMAIL`, or `ADMIN_PASSWORD` to point the smoke test 
 
 ## Reporting Foundation v1 smoke
 
-Wave 11 adds two complementary smoke checks for the new reporting spine:
+Wave 11 adds two complementary smoke checks for the new reporting spine, and
+Wave 12 adds a starter-catalog integrity check:
 
 ```bash
 npm run reporting:filter-tree:test   # pure-Node validator unit smoke
+npm run reporting:starter-views:test # pure-Node starter catalog / groupBy integrity smoke
 npm run reporting:smoke              # live API smoke (catalog, run, export, saved views)
 ```
 
-`reporting:filter-tree:test` runs in any environment after `npm run build` and
-exercises the validator without a database. `reporting:smoke` requires the API
-running locally (or `API_BASE` set) and validates that catalog metadata,
-filter-tree validation, tenant-isolated `run`, saved view CRUD, and CSV export
-all behave correctly across every accessible tenant.
+`reporting:filter-tree:test` and `reporting:starter-views:test` run in any
+environment after `npm run build` and exercise the compiled reporting logic
+without a database. `reporting:smoke` requires the API running locally (or
+`API_BASE` set) and validates that catalog metadata, filter-tree validation,
+tenant-isolated `run`, saved view CRUD, starter views, grouped runs, and CSV
+export all behave correctly across every accessible tenant.
 
 ## Reporting frontend smoke
 
