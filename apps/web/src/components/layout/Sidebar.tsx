@@ -16,6 +16,7 @@ const links = [
   { to: '/app/inventory', key: 'inventory' as const },
   { to: '/app/communications', key: 'communications' as const },
   { to: '/app/reports', key: 'reports' as const },
+  { to: '/app/imports', key: 'imports' as const },
   { to: '/app/settings', key: 'settings' as const },
 ];
 
