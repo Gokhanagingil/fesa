@@ -1,5 +1,121 @@
 # Communication & Follow-up
 
+## Wave 13.2 — Communication & Follow-up Pack v1.2
+
+This refinement layers on top of v1.1 without introducing a parallel
+communication module.  The headline shifts again — slightly:
+
+> from “we can comfortably manage and revisit follow-up work”
+> to “follow-up feels mature, calmly aware of context, honestly
+> reachable, and naturally connected to bulk operations.”
+
+### What ships in v1.2
+
+| Area | Change |
+|------|--------|
+| Token resolution | `{{branchName}}` is now resolved per recipient from the athlete's own sport branch (no more `null`/`—` when the audience spans multiple branches). `{{clubName}}` is resolved from the audience response `meta.clubName` (sourced from the active tenant) so club staff get warm, branded messages without manual editing. The token catalog itself is unchanged; we only made existing tokens fill more reliably. |
+| Audience meta | `GET /api/communications/audiences` now returns a small `meta: { clubName }` block plus richer reach counts: `athletesWithEmailReach` and `athletesUnreachable` in addition to `athletesWithPhoneReach` and `athletesMissingPhone`.  Tenant scoping is unchanged. |
+| Reachability honesty | The audience banner adds an unreachable chip when at least one family has no contact at all, plus a “All families on this list have a way to be reached” reassurance line when reach is total.  A new “Show reachable only” toggle filters the visible recipient list without losing the original audience.  The recipient-card chip is built from the new `classifyMemberReach()` helper so `whatsapp`, `phone`, `email`, and `unreachable` reads consistently across the page. |
+| Stale draft awareness | The `GET /api/communications/templates` endpoint now returns `lifecycle.staleAfterDays` (default `5`).  Drafts older than that surface a calm “Still relevant?” chip in history rows, an info banner above the history list, and a soft amber hint at the top of the draft editor when an old draft is reopened.  No new lifecycle states, no scheduling, no nagging. |
+| Lifecycle clarity | The status pill in the editor now also shows a relative “Drafted today / Drafted X days ago / Logged X days ago” line and a tooltip explaining the visibility rule (`Draft — only saved for you`, `Logged — visible to club staff`). |
+| History filters | The history list adds three optional dropdowns — Template, Channel, Source — that operate client-side over the loaded items.  Combined with the existing status pills (`Active`, `Drafts`, `Logged`, `Archived`) staff can find a similar past follow-up much faster.  Empty filter state has its own warm copy. |
+| Bulk → follow-up | The audience query now accepts `guardianIds[]`; supplying one resolves the audience through `athlete-guardians` so staff can flow naturally from the Guardians bulk selection into a warm draft.  GuardiansPage gains a `Prepare follow-up` bulk action that deep-links into `/app/communications` with `source=guardians_selection`, `primaryContactsOnly=true`, and the WhatsApp channel pre-selected.  AthletesPage already had `Prepare message`; both now share the same source-surface vocabulary. |
+| Finance bridge | The Finance hub priority-collections list shows a dedicated `Prepare reminder` link per athlete, deep-linking into the overdue payment template with the right `source=finance_overdue` attribution. |
+| Mobile UX | Channel and template chip rows scroll horizontally on small screens with comfortable 40 px tap targets while keeping their flex-wrap behaviour from `sm` upwards.  Tab buttons grew to 40 px.  The recipient card already had a stacked layout under `sm`; the audience banner gains a touch-friendly “Show reachable only” pill that lives inline with the chips. |
+| Tone | Copy is calmer (“This draft has been waiting a few days. Refresh the audience or update the message before continuing.”) and avoids CRM language.  Stale wording is intentionally soft. |
+
+### Token catalog (v1.2)
+
+The catalog itself is unchanged from v1.1.  What v1.2 changes is *fill
+reliability*:
+
+- `{{branchName}}` — now read per recipient from the athlete's
+  `sportBranch.name` first, then any draft-level fallback.
+- `{{clubName}}` — read from `audiences.meta.clubName` (the active
+  tenant name).
+- All other tokens (`{{athleteName}}`, `{{guardianName}}`,
+  `{{groupName}}`, `{{teamName}}`, `{{coachName}}`,
+  `{{sessionLocation}}`, `{{nextSession}}`, `{{outstandingAmount}}`,
+  `{{overdueAmount}}`) behave exactly as in v1.1; `{{name}}` remains an
+  alias of `{{athleteName}}`.
+
+Missing values still degrade to `—` and are aggregated into the “missing
+for these recipients” warning so the operator can see the gap before
+opening WhatsApp.
+
+### Stale draft policy
+
+- A draft becomes “stale” when its `updatedAt` (or `createdAt`) is
+  `staleAfterDays` or more days in the past.
+- The default window is `COMMUNICATION_DRAFT_STALE_AFTER_DAYS = 5` and is
+  exposed via `GET /api/communications/templates`'s new
+  `lifecycle.staleAfterDays` field so the UI never has to hard-code it.
+- Stale drafts surface in three places:
+  1. A summary chip / `InlineAlert` above the history list.
+  2. A `Still relevant?` chip on the matching history rows.
+  3. A small amber notice at the top of the editor when the operator
+     reopens a stale draft.
+- Logged or archived rows are never marked stale.  The hint never blocks
+  any action.
+
+### Reachability honesty
+
+`classifyMemberReach(member, channel)` returns one of:
+
+| State | Meaning |
+|-------|---------|
+| `whatsapp` | a phone is on file and the operator picked WhatsApp |
+| `phone` | a phone is on file and the operator picked the call channel |
+| `email` | only an email is on file (or the operator switched to email) |
+| `unreachable` | no guardian, or no usable contact at all |
+
+The audience banner exposes:
+
+- `phoneReachable` (existing) — guardians reachable on WhatsApp
+- `phoneMissing` (existing) — families with no phone on file
+- `reachUnreachable` (new) — families with no contact on file at all
+- `reachAllReachable` (new) — reassurance line when reach is total
+- `Show reachable only` — toggle that filters out unreachable rows from
+  the recipient list without dropping them from the saved audience
+
+### Bulk → follow-up integration
+
+| Surface | Bulk action | Source key |
+|---------|-------------|------------|
+| Athletes (existing, polished) | `Prepare message` | `source=athletes_selection`, `primaryContactsOnly=true` |
+| Guardians (new) | `Prepare follow-up` | `source=guardians_selection`, `primaryContactsOnly=true`, navigates with `guardianIds[]` resolved through `athlete-guardians` |
+| Finance hub priority list | `Prepare reminder` | `source=finance_overdue`, `template=overdue_payment_reminder`, scopes to a single `athleteIds` |
+
+The audience builder DTO was extended with a `guardianIds[]` parameter,
+resolved server-side under `TenantGuard` so guardians from another
+tenant are quietly ignored.  No new endpoint, no parallel module.
+
+### Validation surface
+
+- `npm run build` — full TS build (covers the new audience meta + DTO).
+- `npm run lint` — clean.
+- `npm run i18n:check` — locale parity preserved (TR + EN).
+- `npm run repo:guard` — workspace structure unchanged.
+- `npm run reporting:filter-tree:test` and
+  `npm run reporting:starter-views:test` — green.
+- `npm run frontend:smoke` — adds `communication.smoke.test.tsx`
+  (token resolution, reach classification, lifecycle helpers) and
+  extends `CommunicationsPage.smoke.test.tsx` (stale-draft surface,
+  template filter, reachable-only toggle).
+
+### Intentionally deferred (still)
+
+- Real WhatsApp Business API delivery.
+- Scheduled / recurring follow-ups.
+- Reply tracking and inbox surfaces.
+- Custom templates / template management UI.
+- A multi-step workflow engine (review queues, approvals, etc.).
+- Bulk follow-up bridges from Inventory and Training session selections
+  — they are in scope for a later wave once the bulk-bar wording on
+  those surfaces stabilises further.
+
+---
+
 ## Wave 13.1 — Communication & Follow-up Pack v1.1
 
 This refinement layers on top of v1 without introducing a parallel

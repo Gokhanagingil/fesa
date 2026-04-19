@@ -174,8 +174,10 @@ function makeHistoryResponse(): OutreachActivityListResponse {
         note: null,
         createdByStaffUserId: null,
         createdByName: 'Coach Demo',
-        createdAt: '2026-04-11T09:00:00.000Z',
-        updatedAt: '2026-04-11T09:00:00.000Z',
+        // Intentionally several months old so the smoke test can verify
+        // the gentle "still relevant?" stale-draft hint surfaces.
+        createdAt: '2025-12-01T09:00:00.000Z',
+        updatedAt: '2025-12-01T09:00:00.000Z',
       },
     ],
     counts: {
@@ -373,6 +375,41 @@ describe('communications follow-up smoke coverage', () => {
         ),
       ).toBe(true);
     });
+  });
+
+  it('surfaces the gentle stale-draft hint and template filter in the history tab', async () => {
+    renderWithRoute(<CommunicationsPage />, {
+      path: '/app/communications',
+      initialEntry: '/app/communications',
+    });
+
+    const user = userEvent.setup();
+    const historyTab = await screen.findByRole('button', { name: 'Recent follow-ups' });
+    await user.click(historyTab);
+
+    expect(await screen.findByText(/Still relevant\?/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/draft has been waiting more than/i),
+    ).toBeInTheDocument();
+    // Refining recent follow-ups by template should narrow the rendered list.
+    const templateSelect = await screen.findByDisplayValue('Any template');
+    await user.selectOptions(templateSelect, 'overdue_payment_reminder');
+    expect(screen.queryByText('Family follow-up draft')).not.toBeInTheDocument();
+  });
+
+  it('lets the operator hide families without contact via the reachable-only toggle', async () => {
+    renderWithRoute(<CommunicationsPage />, {
+      path: '/app/communications',
+      initialEntry: '/app/communications',
+    });
+
+    expect(await screen.findByText('Mert Demir')).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText(/Show reachable only/i));
+    await waitFor(() => {
+      expect(screen.queryByText('Mert Demir')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Deniz Kaya')).toBeInTheDocument();
   });
 
   it('opens the original audience list with preserved filters from history', async () => {

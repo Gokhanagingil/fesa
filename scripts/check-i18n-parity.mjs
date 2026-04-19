@@ -14,6 +14,7 @@ const scopedPrefixes = [
   'pages.guardians.bulkHint',
   'pages.guardians.bulkDelete',
   'pages.guardians.bulkDeleteConfirm',
+  'pages.guardians.bulkPrepareMessage',
   'pages.inventory.bulkReturnAll',
   'pages.inventory.bulkReturnConfirm',
   'pages.inventory.bulkReturnedDone',

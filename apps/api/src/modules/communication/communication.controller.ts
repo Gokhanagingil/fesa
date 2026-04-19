@@ -21,6 +21,7 @@ import { ListOutreachQueryDto } from './dto/list-outreach-query.dto';
 import { LogOutreachDto, OutreachStatus } from './dto/log-outreach.dto';
 import {
   COMMUNICATION_CHANNELS,
+  COMMUNICATION_DRAFT_STALE_AFTER_DAYS,
   COMMUNICATION_TEMPLATES,
   COMMUNICATION_TEMPLATE_TOKENS,
 } from './templates';
@@ -44,6 +45,9 @@ export class CommunicationController {
       channels: COMMUNICATION_CHANNELS,
       items: COMMUNICATION_TEMPLATES,
       tokens: COMMUNICATION_TEMPLATE_TOKENS,
+      lifecycle: {
+        staleAfterDays: COMMUNICATION_DRAFT_STALE_AFTER_DAYS,
+      },
     };
   }
 

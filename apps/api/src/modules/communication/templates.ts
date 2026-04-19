@@ -109,6 +109,14 @@ export type CommunicationTemplateToken = {
   alwaysAvailable: boolean;
 };
 
+/**
+ * Lightweight lifecycle / freshness policy.  We surface a gentle "still
+ * relevant?" hint on saved drafts older than this many days.  The number
+ * is intentionally small (a working week) so the hint feels like club
+ * coordination rather than CRM nagging.
+ */
+export const COMMUNICATION_DRAFT_STALE_AFTER_DAYS = 5 as const;
+
 export const COMMUNICATION_TEMPLATE_TOKENS: CommunicationTemplateToken[] = [
   {
     key: 'athleteName',

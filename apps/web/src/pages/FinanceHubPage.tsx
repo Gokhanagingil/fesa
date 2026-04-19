@@ -241,12 +241,20 @@ export function FinanceHubPage() {
                         {entry.overdueCount > 0 ? ` · ${t('pages.finance.overdueCount', { count: entry.overdueCount })}` : ''}
                       </p>
                     </div>
-                    <Link
-                      to={`/app/finance/athlete-charges?athleteId=${entry.athlete.id}`}
-                      className="text-sm font-semibold text-amateur-accent hover:underline"
-                    >
-                      {t('pages.finance.athleteChargesLink')}
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-3 text-sm font-semibold">
+                      <Link
+                        to={`/app/finance/athlete-charges?athleteId=${entry.athlete.id}`}
+                        className="text-amateur-accent hover:underline"
+                      >
+                        {t('pages.finance.athleteChargesLink')}
+                      </Link>
+                      <Link
+                        to={`/app/communications?athleteIds=${entry.athlete.id}&primaryContactsOnly=true&channel=whatsapp&template=overdue_payment_reminder&source=finance_overdue&sourceKey=priority-${entry.athlete.id}`}
+                        className="text-emerald-700 hover:underline"
+                      >
+                        {t('pages.finance.priorityCollectionsPrepare')}
+                      </Link>
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -12,6 +12,7 @@ import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.entity';
 import { StaffUser } from '../../database/entities/staff-user.entity';
 import { Team } from '../../database/entities/team.entity';
+import { Tenant } from '../../database/entities/tenant.entity';
 import { TrainingSession } from '../../database/entities/training-session.entity';
 import { FinanceModule } from '../finance/finance.module';
 import { FamilyActionModule } from '../family-action/family-action.module';
@@ -37,6 +38,7 @@ import { OutreachService } from './outreach.service';
       SavedFilterPreset,
       OutreachActivity,
       StaffUser,
+      Tenant,
     ]),
   ],
   controllers: [CommunicationController],
