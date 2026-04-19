@@ -5,6 +5,7 @@ import { GuardianService } from './guardian.service';
 import { CreateGuardianDto } from './dto/create-guardian.dto';
 import { UpdateGuardianDto } from './dto/update-guardian.dto';
 import { ListGuardiansQueryDto } from './dto/list-guardians-query.dto';
+import { BulkDeleteGuardiansDto } from './dto/bulk-guardians.dto';
 import { FamilyActionService } from '../family-action/family-action.service';
 
 @Controller('guardians')
@@ -23,6 +24,11 @@ export class GuardianController {
   @Post()
   create(@Req() req: Request, @Body() dto: CreateGuardianDto) {
     return this.guardians.create(req.tenantId!, dto);
+  }
+
+  @Post('bulk-delete')
+  bulkDelete(@Req() req: Request, @Body() dto: BulkDeleteGuardiansDto) {
+    return this.guardians.bulkDelete(req.tenantId!, dto);
   }
 
   @Get(':id')

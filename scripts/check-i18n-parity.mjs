@@ -6,6 +6,17 @@ const localeDir = path.join(root, 'apps', 'web', 'src', 'i18n', 'locales');
 const referenceLocale = 'en';
 const comparedLocales = ['tr'];
 const scopedPrefixes = [
+  'app.bulk',
+  'app.exportCsv',
+  'app.nav.imports',
+  'pages.imports',
+  'pages.guardians.bulkTitle',
+  'pages.guardians.bulkHint',
+  'pages.guardians.bulkDelete',
+  'pages.guardians.bulkDeleteConfirm',
+  'pages.inventory.bulkReturnAll',
+  'pages.inventory.bulkReturnConfirm',
+  'pages.inventory.bulkReturnedDone',
   'app.enums.athleteStatus',
   'pages.dashboard.recentCollectionsHint',
   'pages.dashboard.stats.guardians',

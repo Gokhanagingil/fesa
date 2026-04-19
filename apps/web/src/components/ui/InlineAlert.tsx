@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import type { ReactNode } from 'react';
 
 type InlineAlertProps = {
-  tone?: 'success' | 'error' | 'info';
+  tone?: 'success' | 'error' | 'info' | 'warning';
   children: ReactNode;
   message?: string;
   className?: string;
@@ -15,6 +15,7 @@ export function InlineAlert({ tone = 'info', children, message, className }: Inl
         'rounded-xl border px-3 py-2 text-sm',
         tone === 'success' && 'border-emerald-200 bg-emerald-50 text-emerald-800',
         tone === 'error' && 'border-red-200 bg-red-50 text-red-700',
+        tone === 'warning' && 'border-amber-200 bg-amber-50 text-amber-800',
         tone === 'info' && 'border-amateur-border bg-amateur-canvas text-amateur-muted',
         className,
       )}

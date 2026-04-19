@@ -179,6 +179,7 @@ The current product wave extends the existing command center into a more complet
 - **Dashboard + reporting:** the dashboard and reports pages now surface live operational, coaching, private-lesson, and collection summaries instead of placeholder counts and disabled report affordances.
 - **Staff identity + tenant administration:** staff/admin users now have a real login flow, explicit tenant memberships, role-aware entry, and a lightweight admin/settings surface for platform vs club administration.
 - **Inventory & Assignment Pack v1:** clubs can manage physical stock (jerseys, sweatshirts, balls, cones, equipment) with optional size / number variants, assign items to athletes, return them, and read low-stock signals — all reusing the same reporting backbone. See [docs/inventory.md](docs/inventory.md).
+- **Import / Export & Bulk Operations Foundation v1:** clubs can import athletes, guardians, and athlete↔guardian relationships through a guided wizard with preview / validation / commit, run a small set of high-value bulk actions (lifecycle updates, guardian delete, inventory bulk return), and pull practical CSV exports without leaving the page. See [docs/import-export.md](docs/import-export.md).
 
 ## Domain: Group vs Team vs Athlete
 
@@ -195,6 +196,7 @@ The current product wave extends the existing command center into a more complet
 - [docs/reporting.md](docs/reporting.md) — reporting and bulk placeholders
 - [docs/communication.md](docs/communication.md) — Communication & Follow-up Pack v1 (WhatsApp-first follow-up)
 - [docs/inventory.md](docs/inventory.md) — Inventory & Assignment Pack v1 (stock, athlete assignments, movements)
+- [docs/import-export.md](docs/import-export.md) — Import / Export & Bulk Operations Foundation v1 (athlete / guardian / link imports, shared bulk bar, CSV exports)
 
 ## Security
 

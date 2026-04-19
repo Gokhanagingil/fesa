@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
+import { BulkActionBar, type BulkActionDescriptor } from '../components/ui/BulkActionBar';
 import { EmptyState } from '../components/ui/EmptyState';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
@@ -9,6 +10,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { DataExplorer } from '../components/reporting/DataExplorer';
 import { apiGet, apiPatch } from '../lib/api';
 import { getAthleteStatusLabel, getFamilyReadinessStatusLabel, getPersonName } from '../lib/display';
+import { downloadCsv, renderCsvFromRows } from '../lib/imports';
 import { useTenant } from '../lib/tenant-hooks';
 import type { Athlete, AthleteStatus, ClubGroup, FamilyReadinessStatus, Team } from '../lib/domain-types';
 
@@ -208,6 +210,56 @@ export function AthletesPage() {
 
   const view = (searchParams.get('view') as 'list' | 'advanced') ?? 'list';
 
+  const exportSelection = useCallback(
+    (target: 'visible' | 'selected') => {
+      const targetItems = target === 'selected' ? selectedAthletes : items;
+      if (targetItems.length === 0) {
+        setError(t('app.exportCsv.emptyHint'));
+        return;
+      }
+      const headers = [
+        t('pages.athletes.name'),
+        t('pages.athletes.primaryGroup'),
+        t('pages.athletes.status'),
+        t('pages.athletes.jersey'),
+      ];
+      const rows = targetItems.map((athlete) => ({
+        [headers[0]]: getPersonName(athlete),
+        [headers[1]]: groupMap.get(athlete.primaryGroupId ?? '') ?? '',
+        [headers[2]]: getAthleteStatusLabel(t, athlete.status),
+        [headers[3]]: athlete.jerseyNumber ?? '',
+      }));
+      const csv = renderCsvFromRows(headers, rows);
+      const filename = `amateur-athletes-${target}-${new Date().toISOString().slice(0, 10)}.csv`;
+      downloadCsv(filename, csv);
+      setMessage(t('app.exportCsv.successHint', { count: targetItems.length }));
+    },
+    [groupMap, items, selectedAthletes, t],
+  );
+
+  const bulkActions: BulkActionDescriptor[] = useMemo(() => {
+    const runApply = () => {
+      void applyBulkActions();
+    };
+    return [
+      {
+        id: 'apply',
+        label: t('pages.athletes.bulkApply'),
+        disabled: !bulkStatus && !bulkGroupId,
+        onClick: runApply,
+      },
+      {
+        id: 'export-selection',
+        ghost: true,
+        label: t('app.bulk.exportSelection'),
+        onClick: () => exportSelection('selected'),
+      },
+    ];
+    // applyBulkActions is recreated on every render via closure; we only need
+    // to refresh button bindings when the bulk form / selection signals change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bulkGroupId, bulkStatus, exportSelection, t]);
+
   return (
     <div>
       <PageHeader title={t('pages.athletes.title')} subtitle={t('pages.athletes.subtitle')} />
@@ -317,6 +369,9 @@ export function AthletesPage() {
               />
               <span>{t('pages.athletes.familyActions.followUpFilter')}</span>
             </label>
+            <Button type="button" variant="ghost" onClick={() => exportSelection('visible')}>
+              {t('app.exportCsv.label')}
+            </Button>
             <Link to="/app/athletes/new">
               <Button>{t('pages.athletes.new')}</Button>
             </Link>
@@ -338,82 +393,64 @@ export function AthletesPage() {
           <EmptyState title={t('pages.athletes.empty')} hint={t('pages.athletes.emptyHint')} />
         ) : (
           <div className="space-y-4">
-            <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-display text-base font-semibold text-amateur-ink">
-                    {t('pages.athletes.bulkTitle')}
-                  </h2>
-                  <p className="mt-1 text-sm text-amateur-muted">{t('pages.athletes.bulkHint')}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="ghost" onClick={toggleVisibleSelection}>
-                    {t('pages.athletes.bulkSelectVisible')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setSelectedAthleteIds([])}
-                    disabled={selectedAthleteIds.length === 0}
-                  >
-                    {t('pages.athletes.bulkClearSelection')}
-                  </Button>
-                </div>
-              </div>
-              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span>{t('pages.athletes.bulkStatus')}</span>
-                    <select
-                      value={bulkStatus}
-                      onChange={(e) => setBulkStatus((e.target.value as AthleteStatus) || '')}
-                      className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-amateur-ink"
-                    >
-                      <option value="">{t('pages.athletes.bulkKeepStatus')}</option>
-                      {statusOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {getAthleteStatusLabel(t, option)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span>{t('pages.athletes.bulkGroupMove')}</span>
-                    <select
-                      value={bulkGroupId}
-                      onChange={(e) => setBulkGroupId(e.target.value)}
-                      className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-amateur-ink"
-                    >
-                      <option value="">{t('pages.athletes.bulkKeepGroup')}</option>
-                      {groups.map((group) => (
-                        <option key={group.id} value={group.id}>
-                          {group.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <div className="rounded-xl border border-dashed border-amateur-border bg-amateur-surface px-3 py-3 text-sm text-amateur-muted">
-                    {t('pages.athletes.bulkSelectedCount', { count: selectedAthletes.length })}
+            <BulkActionBar
+              title={t('pages.athletes.bulkTitle')}
+              subtitle={t('pages.athletes.bulkHint')}
+              selectedCount={selectedAthletes.length}
+              visibleTotal={items.length}
+              allVisibleSelected={
+                items.length > 0 && items.every((athlete) => selectedAthleteIds.includes(athlete.id))
+              }
+              onToggleVisible={toggleVisibleSelection}
+              onClearSelection={() => setSelectedAthleteIds([])}
+              busy={bulkSaving}
+              actions={bulkActions}
+            />
+            {selectedAthletes.length > 0 ? (
+              <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span>{t('pages.athletes.bulkStatus')}</span>
+                      <select
+                        value={bulkStatus}
+                        onChange={(e) => setBulkStatus((e.target.value as AthleteStatus) || '')}
+                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-amateur-ink"
+                      >
+                        <option value="">{t('pages.athletes.bulkKeepStatus')}</option>
+                        {statusOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {getAthleteStatusLabel(t, option)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span>{t('pages.athletes.bulkGroupMove')}</span>
+                      <select
+                        value={bulkGroupId}
+                        onChange={(e) => setBulkGroupId(e.target.value)}
+                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-amateur-ink"
+                      >
+                        <option value="">{t('pages.athletes.bulkKeepGroup')}</option>
+                        {groups.map((group) => (
+                          <option key={group.id} value={group.id}>
+                            {group.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+                      {t('pages.athletes.bulkPreviewTitle')}
+                    </p>
+                    <p className="mt-2 text-sm text-amateur-muted">{bulkActionPreview}</p>
+                    <p className="mt-2 text-xs text-amateur-muted">{t('pages.athletes.bulkSafetyNote')}</p>
                   </div>
                 </div>
-                <div className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
-                    {t('pages.athletes.bulkPreviewTitle')}
-                  </p>
-                  <p className="mt-2 text-sm text-amateur-muted">{bulkActionPreview}</p>
-                  <p className="mt-2 text-xs text-amateur-muted">{t('pages.athletes.bulkSafetyNote')}</p>
-                  <div className="mt-4">
-                    <Button
-                      type="button"
-                      onClick={() => void applyBulkActions()}
-                      disabled={bulkSaving || selectedAthleteIds.length === 0 || (!bulkStatus && !bulkGroupId)}
-                    >
-                      {t('pages.athletes.bulkApply')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </section>
+              </section>
+            ) : null}
             <div className="overflow-x-auto">
             {activeTeam ? (
               <p className="mb-3 text-xs text-amateur-muted">

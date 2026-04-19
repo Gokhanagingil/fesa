@@ -23,6 +23,7 @@ import {
   AssignInventoryDto,
   ReturnInventoryAssignmentDto,
 } from './dto/assign-inventory.dto';
+import { BulkReturnInventoryDto } from './dto/bulk-return-inventory.dto';
 
 @Controller('inventory')
 @UseGuards(TenantGuard)
@@ -105,6 +106,11 @@ export class InventoryController {
   @Post('assignments')
   assign(@Req() req: Request, @Body() dto: AssignInventoryDto) {
     return this.inventory.assignToAthlete(req.tenantId!, dto, req.staffUserId ?? null);
+  }
+
+  @Post('assignments/bulk-return')
+  bulkReturn(@Req() req: Request, @Body() dto: BulkReturnInventoryDto) {
+    return this.inventory.bulkReturn(req.tenantId!, dto, req.staffUserId ?? null);
   }
 
   @Post('assignments/:assignmentId/return')

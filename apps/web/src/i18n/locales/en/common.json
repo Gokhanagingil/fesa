@@ -17,6 +17,7 @@
       "inventory": "Inventory",
       "reports": "Reports",
       "reportBuilder": "Report builder",
+      "imports": "Import / Export",
       "settings": "Settings"
     },
     "actions": {
@@ -42,6 +43,32 @@
       "saving": "Saving…",
       "empty": "Nothing here yet",
       "emptyHint": "When you add records, they will show up in this list."
+    },
+    "bulk": {
+      "selectionLabel": "Select {{name}}",
+      "selectionLabelGeneric": "Select this row",
+      "selectVisible": "Select visible",
+      "deselectVisible": "Deselect visible",
+      "clearSelection": "Clear selection",
+      "selectedCount_one": "{{count}} item selected",
+      "selectedCount_other": "{{count}} items selected",
+      "actionsTitle": "Bulk actions",
+      "actionsHint": "Pick rows below, then choose what to do with them.",
+      "noActions": "Pick a bulk action.",
+      "exportSelection": "Export selection (CSV)",
+      "noSelection": "Select a few rows to enable bulk actions.",
+      "confirmTitle": "Confirm bulk action",
+      "confirmRunning": "Working on the selected items…",
+      "confirmDone": "Bulk action complete.",
+      "confirmFailed": "Bulk action failed."
+    },
+    "exportCsv": {
+      "label": "Export visible (CSV)",
+      "labelSelection": "Export selection (CSV)",
+      "downloadingHint": "Preparing a CSV download for the current view.",
+      "successHint_one": "Exported {{count}} row to CSV.",
+      "successHint_other": "Exported {{count}} rows to CSV.",
+      "emptyHint": "Nothing to export yet — adjust filters or select rows."
     },
     "language": {
       "label": "Language",
@@ -530,6 +557,10 @@
       "unlink": "Unlink",
       "linkSuccess": "Guardian linked.",
       "unlinkSuccess": "Guardian unlinked.",
+      "bulkTitle": "Guardian bulk actions",
+      "bulkHint": "Select reviewed guardians to export or remove them safely.",
+      "bulkDelete": "Delete selected",
+      "bulkDeleteConfirm": "Delete the selected guardians? Linked guardians stay in place.",
       "familyReadiness": {
         "title": "Family readiness",
         "subtitle": "See whether this guardian still owes information, has athlete actions pending, or needs staff review.",
@@ -1564,6 +1595,11 @@
       "activeAssignments": "Currently assigned",
       "noActiveAssignments": "No athletes currently hold this item.",
       "returnButton": "Return / release",
+      "bulkReturnAll_one": "Return all ({{count}})",
+      "bulkReturnAll_other": "Return all ({{count}})",
+      "bulkReturnConfirm_one": "Return the selected assignment to stock?",
+      "bulkReturnConfirm_other": "Return all {{count}} selected assignments to stock?",
+      "bulkReturnedDone": "Returned {{returned}} of {{requested}} active assignments.",
       "recentMovements": "Recent movements",
       "noMovements": "No movement history yet.",
       "variantStockSummary": "Stock {{stock}} · Assigned {{assigned}} · Available {{available}}",
@@ -1686,6 +1722,131 @@
         "submit": "Submit response",
         "readOnlyHint": "This request is no longer waiting on your action.",
         "historyTitle": "Request history"
+      }
+    },
+    "imports": {
+      "title": "Import / Export",
+      "subtitle": "Move existing data into the platform with confidence — and pull practical lists back out.",
+      "introTitle": "What happens here",
+      "intro": "Use these guided flows to bring athlete, guardian, and family data into the platform. Each import previews validation issues before any record is changed.",
+      "pickEntity": "Choose what to import",
+      "templateButton": "Download CSV template",
+      "templateHint": "Open the template, fill it in, then paste it back below.",
+      "uploadTitle": "Paste your CSV or upload a file",
+      "uploadHint": "Drop a .csv file or paste rows from a spreadsheet. Headers on the first line.",
+      "fileButton": "Choose CSV file",
+      "filePicked": "Loaded {{name}} ({{count}} rows).",
+      "rawLabel": "CSV content",
+      "parseButton": "Read rows",
+      "parseAgain": "Re-read rows",
+      "parsedHint": "{{count}} rows parsed. Map each column below.",
+      "mappingTitle": "Map your columns",
+      "mappingHint": "Match your spreadsheet columns to the fields the platform understands. Required fields are marked.",
+      "mappingSource": "Your column",
+      "mappingTarget": "Maps to",
+      "mappingIgnore": "Ignore this column",
+      "mappingAuto": "Auto-detected",
+      "mappingRequiredMissing": "Map every required field before previewing.",
+      "previewButton": "Preview validation",
+      "previewLoading": "Checking rows…",
+      "previewHint": "We do not change anything during preview. Resolve highlighted issues, then commit.",
+      "previewTitle": "Preview",
+      "previewEmpty": "Run a preview once your columns are mapped.",
+      "rowOutcome": {
+        "create": "Will create",
+        "update": "Will update",
+        "skip": "Already exists",
+        "reject": "Cannot import"
+      },
+      "rowOutcomeShort": {
+        "create": "Create",
+        "update": "Update",
+        "skip": "Skip",
+        "reject": "Blocked"
+      },
+      "summaryCreate_one": "{{count}} row to create",
+      "summaryCreate_other": "{{count}} rows to create",
+      "summaryUpdate_one": "{{count}} row to update",
+      "summaryUpdate_other": "{{count}} rows to update",
+      "summarySkip_one": "{{count}} row already exists",
+      "summarySkip_other": "{{count}} rows already exist",
+      "summaryReject_one": "{{count}} row blocked",
+      "summaryReject_other": "{{count}} rows blocked",
+      "summaryWarnings_one": "{{count}} warning to review",
+      "summaryWarnings_other": "{{count}} warnings to review",
+      "missingRequired_one": "{{count}} row is missing required field {{field}}",
+      "missingRequired_other": "{{count}} rows are missing required field {{field}}",
+      "commitButton": "Import these rows",
+      "committing": "Importing…",
+      "commitSuccess": "Imported {{created}} new and updated {{updated}} existing record(s); {{skipped}} skipped.",
+      "commitBlocked": "Resolve the highlighted issues to enable import.",
+      "rowNumber": "Row",
+      "rowDisplay": "Record",
+      "rowIssues": "Issues",
+      "rowReady": "Ready",
+      "noIssues": "No issues",
+      "loadFailed": "Could not load import definitions.",
+      "defaultBranchLabel": "Default sport branch",
+      "defaultBranchHint": "Used when a row leaves the sport branch column empty.",
+      "anyBranch": "— pick a branch —",
+      "fields": {
+        "athletes": {
+          "firstName": "First name",
+          "lastName": "Last name",
+          "preferredName": "Preferred name",
+          "birthDate": "Birth date",
+          "gender": "Gender",
+          "sportBranch": "Sport branch",
+          "primaryGroup": "Primary group",
+          "status": "Status",
+          "jerseyNumber": "Jersey number",
+          "notes": "Notes"
+        },
+        "guardians": {
+          "firstName": "First name",
+          "lastName": "Last name",
+          "phone": "Phone",
+          "email": "Email",
+          "notes": "Notes"
+        },
+        "athleteGuardians": {
+          "athleteFirstName": "Athlete first name",
+          "athleteLastName": "Athlete last name",
+          "guardianFirstName": "Guardian first name",
+          "guardianLastName": "Guardian last name",
+          "relationshipType": "Relationship",
+          "isPrimaryContact": "Primary contact",
+          "notes": "Notes"
+        }
+      },
+      "entities": {
+        "athletes": {
+          "title": "Athletes",
+          "description": "Bring your athlete roster into the platform with sport branch and group context."
+        },
+        "guardians": {
+          "title": "Guardians",
+          "description": "Add guardian contact details so families can be reached and linked to athletes."
+        },
+        "athleteGuardians": {
+          "title": "Athlete ↔ guardian links",
+          "description": "Connect existing athletes to existing guardians with relationship metadata."
+        }
+      },
+      "hints": {
+        "dateFormat": "Accepts YYYY-MM-DD or DD/MM/YYYY.",
+        "sportBranch": "Use the branch name or its short code.",
+        "primaryGroup": "Group must already exist in the chosen sport branch.",
+        "athleteStatus": "trial · active · paused · inactive · archived.",
+        "relationshipType": "mother · father · guardian · other."
+      },
+      "exportsTitle": "Practical exports",
+      "exportsHint": "These are quick wrappers around the reporting engine. For advanced filtering use the Report Builder.",
+      "exportButtons": {
+        "athletes": "Export current athletes (CSV)",
+        "guardians": "Export current guardians (CSV)",
+        "training": "Export upcoming training (CSV)",
+        "finance": "Export overdue charges (CSV)"
       }
     }
   },

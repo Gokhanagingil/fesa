@@ -24,6 +24,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { ReportBuilderPage } from './pages/ReportBuilderPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { InventoryPage } from './pages/InventoryPage';
+import { ImportsPage } from './pages/ImportsPage';
 import { PortalShell } from './components/layout/PortalShell';
 import { GuardianPortalLoginPage } from './pages/GuardianPortalLoginPage';
 import { GuardianPortalActivationPage } from './pages/GuardianPortalActivationPage';
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="/app/inventory" element={<InventoryPage />} />
             <Route path="/app/reports" element={<ReportsPage />} />
             <Route path="/app/report-builder" element={<ReportBuilderPage />} />
+            <Route path="/app/imports" element={<ImportsPage />} />
             <Route path="/app/settings" element={<SettingsPage />} />
           </Route>
         </Route>

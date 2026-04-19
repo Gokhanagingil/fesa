@@ -4,9 +4,11 @@ import { Brackets, Repository } from 'typeorm';
 import { Guardian } from '../../database/entities/guardian.entity';
 import { AthleteGuardian } from '../../database/entities/athlete-guardian.entity';
 import { Athlete } from '../../database/entities/athlete.entity';
+import { In } from 'typeorm';
 import { CreateGuardianDto } from './dto/create-guardian.dto';
 import { UpdateGuardianDto } from './dto/update-guardian.dto';
 import { LinkAthleteGuardianDto } from './dto/link-athlete-guardian.dto';
+import { BulkDeleteGuardiansDto } from './dto/bulk-guardians.dto';
 
 @Injectable()
 export class GuardianService {
@@ -117,5 +119,44 @@ export class GuardianService {
   async unlinkFromAthlete(tenantId: string, athleteId: string, linkId: string): Promise<void> {
     const res = await this.links.delete({ id: linkId, tenantId, athleteId });
     if (!res.affected) throw new NotFoundException('Link not found');
+  }
+
+  async bulkDelete(tenantId: string, dto: BulkDeleteGuardiansDto): Promise<{
+    requested: number;
+    deleted: number;
+    skipped: number;
+    skippedIds: string[];
+  }> {
+    const guardianIds = Array.from(new Set(dto.guardianIds));
+    if (guardianIds.length === 0) {
+      return { requested: 0, deleted: 0, skipped: 0, skippedIds: [] };
+    }
+    const owned = await this.guardians.find({
+      where: { tenantId, id: In(guardianIds) },
+    });
+    if (owned.length === 0) {
+      throw new NotFoundException('No guardians matched in this club');
+    }
+    const ownedIds = owned.map((guardian) => guardian.id);
+    const linkRows = await this.links.find({
+      where: { tenantId, guardianId: In(ownedIds) },
+    });
+    const linkedSet = new Set(linkRows.map((row) => row.guardianId));
+    const linkedIds = ownedIds.filter((id) => linkedSet.has(id));
+    if (linkedIds.length > 0 && !dto.skipLinked) {
+      throw new BadRequestException(
+        'Some guardians are still linked to athletes. Unlink them first or enable skip-linked.',
+      );
+    }
+    const removableIds = ownedIds.filter((id) => !linkedSet.has(id));
+    if (removableIds.length > 0) {
+      await this.guardians.delete({ tenantId, id: In(removableIds) });
+    }
+    return {
+      requested: guardianIds.length,
+      deleted: removableIds.length,
+      skipped: linkedIds.length + (guardianIds.length - ownedIds.length),
+      skippedIds: linkedIds,
+    };
   }
 }

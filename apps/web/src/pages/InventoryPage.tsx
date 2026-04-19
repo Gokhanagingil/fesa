@@ -7,6 +7,7 @@ import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
+import { downloadCsv, renderCsvFromRows } from '../lib/imports';
 import { useTenant } from '../lib/tenant-hooks';
 import type {
   Athlete,
@@ -327,6 +328,54 @@ export function InventoryPage() {
     }
   }
 
+  async function handleBulkReturn(assignmentIds: string[]) {
+    if (assignmentIds.length === 0) return;
+    if (!window.confirm(t('pages.inventory.bulkReturnConfirm', { count: assignmentIds.length }))) {
+      return;
+    }
+    setError(null);
+    try {
+      const result = await apiPost<{ requested: number; returned: number; skipped: number }>(
+        '/api/inventory/assignments/bulk-return',
+        { assignmentIds },
+      );
+      setMessage(
+        t('pages.inventory.bulkReturnedDone', {
+          returned: result.returned,
+          requested: result.requested,
+        }),
+      );
+      await load();
+      if (openItemId) await loadDetail(openItemId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
+    }
+  }
+
+  function handleExportItems() {
+    if (filteredItems.length === 0) {
+      setError(t('app.exportCsv.emptyHint'));
+      return;
+    }
+    const headers = [
+      t('pages.inventory.fieldName'),
+      t('pages.inventory.fieldCategory'),
+      t('pages.inventory.statTotal'),
+      t('pages.inventory.statAvailable'),
+      t('pages.inventory.statAssignedShort'),
+    ];
+    const rows = filteredItems.map((item) => ({
+      [headers[0]]: item.name,
+      [headers[1]]: t(`pages.inventory.category.${item.category}`),
+      [headers[2]]: item.totalStock,
+      [headers[3]]: item.totalAvailable,
+      [headers[4]]: item.totalAssigned,
+    }));
+    const csv = renderCsvFromRows(headers, rows);
+    downloadCsv(`amateur-inventory-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    setMessage(t('app.exportCsv.successHint', { count: filteredItems.length }));
+  }
+
   const counts = data?.counts;
 
   const filteredItems = useMemo(() => data?.items ?? [], [data]);
@@ -353,6 +402,9 @@ export function InventoryPage() {
               }}
             >
               {t('app.actions.refresh')}
+            </Button>
+            <Button variant="ghost" type="button" onClick={handleExportItems}>
+              {t('app.exportCsv.label')}
             </Button>
             <Button
               type="button"
@@ -761,6 +813,7 @@ export function InventoryPage() {
                           assigning={assigning}
                           onAssign={handleAssign}
                           onReturn={handleReturn}
+                          onBulkReturn={handleBulkReturn}
                           adjustingVariantId={adjustingVariantId}
                           setAdjustingVariantId={setAdjustingVariantId}
                           adjustDelta={adjustDelta}
@@ -794,6 +847,7 @@ type DetailPanelProps = {
   assigning: boolean;
   onAssign: (event: FormEvent) => void;
   onReturn: (assignment: InventoryAssignmentSummary) => void;
+  onBulkReturn?: (assignmentIds: string[]) => void;
   adjustingVariantId: string | null;
   setAdjustingVariantId: (value: string | null) => void;
   adjustDelta: string;
@@ -815,6 +869,7 @@ function DetailPanel({
   assigning,
   onAssign,
   onReturn,
+  onBulkReturn,
   adjustingVariantId,
   setAdjustingVariantId,
   adjustDelta,
@@ -956,9 +1011,22 @@ function DetailPanel({
       </section>
 
       <section>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amateur-muted">
-          {t('pages.inventory.activeAssignments')}
-        </p>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amateur-muted">
+            {t('pages.inventory.activeAssignments')}
+          </p>
+          {detail.activeAssignments.length > 1 && onBulkReturn ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() =>
+                onBulkReturn(detail.activeAssignments.map((assignment) => assignment.id))
+              }
+            >
+              {t('pages.inventory.bulkReturnAll', { count: detail.activeAssignments.length })}
+            </Button>
+          ) : null}
+        </div>
         {detail.activeAssignments.length === 0 ? (
           <p className="text-sm text-amateur-muted">{t('pages.inventory.noActiveAssignments')}</p>
         ) : (
