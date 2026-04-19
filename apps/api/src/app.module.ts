@@ -25,6 +25,7 @@ import { GuardianPortalModule } from './modules/guardian-portal/guardian-portal.
 import { AuthModule } from './modules/auth/auth.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { ImportsModule } from './modules/imports/imports.module';
+import { MediaModule } from './modules/media/media.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ImportsModule } from './modules/imports/imports.module';
       }),
     }),
     CoreModule,
+    MediaModule,
     AuthModule,
     HealthModule,
     TenantModule,

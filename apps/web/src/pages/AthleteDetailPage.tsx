@@ -5,6 +5,8 @@ import { Button } from '../components/ui/Button';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
+import { AthleteAvatar } from '../components/ui/AthleteAvatar';
+import { AthletePhotoCard } from '../components/athlete/AthletePhotoCard';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
 import { useTenant } from '../lib/tenant-hooks';
 import {
@@ -388,10 +390,16 @@ export function AthleteDetailPage() {
         </InlineAlert>
       ) : null}
 
+      <div className="mb-6">
+        <AthletePhotoCard athlete={athlete} onChanged={(next) => setAthlete(next)} />
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm lg:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
+            <div className="flex items-start gap-3">
+              <AthleteAvatar athlete={athlete} size="md" className="hidden sm:inline-flex" />
+              <div>
               <h2 className="font-display text-lg font-semibold text-amateur-ink">
                 {athlete.firstName} {athlete.lastName}
               </h2>
@@ -403,6 +411,7 @@ export function AthleteDetailPage() {
                   status: getFamilyReadinessStatusLabel(t, readinessStatus),
                 })}
               </p>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               <span className="rounded-full bg-amateur-accent-soft px-3 py-1 text-xs font-medium text-amateur-accent">

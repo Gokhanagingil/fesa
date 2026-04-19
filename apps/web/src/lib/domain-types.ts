@@ -86,6 +86,11 @@ export type Athlete = {
   jerseyNumber: string | null;
   shirtSize: string | null;
   notes: string | null;
+  /** Wave 16 — Athlete Photo & Media Foundation v1. */
+  photoFileName?: string | null;
+  photoContentType?: string | null;
+  photoSizeBytes?: number | null;
+  photoUploadedAt?: string | null;
   sportBranch?: SportBranch;
   primaryGroup?: ClubGroup | null;
 };

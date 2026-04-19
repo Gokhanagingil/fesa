@@ -13,6 +13,8 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 | [reporting.md](./reporting.md) | Reporting and bulk-operation placeholders |
 | [communication.md](./communication.md) | Communication & Follow-up Pack v1 — WhatsApp-first follow-up surface |
 | [inventory.md](./inventory.md) | Inventory & Assignment Pack v1 — stock visibility, athlete assignments, movement history |
+| [import-export.md](./import-export.md) | Import / Export & Bulk Operations Foundation v1 — guided imports, bulk actions, CSV exports |
+| [media.md](./media.md) | Athlete Photo & Media Foundation v1 — profile photo upload / replace / remove, tenant-isolated storage |
 | [bootstrap.md](./bootstrap.md) | Demo seed, idempotency, demo tenant id, staff login fixtures |
 | [staging-deploy.md](./staging-deploy.md) | Manual GitHub Actions deploy to Ubuntu staging (SSH troubleshooting, PM2, Nginx) |
 | [release-operations.md](./release-operations.md) | Pre-deploy gates, troubleshooting flow, and branch/hotfix discipline |
