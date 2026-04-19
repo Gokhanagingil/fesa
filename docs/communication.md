@@ -16,7 +16,7 @@ assisted WhatsApp-first flow operators rely on.
 
 | Area | Change |
 |------|--------|
-| Live Cloud API client | New `WhatsAppCloudApiClient` wraps a single `POST /{phoneNumberId}/messages` per recipient.  Injectable fetcher seam for tests, never throws, masks recipient phone numbers in logs, classifies failures into a tiny operator-friendly vocabulary (`token_invalid`, `rate_limited`, `transport_error`, `provider_unavailable`, `provider_rejected`, `unknown`).  Extracts the Meta `wamid.*` provider message id when present. |
+| Live Cloud API client | New `WhatsAppCloudApiClient` wraps a single `POST /{phoneNumberId}/messages` per recipient.  Injectable fetcher seam for tests via the explicit `WHATSAPP_CLOUD_API_FETCHER` token (registered in `CommunicationModule` with `defaultWhatsAppFetcher` as the production value), never throws, masks recipient phone numbers in logs, classifies failures into a tiny operator-friendly vocabulary (`token_invalid`, `rate_limited`, `transport_error`, `provider_unavailable`, `provider_rejected`, `unknown`).  Extracts the Meta `wamid.*` provider message id when present. |
 | Real direct send | `WhatsAppCloudApiProvider.attemptCloudApiSend()` is no longer a stub — it calls the live Cloud API per recipient.  Aggregate state stays honest: all delivered → `sent`, mixed batch → `sent` with detail `partial_sent:X_of_Y` (per-recipient outcomes still preserved), all failed → `failed`. |
 | Honest orchestrator behaviour | `CommunicationDeliveryService.deliver()` lets partial-sent flow through as `sent` (the row IS the audit trail of a real send), and falls back to assisted only when the direct attempt fails end-to-end or readiness is no longer `direct_capable`. |
 | Per-attempt counts | `OutreachService.attemptDelivery` now records `audienceSnapshot.lastDeliveryAttempt = { attempted, sent, failed }` so history rows can render an honest "Sent to X of Y" chip without inventing values. |
@@ -138,8 +138,15 @@ assisted mode without losing any history.
   fallback notice scenarios.
 - `npm run whatsapp:delivery:test` (new) — pure node smoke covering
   Cloud API client error classification, provider aggregation
-  (`sent` / `failed` / partial), orchestrator fallback, and the
-  "no client call when readiness is paused" guarantee.
+  (`sent` / `failed` / partial), orchestrator fallback, the
+  "no client call when readiness is paused" guarantee, and a
+  Nest container regression check that `WhatsAppCloudApiClient`
+  resolves through the `WHATSAPP_CLOUD_API_FETCHER` token (guards
+  against the boot-time DI failure that the function-typed fetcher
+  parameter caused before the explicit `@Inject(...)` wiring).
+- `npm run api:boot:smoke` — Nest boot validates the live
+  `CommunicationModule` provider graph end-to-end against the
+  configured Postgres instance.
 
 ### Intentionally deferred
 
