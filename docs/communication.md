@@ -1,5 +1,160 @@
 # Communication & Follow-up
 
+## Wave 16 — WhatsApp Cloud API Live Delivery Pack
+
+This wave turns the v15 readiness scaffolding into real WhatsApp
+Cloud API delivery — carefully, honestly, and without removing the
+assisted WhatsApp-first flow operators rely on.
+
+> from "we are architecturally and operationally ready to support
+> real WhatsApp delivery safely and honestly"
+> to "clubs configured for direct send actually send via the
+> WhatsApp Cloud API, while assisted WhatsApp remains a first-class
+> calm fallback."
+
+### What ships in v16
+
+| Area | Change |
+|------|--------|
+| Live Cloud API client | New `WhatsAppCloudApiClient` wraps a single `POST /{phoneNumberId}/messages` per recipient.  Injectable fetcher seam for tests, never throws, masks recipient phone numbers in logs, classifies failures into a tiny operator-friendly vocabulary (`token_invalid`, `rate_limited`, `transport_error`, `provider_unavailable`, `provider_rejected`, `unknown`).  Extracts the Meta `wamid.*` provider message id when present. |
+| Real direct send | `WhatsAppCloudApiProvider.attemptCloudApiSend()` is no longer a stub — it calls the live Cloud API per recipient.  Aggregate state stays honest: all delivered → `sent`, mixed batch → `sent` with detail `partial_sent:X_of_Y` (per-recipient outcomes still preserved), all failed → `failed`. |
+| Honest orchestrator behaviour | `CommunicationDeliveryService.deliver()` lets partial-sent flow through as `sent` (the row IS the audit trail of a real send), and falls back to assisted only when the direct attempt fails end-to-end or readiness is no longer `direct_capable`. |
+| Per-attempt counts | `OutreachService.attemptDelivery` now records `audienceSnapshot.lastDeliveryAttempt = { attempted, sent, failed }` so history rows can render an honest "Sent to X of Y" chip without inventing values. |
+| Live readiness check | New `mode: 'live'` option on `POST /api/communications/readiness/whatsapp/validate`.  Performs a single read-only Cloud API request against the configured `phoneNumberId`; the call is rejected on the recipient (we deliberately use an invalid probe number) but accepted on the credentials.  This is what flips the validation chip to `ok` and the readiness state to `direct_capable`.  The default `local` mode stays side-effect free. |
+| Validation safeguard | The classifier now requires an explicit `validation.state === 'ok'` to promote a tenant to `direct_capable`.  Any config edit drops validation back to `never_validated`, so direct send always pauses after edits until the operator re-runs the readiness check.  Local checks accept the configuration shape; live checks confirm Meta accepts the credentials. |
+| Stricter local validation | Two new readiness issue codes — `phone_number_id_invalid` and `business_account_id_invalid` — fire when the configured ids are not pure digits.  The access token reference scheme is also tightened (`env:NAME` only with `[A-Z][A-Z0-9_]*` names). |
+| UX for live delivery | `Send via WhatsApp` becomes a real direct-send button when `direct_capable`.  Outcomes render as calm `InlineAlert`s — `directSent`, `directPartial` (warm amber), `directFallback`, `directFailed` — with no provider jargon.  Assisted controls stay first-class alongside. |
+| Settings polish | The readiness panel adds a `Run live readiness check` action sitting next to the existing local check, plus a one-line warm hint explaining what the live check does and a translated validation message under the badge. |
+| History honesty | Each row that had a partial direct send shows a "Sent to X of Y" chip in warm amber instead of plain "Sent directly", so operators can tell at a glance which batches need a follow-up nudge. |
+| Tone | Every new copy string is calm, club-friendly, and avoids enterprise/CRM language.  Provider/error codes are translated through a dedicated `validationMessages` namespace, so raw codes never reach the operator UI. |
+
+### Live Cloud API delivery surface
+
+The live send path is intentionally tiny and disciplined:
+
+1. `OutreachService.attemptDelivery` resolves recipients from the
+   request payload, calls `CommunicationDeliveryService.deliver`,
+   and persists the aggregate state + per-attempt counts on the row.
+2. `CommunicationDeliveryService.deliver` checks the WhatsApp Cloud
+   API capability for the tenant.  Only a `direct_capable` tenant
+   gets a real send; every other state degrades to assisted with a
+   calm honest detail.
+3. `WhatsAppCloudApiProvider.attemptCloudApiSend` performs one HTTP
+   call per recipient via `WhatsAppCloudApiClient`.  Each per-
+   recipient outcome is `sent` (with the optional `wamid.*`) or
+   `failed` (with one of our short classification codes).
+4. The provider rolls outcomes up:
+   - all `sent` → `state: 'sent'`, detail `delivered_X_of_X`
+   - mixed     → `state: 'sent'`, detail `partial_sent:X_of_total`
+   - all failed → `state: 'failed'`, detail = first failure code
+5. The orchestrator returns the provider result for `sent` (partial
+   or otherwise), or replaces it with an `assisted` deep-link build
+   plus a `state: 'fallback'` aggregate when nothing went through.
+
+The Cloud API request itself is `POST graph.facebook.com/v19.0/
+{phoneNumberId}/messages` with a plain `text` payload.  No
+templates, no media, no broadcast — that surface area is
+deliberately deferred until the live send path is proven.
+
+### Readiness validation modes
+
+| Mode | What it does | Side-effects |
+|------|--------------|--------------|
+| `local` (default) | Local consistency check + token reference resolves in this environment. | None. |
+| `live` | Same, plus a single read-only Cloud API request against the configured `phoneNumberId` to verify Meta accepts the credentials.  We use an obviously invalid probe recipient so no real message is sent. | One outbound HTTPS call to `graph.facebook.com`. |
+
+The chip on the readiness panel only flips to `Direct send ready`
+when `validation.state === 'ok'`.  Saving a config field always
+drops validation back to `never_validated`, so direct send pauses
+after every edit until the operator re-runs the check — this is the
+core trust safeguard for live delivery.
+
+### Honest delivery state vocabulary
+
+The lifecycle stays the same tiny set, with one new nuance.
+
+| State | Meaning |
+|-------|---------|
+| `prepared` | Assisted draft is ready (no real send happened). |
+| `sent`     | Direct send succeeded for at least one recipient.  When detail starts with `partial_sent:` the per-recipient list still carries the failures verbatim, so the UX can show "Sent to X of Y" and offer assisted follow-up for the gaps. |
+| `failed`   | Direct send was attempted and no recipient delivered. |
+| `fallback` | Direct send was attempted, failed end-to-end, and the assisted deep-link was prepared instead. |
+
+We deliberately did not introduce a `partial` lifecycle state — the
+whole point of the per-attempt counts is to keep the vocabulary
+calm and let warm copy carry the nuance.
+
+### API endpoints (deltas in v16)
+
+- `POST /api/communications/readiness/whatsapp/validate` now accepts
+  `{ "mode": "local" | "live" }` (defaults to `local`).
+- `POST /api/communications/outreach/:id/deliver` is unchanged on
+  the wire but now produces real `sent` outcomes when readiness is
+  green.
+
+### Configuration & secret handling
+
+- The token reference contract is unchanged — `env:NAME` is the
+  only supported scheme.  Names must match `[A-Z][A-Z0-9_]*` so we
+  never feed a sloppy reference to `process.env`.
+- Deployments wire up the secret by exporting the referenced env
+  var on the API process (eg. `WHATSAPP_CLOUD_API_TOKEN=...` in the
+  systemd unit / docker compose / k8s secret).  The platform never
+  stores the token itself — only the reference.
+- `apps/api/.env.example` keeps the commented `WHATSAPP_CLOUD_API_TOKEN`
+  hint so operators know which env var to set.
+
+### Operator runbook
+
+To enable live direct WhatsApp delivery for a tenant:
+
+1. Provision a WhatsApp Cloud API number for the club (Meta
+   Business → WhatsApp Business Account → Phone numbers).
+2. Export the long-lived access token on the API host as
+   `WHATSAPP_CLOUD_API_TOKEN` (or any other `env:NAME` you choose
+   to advertise to the admin form).
+3. As a club admin, open Settings → WhatsApp delivery readiness:
+   - fill in `Phone number ID`, `Business account ID`, and
+     `Access token reference` (eg. `env:WHATSAPP_CLOUD_API_TOKEN`),
+   - save the form,
+   - click `Run live readiness check`.
+4. Once the chip flips to `Direct send ready`, the Communications
+   page exposes a `Send via WhatsApp` primary action.  `Open
+   WhatsApp` stays available as a calm fallback link.
+
+To pause direct send temporarily, untick `Enable direct send for
+this club` on the same panel — the platform will degrade to
+assisted mode without losing any history.
+
+### Validation surface
+
+- `npm run lint` — clean.
+- `npm run build` — full TS build (covers the new client / provider
+  changes and the partial-sent path).
+- `npm run i18n:check` — locale parity preserved (TR + EN).
+- `npm run repo:guard` — workspace structure unchanged.
+- `npm run frontend:smoke` — extends `CommunicationsPage.smoke.test.tsx`
+  with assisted vs direct rendering, partial-sent notice, and
+  fallback notice scenarios.
+- `npm run whatsapp:delivery:test` (new) — pure node smoke covering
+  Cloud API client error classification, provider aggregation
+  (`sent` / `failed` / partial), orchestrator fallback, and the
+  "no client call when readiness is paused" guarantee.
+
+### Intentionally deferred
+
+- Webhook / read-receipt tracking (we record the `wamid.*` so a
+  future inbound webhook handler can correlate, but the inbound
+  pipeline is out of scope here).
+- WhatsApp message templates (`template` payload) and media —
+  the live send is plain text only in v16.
+- Inbox / reply UI.
+- Direct send for channels other than WhatsApp.
+- Per-tenant rate-limit dashboards (failures are still surfaced
+  honestly per row, but there is no aggregated analytics surface).
+
+---
+
 ## Wave 15 — WhatsApp Integration Readiness / Cloud API Pack
 
 This wave does **not** ship live WhatsApp delivery.  It ships the
