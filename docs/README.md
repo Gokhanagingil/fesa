@@ -15,6 +15,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 | [inventory.md](./inventory.md) | Inventory & Assignment Pack v1 — stock visibility, athlete assignments, movement history |
 | [import-export.md](./import-export.md) | Import / Export & Bulk Operations Foundation v1 — guided imports, bulk actions, CSV exports |
 | [media.md](./media.md) | Athlete Photo & Media Foundation v1 — profile photo upload / replace / remove, tenant-isolated storage |
+| [parent-portal.md](./parent-portal.md) | Parent Access & Portal Foundation + Tenant Branding Foundation v1 — invitation-based guardian access, calm mobile-first parent home, controlled tenant branding |
 | [bootstrap.md](./bootstrap.md) | Demo seed, idempotency, demo tenant id, staff login fixtures |
 | [staging-deploy.md](./staging-deploy.md) | Manual GitHub Actions deploy to Ubuntu staging (SSH troubleshooting, PM2, Nginx) |
 | [release-operations.md](./release-operations.md) | Pre-deploy gates, troubleshooting flow, and branch/hotfix discipline |
@@ -28,6 +29,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 - **Wave seven (done)**: Guardian Portal MVP with controlled guardian access, linked-athlete visibility, family-action completion, and staff review/apply controls inside the same operational system.
 - **Wave eight (current)**: release-quality hardening plus staff/admin login, explicit tenant membership, global vs club admin semantics, and a lightweight admin/settings console.
 - **Wave eleven (current)**: post-login bootstrap recovery, reliable tenant-context restoration, athlete lifecycle controls, and safer bulk club operations across roster, finance, and communications surfaces.
+- **Wave seventeen (current)**: Parent Access & Portal Foundation + Tenant Branding Foundation v1 — invitation-based guardian access, a calm mobile-first parent home distinct from admin surfaces, and a controlled per-tenant brand surface (logo, display name, primary/accent color, welcome copy) under the "branded shell, controlled product core" model.
 
 ## Repository map
 

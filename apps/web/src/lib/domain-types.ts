@@ -468,6 +468,28 @@ export type LogOutreachInput = {
   note?: string;
 };
 
+/**
+ * Parent Portal & Tenant Branding Foundation v1 — controlled brand payload.
+ *
+ * Layout, typography, spacing, component structure, and interaction patterns
+ * stay shared across all tenants. The fields below are the only brand
+ * surface area the portal renders per club.
+ */
+export type TenantBrandingPayload = {
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  displayName: string;
+  tagline: string | null;
+  primaryColor: string;
+  accentColor: string;
+  logoUrl: string | null;
+  welcomeTitle: string | null;
+  welcomeMessage: string | null;
+  isCustomized: boolean;
+  updatedAt: string | null;
+};
+
 export type GuardianPortalActivationStatus = {
   token: string;
   tenantId: string;
@@ -476,6 +498,7 @@ export type GuardianPortalActivationStatus = {
   guardianName: string;
   email: string;
   expiresAt: string;
+  branding?: TenantBrandingPayload;
 };
 
 export type GuardianPortalLinkedAthlete = {
@@ -500,6 +523,16 @@ export type GuardianPortalLinkedAthlete = {
   } | null;
 };
 
+export type GuardianPortalTodayItem = {
+  id: string;
+  title?: string;
+  scheduledStart: string;
+  location?: string | null;
+  athleteId?: string;
+  athleteName?: string;
+  coachName?: string | null;
+};
+
 export type GuardianPortalHome = {
   guardian: {
     id: string;
@@ -512,12 +545,17 @@ export type GuardianPortalHome = {
     activatedAt: string | null;
     lastLoginAt: string | null;
   };
+  branding?: TenantBrandingPayload;
   readiness: GuardianFamilyReadiness;
   linkedAthletes: GuardianPortalLinkedAthlete[];
   actions: FamilyActionRequest[];
   finance: {
     outstandingAthletes: number;
     overdueAthletes: number;
+  };
+  today?: {
+    training: GuardianPortalTodayItem[];
+    privateLessons: GuardianPortalTodayItem[];
   };
 };
 

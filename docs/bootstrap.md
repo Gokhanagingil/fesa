@@ -92,6 +92,7 @@ Use these at `http://localhost:5173/login` after running `npm run seed:demo`.
 - **Platform visibility**: after sign-in, the dashboard and settings surfaces should show all four seeded clubs for the platform admin and a club-scoped overview for each club admin.
 - **Bootstrap recovery**: the login flow now uses the profile returned by `POST /api/auth/login` directly (including `accessibleTenants` and `defaultTenantId`), then verifies via `GET /api/auth/me` in the background. This means a signed-in user always lands in a valid club context immediately — even if the cookie round-trip is delayed or the session verification call fails temporarily.
 - **Lifecycle and bulk flows**: the seeded clubs are suitable for trial-to-active conversion, pause/reactivate/withdraw flows, roster bulk status or primary-group updates, scoped finance bulk assignment, and status-aware communication audience follow-up.
+- **Tenant branding**: each demo club is also seeded with the Wave 17 brand payload (display name, primary/accent color, welcome copy) so the parent portal renders a club-specific look on first launch without staff having to configure anything. Brand fields are idempotent on the natural `tenants.slug` key.
 
 ## Staging
 

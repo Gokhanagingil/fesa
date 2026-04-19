@@ -4,26 +4,35 @@ import { useTranslation } from 'react-i18next';
 import { apiGet } from '../lib/api';
 import type { GuardianPortalHome } from '../lib/domain-types';
 import {
-  formatDate,
   formatDateTime,
   getFamilyActionStatusLabel,
   getFamilyActionTypeLabel,
-  getFamilyReadinessStatusLabel,
-  getFamilyReadinessTone,
-  getGuardianPortalAccessStatusLabel,
-  getGuardianPortalAccessTone,
   getGuardianRelationshipLabel,
   getMoneyAmount,
 } from '../lib/display';
 import { InlineAlert } from '../components/ui/InlineAlert';
-import { PageHeader } from '../components/ui/PageHeader';
-import { StatCard } from '../components/ui/StatCard';
-import { StatusBadge } from '../components/ui/StatusBadge';
-import { Button } from '../components/ui/Button';
+import { usePortalBranding } from '../lib/portal-branding';
+import { PortalBrandMark } from '../components/ui/PortalBrandMark';
 
+/**
+ * Parent home / family dashboard.
+ *
+ * Information architecture (mobile-first, calm, utility-first):
+ *   1. A warm, branded greeting + the club's safe welcome copy if set.
+ *   2. "What needs your attention" — only renders when something actually
+ *      does. We never show empty pending counters; that would only add
+ *      noise for a parent.
+ *   3. "Today" — a tiny, scannable summary of training/lessons happening
+ *      today for any of the family's athletes. Quietly hidden when empty.
+ *   4. "My family" — one card per linked athlete with the few things a
+ *      parent wants at a glance (group, next training, balance).
+ *   5. "Updates from the club" — a subtle showcase strip. No popups, no
+ *      banner spam, no marketing chaos. Always last on the screen.
+ */
 export function GuardianPortalHomePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { setBranding } = usePortalBranding();
   const [data, setData] = useState<GuardianPortalHome | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +42,9 @@ export function GuardianPortalHomePage() {
       try {
         const next = await apiGet<GuardianPortalHome>('/api/guardian-portal/me');
         setData(next);
+        if (next.branding) {
+          setBranding(next.branding);
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : t('app.errors.loadFailed');
         if (/session|credential|unauthorized/i.test(message)) {
@@ -44,7 +56,7 @@ export function GuardianPortalHomePage() {
         setLoading(false);
       }
     })();
-  }, [navigate, t]);
+  }, [navigate, setBranding, t]);
 
   const pendingActions = useMemo(
     () =>
@@ -64,8 +76,7 @@ export function GuardianPortalHomePage() {
 
   if (!data) {
     return (
-      <div className="max-w-3xl">
-        <PageHeader title={t('portal.home.title')} subtitle={t('portal.home.subtitle')} />
+      <div className="space-y-4">
         {error ? (
           <InlineAlert tone="error">{error}</InlineAlert>
         ) : (
@@ -75,170 +86,284 @@ export function GuardianPortalHomePage() {
     );
   }
 
-  const readinessTone = getFamilyReadinessTone(data.readiness.status);
+  const branding = data.branding ?? null;
+  const greetingFirstName = data.guardian.name.split(' ')[0] || data.guardian.name;
+  const todayTraining = data.today?.training ?? [];
+  const todayLessons = data.today?.privateLessons ?? [];
+  const hasToday = todayTraining.length + todayLessons.length > 0;
+  const hasOutstanding = data.finance.outstandingAthletes > 0 || data.finance.overdueAthletes > 0;
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('portal.home.greeting', { name: data.guardian.name })}
-        subtitle={t('portal.home.subtitle')}
-        actions={
-          <StatusBadge tone={getGuardianPortalAccessTone(data.access.status)}>
-            {getGuardianPortalAccessStatusLabel(t, data.access.status)}
-          </StatusBadge>
-        }
-      />
+      <section
+        className="overflow-hidden rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm sm:p-6"
+        style={{
+          backgroundImage:
+            'linear-gradient(135deg, var(--portal-primary-soft, transparent) 0%, transparent 70%)',
+        }}
+      >
+        <div className="flex items-start gap-4">
+          <PortalBrandMark branding={branding} size="md" className="hidden sm:inline-flex" />
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+              {branding?.displayName ?? t('portal.brand')}
+            </p>
+            <h1 className="mt-1 font-display text-2xl font-semibold text-amateur-ink sm:text-3xl">
+              {t('portal.home.greeting', { name: greetingFirstName })}
+            </h1>
+            {branding?.welcomeTitle ? (
+              <p className="mt-3 font-display text-lg text-amateur-ink/90">{branding.welcomeTitle}</p>
+            ) : null}
+            <p className="mt-2 max-w-prose text-sm text-amateur-muted">
+              {branding?.welcomeMessage ?? t('portal.home.welcomeFallback')}
+            </p>
+          </div>
+        </div>
+      </section>
 
       {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
 
-      <section className="grid gap-3 md:grid-cols-4">
-        <StatCard label={t('portal.home.stats.linkedAthletes')} value={data.linkedAthletes.length} compact />
-        <StatCard
-          label={t('portal.home.stats.pendingActions')}
-          value={pendingActions.length}
-          compact
-          tone={pendingActions.length > 0 ? 'danger' : 'default'}
-        />
-        <StatCard label={t('portal.home.stats.awaitingReview')} value={awaitingReview.length} compact />
-        <StatCard
-          label={t('portal.home.stats.outstandingAthletes')}
-          value={data.finance.outstandingAthletes}
-          compact
-        />
-      </section>
-
-      <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-amateur-accent">{t('portal.home.readinessBadge')}</p>
-            <h2 className="mt-1 font-display text-lg font-semibold text-amateur-ink">
-              {t('portal.home.readinessTitle')}
+      {pendingActions.length > 0 || awaitingReview.length > 0 || hasOutstanding ? (
+        <section
+          className="rounded-3xl border bg-amateur-surface p-5 shadow-sm"
+          style={{
+            borderColor: 'var(--portal-ring-soft, var(--color-amateur-border))',
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-display text-base font-semibold text-amateur-ink">
+              {t('portal.home.attentionTitle')}
             </h2>
-            <p className="mt-2 text-sm text-amateur-muted">
-              {t('portal.home.readinessHint', {
-                status: getFamilyReadinessStatusLabel(t, data.readiness.status),
-              })}
-            </p>
+            <span className="text-xs text-amateur-muted">{t('portal.home.attentionHint')}</span>
           </div>
-          <StatusBadge tone={readinessTone}>{getFamilyReadinessStatusLabel(t, data.readiness.status)}</StatusBadge>
-        </div>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <div className="space-y-6">
-          <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-amateur-ink">
-                  {t('portal.home.actionsTitle')}
-                </h2>
-                <p className="mt-1 text-sm text-amateur-muted">{t('portal.home.actionsHint')}</p>
-              </div>
-            </div>
-
-            {data.actions.length === 0 ? (
-              <p className="mt-4 text-sm text-amateur-muted">{t('portal.home.noActions')}</p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {data.actions.map((action) => (
-                  <article
-                    key={action.id}
-                    className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <StatusBadge
-                            tone={
-                              ['open', 'pending_family_action', 'rejected'].includes(action.status)
-                                ? 'warning'
-                                : ['submitted', 'under_review'].includes(action.status)
-                                  ? 'info'
-                                  : 'success'
-                            }
-                          >
-                            {getFamilyActionStatusLabel(t, action.status)}
-                          </StatusBadge>
-                          <span className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
-                            {getFamilyActionTypeLabel(t, action.type)}
-                          </span>
-                        </div>
-                        <h3 className="mt-3 font-medium text-amateur-ink">{action.title}</h3>
-                        <p className="mt-1 text-sm text-amateur-muted">
-                          {[action.athleteName, action.dueDate ? formatDate(action.dueDate, i18n.language) : null]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </p>
-                        {action.description ? (
-                          <p className="mt-2 text-sm text-amateur-muted">{action.description}</p>
-                        ) : null}
-                      </div>
-                      <Link to={`/portal/actions/${action.id}`}>
-                        <Button variant="ghost">
-                          {['open', 'pending_family_action', 'rejected'].includes(action.status)
-                            ? t('portal.actions.open')
-                            : t('portal.actions.view')}
-                        </Button>
-                      </Link>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-
-        <div className="space-y-6">
-          <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
-            <h2 className="font-display text-lg font-semibold text-amateur-ink">
-              {t('portal.home.athletesTitle')}
-            </h2>
-            <p className="mt-1 text-sm text-amateur-muted">{t('portal.home.athletesHint')}</p>
-            <div className="mt-4 space-y-3">
-              {data.linkedAthletes.map((athlete) => (
-                <article key={athlete.linkId} className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-medium text-amateur-ink">{athlete.athleteName}</h3>
-                      <p className="mt-1 text-sm text-amateur-muted">
-                        {[
-                          getGuardianRelationshipLabel(t, athlete.relationshipType),
-                          athlete.groupName,
-                          athlete.isPrimaryContact ? t('portal.home.primaryContact') : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
-                    </div>
-                    <div className="text-right text-sm text-amateur-muted">
-                      <p>
-                        {t('portal.home.outstanding')}: {getMoneyAmount(athlete.outstandingAmount, 'TRY')}
-                      </p>
-                      {Number(athlete.overdueAmount) > 0 ? (
-                        <p>
-                          {t('portal.home.overdue')}: {getMoneyAmount(athlete.overdueAmount, 'TRY')}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                  {athlete.nextTraining.length > 0 ? (
-                    <p className="mt-3 text-sm text-amateur-muted">
-                      {t('portal.home.nextTraining')}: {athlete.nextTraining.map((session) => `${session.title} · ${formatDateTime(session.scheduledStart, i18n.language)}`).join(', ')}
-                    </p>
-                  ) : null}
-                  {athlete.nextPrivateLesson ? (
-                    <p className="mt-2 text-sm text-amateur-muted">
-                      {t('portal.home.nextLesson')}:{' '}
-                      {[formatDateTime(athlete.nextPrivateLesson.scheduledStart, i18n.language), athlete.nextPrivateLesson.coachName]
+          <ul className="mt-3 space-y-2">
+            {pendingActions.slice(0, 3).map((action) => (
+              <li key={action.id}>
+                <Link
+                  to={`/portal/actions/${action.id}`}
+                  className="flex items-start justify-between gap-3 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 transition-colors hover:bg-amateur-surface"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-amateur-ink">{action.title}</p>
+                    <p className="mt-1 text-xs text-amateur-muted">
+                      {[action.athleteName, getFamilyActionTypeLabel(t, action.type)]
                         .filter(Boolean)
                         .join(' · ')}
                     </p>
+                  </div>
+                  <span
+                    className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold"
+                    style={{
+                      backgroundColor: 'var(--portal-primary-soft, #e3f4ee)',
+                      color: 'var(--portal-primary, #0d4a3c)',
+                    }}
+                  >
+                    {t('portal.home.actionOpen')}
+                  </span>
+                </Link>
+              </li>
+            ))}
+            {awaitingReview.length > 0 ? (
+              <li className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm text-amateur-muted">
+                {t('portal.home.awaitingReviewLine', { count: awaitingReview.length })}
+              </li>
+            ) : null}
+            {hasOutstanding ? (
+              <li className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm text-amateur-muted">
+                {t('portal.home.financeLine', {
+                  outstanding: data.finance.outstandingAthletes,
+                  overdue: data.finance.overdueAthletes,
+                })}
+              </li>
+            ) : null}
+          </ul>
+        </section>
+      ) : (
+        <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+          <h2 className="font-display text-base font-semibold text-amateur-ink">
+            {t('portal.home.allClearTitle')}
+          </h2>
+          <p className="mt-1 text-sm text-amateur-muted">{t('portal.home.allClearBody')}</p>
+        </section>
+      )}
+
+      {hasToday ? (
+        <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+          <h2 className="font-display text-base font-semibold text-amateur-ink">
+            {t('portal.home.todayTitle')}
+          </h2>
+          <p className="mt-1 text-sm text-amateur-muted">{t('portal.home.todayHint')}</p>
+          <ul className="mt-3 space-y-2">
+            {todayTraining.map((session) => (
+              <li
+                key={session.id}
+                className="flex items-start justify-between gap-3 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-amateur-ink">
+                    {session.title ?? t('portal.home.trainingDefault')}
+                  </p>
+                  <p className="mt-1 text-xs text-amateur-muted">
+                    {[
+                      formatDateTime(session.scheduledStart, i18n.language),
+                      session.location ?? null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
+                  {t('portal.home.todayBadgeTraining')}
+                </span>
+              </li>
+            ))}
+            {todayLessons.map((lesson) => (
+              <li
+                key={lesson.id}
+                className="flex items-start justify-between gap-3 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-amateur-ink">
+                    {lesson.athleteName ?? t('portal.home.privateLessonDefault')}
+                  </p>
+                  <p className="mt-1 text-xs text-amateur-muted">
+                    {[
+                      formatDateTime(lesson.scheduledStart, i18n.language),
+                      lesson.coachName ?? null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
+                  {t('portal.home.todayBadgeLesson')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <section
+        id="family"
+        className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm scroll-mt-24"
+      >
+        <h2 className="font-display text-base font-semibold text-amateur-ink">
+          {t('portal.home.familyTitle')}
+        </h2>
+        <p className="mt-1 text-sm text-amateur-muted">{t('portal.home.familyHint')}</p>
+        {data.linkedAthletes.length === 0 ? (
+          <p className="mt-4 text-sm text-amateur-muted">{t('portal.home.familyEmpty')}</p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {data.linkedAthletes.map((athlete) => (
+              <li
+                key={athlete.linkId}
+                className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-medium text-amateur-ink">
+                      {athlete.athleteName}
+                    </p>
+                    <p className="mt-1 text-xs text-amateur-muted">
+                      {[
+                        getGuardianRelationshipLabel(t, athlete.relationshipType),
+                        athlete.groupName,
+                        athlete.isPrimaryContact ? t('portal.home.primaryContact') : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </div>
+                  {Number(athlete.outstandingAmount) > 0 ? (
+                    <div className="shrink-0 text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-amateur-muted">
+                        {t('portal.home.outstanding')}
+                      </p>
+                      <p className="text-sm font-semibold text-amateur-ink">
+                        {getMoneyAmount(athlete.outstandingAmount, 'TRY')}
+                      </p>
+                      {Number(athlete.overdueAmount) > 0 ? (
+                        <p className="text-[11px] font-medium text-rose-600">
+                          {t('portal.home.overdue')}{' '}
+                          {getMoneyAmount(athlete.overdueAmount, 'TRY')}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : null}
-                </article>
-              ))}
-            </div>
-          </section>
-        </div>
+                </div>
+                {athlete.nextTraining.length > 0 ? (
+                  <p className="mt-3 text-xs text-amateur-muted">
+                    {t('portal.home.nextTraining')}:{' '}
+                    {athlete.nextTraining
+                      .map(
+                        (session) =>
+                          `${session.title} · ${formatDateTime(session.scheduledStart, i18n.language)}`,
+                      )
+                      .join(' · ')}
+                  </p>
+                ) : null}
+                {athlete.nextPrivateLesson ? (
+                  <p className="mt-1 text-xs text-amateur-muted">
+                    {t('portal.home.nextLesson')}:{' '}
+                    {[
+                      formatDateTime(athlete.nextPrivateLesson.scheduledStart, i18n.language),
+                      athlete.nextPrivateLesson.coachName,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {data.actions.length > 0 ? (
+        <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+          <h2 className="font-display text-base font-semibold text-amateur-ink">
+            {t('portal.home.allRequestsTitle')}
+          </h2>
+          <p className="mt-1 text-sm text-amateur-muted">{t('portal.home.allRequestsHint')}</p>
+          <ul className="mt-3 space-y-2">
+            {data.actions.map((action) => (
+              <li key={action.id}>
+                <Link
+                  to={`/portal/actions/${action.id}`}
+                  className="flex items-start justify-between gap-3 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 transition-colors hover:bg-amateur-surface"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-amateur-ink">{action.title}</p>
+                    <p className="mt-1 text-xs text-amateur-muted">
+                      {[action.athleteName, getFamilyActionStatusLabel(t, action.status)]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* Club showcase / updates layer.
+          Subtle, supporting, never the primary surface.  We do not show
+          banners, popups, or marketing copy here — only the welcome
+          message the club configured (if any) plus a calm, single-line
+          reassurance about how families learn about news. */}
+      <section
+        id="updates"
+        className="rounded-3xl border border-dashed border-amateur-border bg-amateur-surface/60 p-5 text-sm text-amateur-muted scroll-mt-24"
+      >
+        <p className="font-medium text-amateur-ink">
+          {branding?.welcomeTitle ?? t('portal.home.updatesTitle')}
+        </p>
+        <p className="mt-1">
+          {branding?.welcomeMessage ?? t('portal.home.updatesPlaceholder')}
+        </p>
       </section>
     </div>
   );

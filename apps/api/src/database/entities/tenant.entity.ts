@@ -15,6 +15,38 @@ export class Tenant {
   @Column({ type: 'varchar', length: 64, unique: true })
   slug!: string;
 
+  /**
+   * Parent Portal & Tenant Branding Foundation v1.
+   *
+   * Branding is intentionally limited to a small, controlled surface so each
+   * club can feel like itself in the parent portal without degrading product
+   * quality. Layout, typography, spacing, and component structure stay
+   * identical across tenants — only the marks below vary.
+   */
+  @Column({ type: 'varchar', length: 160, nullable: true })
+  brandDisplayName!: string | null;
+
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  brandTagline!: string | null;
+
+  @Column({ type: 'varchar', length: 9, nullable: true })
+  brandPrimaryColor!: string | null;
+
+  @Column({ type: 'varchar', length: 9, nullable: true })
+  brandAccentColor!: string | null;
+
+  @Column({ type: 'varchar', length: 512, nullable: true })
+  brandLogoUrl!: string | null;
+
+  @Column({ type: 'varchar', length: 160, nullable: true })
+  brandWelcomeTitle!: string | null;
+
+  @Column({ type: 'varchar', length: 400, nullable: true })
+  brandWelcomeMessage!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  brandUpdatedAt!: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
