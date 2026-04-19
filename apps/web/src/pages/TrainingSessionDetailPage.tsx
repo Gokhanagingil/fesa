@@ -53,6 +53,7 @@ export function TrainingSessionDetailPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rosterTruncated, setRosterTruncated] = useState(false);
+  const [showBulkTools, setShowBulkTools] = useState(false);
 
   const load = useCallback(async () => {
     if (!tenantId || !id) return;
@@ -226,17 +227,29 @@ export function TrainingSessionDetailPage() {
               className="min-w-[12rem] bg-transparent text-amateur-ink outline-none placeholder:text-amateur-muted"
             />
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <Button type="button" variant="ghost" onClick={() => applyBulkStatus('present')}>
+              {t('pages.training.markAll', { status: getAttendanceStatusLabel(t, 'present') })}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setShowBulkTools((value) => !value)}>
+              {showBulkTools ? t('app.actions.hide') : t('app.actions.more')}
+            </Button>
+          </div>
+        </div>
+        {showBulkTools ? (
+          <div className="mt-3 flex flex-wrap gap-2 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3">
             <Button type="button" variant="ghost" onClick={() => applyBulkStatus('unset')}>
               {t('pages.training.clearMarkedStatuses')}
             </Button>
-            {attendanceOptions.map((status) => (
-              <Button key={status} type="button" variant="ghost" onClick={() => applyBulkStatus(status)}>
-                {t('pages.training.markAll', { status: getAttendanceStatusLabel(t, status) })}
-              </Button>
-            ))}
+            {attendanceOptions
+              .filter((status) => status !== 'present')
+              .map((status) => (
+                <Button key={status} type="button" variant="ghost" onClick={() => applyBulkStatus(status)}>
+                  {t('pages.training.markAll', { status: getAttendanceStatusLabel(t, status) })}
+                </Button>
+              ))}
           </div>
-        </div>
+        ) : null}
         {unsetCount > 0 ? (
           <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {t('pages.training.unmarkedAttendanceHint', { count: unsetCount })}

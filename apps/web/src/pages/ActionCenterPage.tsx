@@ -301,32 +301,34 @@ export function ActionCenterPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="font-display text-base font-semibold text-amateur-ink">
-                    {t('pages.actionCenter.bulkTitle')}
-                  </h2>
-                  <p className="mt-1 text-sm text-amateur-muted">{t('pages.actionCenter.bulkHint')}</p>
+            {selectedItems.length > 0 ? (
+              <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="font-display text-base font-semibold text-amateur-ink">
+                      {t('pages.actionCenter.bulkTitle')}
+                    </h2>
+                    <p className="mt-1 text-sm text-amateur-muted">{t('pages.actionCenter.bulkHint')}</p>
+                  </div>
+                  <div className="rounded-xl border border-dashed border-amateur-border px-3 py-2 text-sm text-amateur-muted">
+                    {t('pages.actionCenter.selectedCount', { count: selectedItems.length })}
+                  </div>
                 </div>
-                <div className="rounded-xl border border-dashed border-amateur-border px-3 py-2 text-sm text-amateur-muted">
-                  {t('pages.actionCenter.selectedCount', { count: selectedItems.length })}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {bulkActions.map((action) => (
+                    <Button
+                      key={action}
+                      type="button"
+                      variant={action === 'mark_read' ? 'ghost' : 'primary'}
+                      onClick={() => void runBulkAction(action)}
+                      disabled={saving}
+                    >
+                      {getActionCenterMutationLabel(t, action)}
+                    </Button>
+                  ))}
                 </div>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {bulkActions.map((action) => (
-                  <Button
-                    key={action}
-                    type="button"
-                    variant={action === 'mark_read' ? 'ghost' : 'primary'}
-                    onClick={() => void runBulkAction(action)}
-                    disabled={selectedItems.length === 0 || saving}
-                  >
-                    {getActionCenterMutationLabel(t, action)}
-                  </Button>
-                ))}
-              </div>
-            </section>
+              </section>
+            ) : null}
 
             <section className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
               {groupedItems.map((group) => (
@@ -425,6 +427,7 @@ function CategorySummaryCard({ group }: { group: ActionCenterItemGroup }) {
 function ActionCenterRow({ item, selected, onToggleSelected, onRefresh }: ActionCenterRowProps) {
   const { t, i18n } = useTranslation();
   const [saving, setSaving] = useState(false);
+  const [showMoreActions, setShowMoreActions] = useState(false);
 
   async function mutate(action: ActionCenterItemMutation, snoozedUntil?: string) {
     setSaving(true);
@@ -485,34 +488,46 @@ function ActionCenterRow({ item, selected, onToggleSelected, onRefresh }: Action
               <Link to={item.deepLink}>
                 <Button variant="ghost">{t('pages.actionCenter.openItem')}</Button>
               </Link>
-              {item.communicationLink ? (
-                <Link to={item.communicationLink}>
-                  <Button variant="ghost">{t('pages.actionCenter.openCommunication')}</Button>
-                </Link>
-              ) : null}
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            {!item.read ? (
-              <Button type="button" variant="ghost" onClick={() => void mutate('mark_read')} disabled={saving}>
-                {getActionCenterMutationLabel(t, 'mark_read')}
-              </Button>
-            ) : (
-              <Button type="button" variant="ghost" onClick={() => void mutate('mark_unread')} disabled={saving}>
-                {getActionCenterMutationLabel(t, 'mark_unread')}
-              </Button>
-            )}
-            <Button type="button" variant="ghost" onClick={() => void mutate('snooze', snoozeUntil)} disabled={saving}>
-              {getActionCenterMutationLabel(t, 'snooze')}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => void mutate('dismiss')} disabled={saving}>
-              {getActionCenterMutationLabel(t, 'dismiss')}
-            </Button>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button type="button" onClick={() => void mutate('complete')} disabled={saving}>
               {getActionCenterMutationLabel(t, 'complete')}
             </Button>
+            {item.communicationLink ? (
+              <Link to={item.communicationLink}>
+                <Button variant="ghost">{t('pages.actionCenter.openCommunication')}</Button>
+              </Link>
+            ) : null}
+            <Button type="button" variant="ghost" onClick={() => setShowMoreActions((value) => !value)}>
+              {showMoreActions ? t('app.actions.hide') : t('app.actions.more')}
+            </Button>
           </div>
+          {showMoreActions ? (
+            <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-3">
+              {!item.read ? (
+                <Button type="button" variant="ghost" onClick={() => void mutate('mark_read')} disabled={saving}>
+                  {getActionCenterMutationLabel(t, 'mark_read')}
+                </Button>
+              ) : (
+                <Button type="button" variant="ghost" onClick={() => void mutate('mark_unread')} disabled={saving}>
+                  {getActionCenterMutationLabel(t, 'mark_unread')}
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => void mutate('snooze', snoozeUntil)}
+                disabled={saving}
+              >
+                {getActionCenterMutationLabel(t, 'snooze')}
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => void mutate('dismiss')} disabled={saving}>
+                {getActionCenterMutationLabel(t, 'dismiss')}
+              </Button>
+            </div>
+          ) : null}
         </div>
       </div>
     </article>

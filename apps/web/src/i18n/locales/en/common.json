@@ -33,7 +33,8 @@
       "record": "Record",
       "apply": "Apply",
       "refresh": "Refresh",
-      "hide": "Hide"
+      "hide": "Hide",
+      "more": "More"
     },
     "states": {
       "loading": "Loading…",
