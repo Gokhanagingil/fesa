@@ -10,6 +10,11 @@ The amateur platform ships a **single, repeatable demo seed** for local developm
   - `moda-voleybol-akademi` — Moda Voleybol Akademi
   - `marmara-futbol-okulu` — Marmara Futbol Okulu
 - Inserts **sport branches**, **age groups**, **groups (cohorts)**, **teams**, **coaches**, **athletes**, **guardians**, **links**, **team memberships**, **training sessions**, **private lessons**, **attendance**, **charge items**, **athlete charges**, **staff users**, **tenant memberships**, and **staff sessions**.
+- After the expansion seed, also runs an **inventory seed** that adds a small
+  but believable inventory footprint per club (numbered match jerseys, sized
+  sweatshirts, training balls, cones with a deliberately low stock signal,
+  and a few open athlete assignments). The inventory seed is idempotent and
+  reuses the demo athlete cohort as assignment recipients.
 - After the base seed completes, runs an **expansion seed** that grows each
   demo club into a believable staging-walkthrough footprint (≈22-29 athletes,
   ≈12-21 guardians, 4-6 coaches, several groups and teams, weekly recurring

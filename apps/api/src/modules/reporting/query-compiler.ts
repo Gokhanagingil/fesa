@@ -24,6 +24,7 @@ import { Guardian } from '../../database/entities/guardian.entity';
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { AthleteCharge } from '../../database/entities/athlete-charge.entity';
 import { TrainingSession } from '../../database/entities/training-session.entity';
+import { InventoryVariant } from '../../database/entities/inventory-variant.entity';
 import { getCatalogEntity, getFieldDefinition } from './catalog';
 import { validateFilterTree } from './filter-tree';
 import {
@@ -48,6 +49,7 @@ const ENTITY_ALIAS: Record<ReportEntityKey, string> = {
   private_lessons: 'lesson',
   finance_charges: 'ac',
   training_sessions: 'session',
+  inventory_variants: 'variant',
 };
 
 function addDaysUtc(base: Date, amount: number): Date {
@@ -105,6 +107,8 @@ const JOIN_DEFS: Record<string, (qb: SelectQueryBuilder<ObjectLiteral>) => void>
     qb.leftJoin('session.team', 'session_team'),
   training_session_coach: (qb) =>
     qb.leftJoin('session.coach', 'session_coach'),
+  variant_item: (qb) => qb.leftJoin('variant.inventoryItem', 'variant_item'),
+  variant_branch: (qb) => qb.leftJoin('variant_item.sportBranch', 'variant_branch'),
 };
 
 function renderPercentExpression(
@@ -452,12 +456,53 @@ const CHARGE_FIELDS: Record<string, FieldSql> = {
   'charge.billingPeriodLabel': { expression: 'ac."billingPeriodLabel"' },
 };
 
+const INVENTORY_AVAILABLE_SQL = `GREATEST(variant."stockOnHand" - variant."assignedCount", 0)`;
+const INVENTORY_THRESHOLD_SQL = `COALESCE(variant."lowStockThreshold", variant_item."lowStockThreshold", 0)`;
+
+const INVENTORY_VARIANT_FIELDS: Record<string, FieldSql> = {
+  'inventory.id': { expression: 'variant.id' },
+  'inventory.itemName': {
+    expression: 'variant_item.name',
+    joins: [{ id: 'variant_item', apply: JOIN_DEFS.variant_item }],
+  },
+  'inventory.itemCategory': {
+    expression: 'variant_item.category',
+    joins: [{ id: 'variant_item', apply: JOIN_DEFS.variant_item }],
+  },
+  'inventory.itemSportBranchName': {
+    expression: 'variant_branch.name',
+    joins: [
+      { id: 'variant_item', apply: JOIN_DEFS.variant_item },
+      { id: 'variant_branch', apply: JOIN_DEFS.variant_branch },
+    ],
+  },
+  'inventory.size': { expression: 'variant.size' },
+  'inventory.number': { expression: 'variant.number' },
+  'inventory.color': { expression: 'variant.color' },
+  'inventory.stockOnHand': { expression: 'variant."stockOnHand"' },
+  'inventory.assignedCount': { expression: 'variant."assignedCount"' },
+  'inventory.available': { expression: INVENTORY_AVAILABLE_SQL },
+  'inventory.lowStockThreshold': {
+    expression: INVENTORY_THRESHOLD_SQL,
+    joins: [{ id: 'variant_item', apply: JOIN_DEFS.variant_item }],
+  },
+  'inventory.isLowStock': {
+    expression: `(${INVENTORY_THRESHOLD_SQL} > 0 AND ${INVENTORY_AVAILABLE_SQL} > 0 AND ${INVENTORY_AVAILABLE_SQL} <= ${INVENTORY_THRESHOLD_SQL})`,
+    joins: [{ id: 'variant_item', apply: JOIN_DEFS.variant_item }],
+  },
+  'inventory.isOutOfStock': {
+    expression: `(variant."stockOnHand" > 0 AND ${INVENTORY_AVAILABLE_SQL} = 0)`,
+  },
+  'inventory.isActive': { expression: 'variant."isActive"' },
+};
+
 const FIELD_TABLE: Record<ReportEntityKey, Record<string, FieldSql>> = {
   athletes: ATHLETE_FIELDS,
   guardians: GUARDIAN_FIELDS,
   private_lessons: LESSON_FIELDS,
   training_sessions: TRAINING_SESSION_FIELDS,
   finance_charges: CHARGE_FIELDS,
+  inventory_variants: INVENTORY_VARIANT_FIELDS,
 };
 
 /**
@@ -851,6 +896,9 @@ export class ReportingQueryCompiler {
         break;
       case 'training_sessions':
         qb = this.dataSource.getRepository(TrainingSession).createQueryBuilder(alias);
+        break;
+      case 'inventory_variants':
+        qb = this.dataSource.getRepository(InventoryVariant).createQueryBuilder(alias);
         break;
       default:
         throw new BadRequestException(`Unsupported entity "${entity}".`);

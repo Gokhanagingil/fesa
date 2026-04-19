@@ -13,6 +13,7 @@ const links = [
   { to: '/app/training', key: 'training' as const },
   { to: '/app/private-lessons', key: 'privateLessons' as const },
   { to: '/app/finance', key: 'finance' as const },
+  { to: '/app/inventory', key: 'inventory' as const },
   { to: '/app/communications', key: 'communications' as const },
   { to: '/app/reports', key: 'reports' as const },
   { to: '/app/settings', key: 'settings' as const },

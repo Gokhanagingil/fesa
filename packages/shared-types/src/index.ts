@@ -95,7 +95,8 @@ export type ReportEntityKey =
   | 'guardians'
   | 'private_lessons'
   | 'finance_charges'
-  | 'training_sessions';
+  | 'training_sessions'
+  | 'inventory_variants';
 
 /** Field data types supported by the universal filter grammar. */
 export type ReportFieldType =
@@ -442,4 +443,108 @@ export interface ChargeItemSummary {
   defaultAmount: string;
   currency: string;
   isActive: boolean;
+}
+
+// —— Inventory & Assignment Pack v1 ————————————————————————————————————
+
+export type InventoryCategory = 'apparel' | 'balls' | 'equipment' | 'gear' | 'other';
+
+export type InventoryMovementType =
+  | 'stock_added'
+  | 'stock_removed'
+  | 'stock_adjusted'
+  | 'assigned'
+  | 'returned'
+  | 'retired';
+
+export interface InventoryVariantSummary {
+  id: Uuid;
+  inventoryItemId: Uuid;
+  size: string | null;
+  number: string | null;
+  color: string | null;
+  isDefault: boolean;
+  stockOnHand: number;
+  assignedCount: number;
+  available: number;
+  effectiveLowStockThreshold: number;
+  isLowStock: boolean;
+  isOutOfStock: boolean;
+  isActive: boolean;
+}
+
+export interface InventoryItemSummary {
+  id: Uuid;
+  name: string;
+  category: InventoryCategory;
+  sportBranchId: Uuid | null;
+  sportBranchName: string | null;
+  hasVariants: boolean;
+  trackAssignment: boolean;
+  description: string | null;
+  isActive: boolean;
+  lowStockThreshold: number;
+  totalStock: number;
+  totalAssigned: number;
+  totalAvailable: number;
+  variantCount: number;
+  lowStockVariantCount: number;
+  outOfStockVariantCount: number;
+  activeAssignmentCount: number;
+  variants: InventoryVariantSummary[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InventoryAssignmentSummary {
+  id: Uuid;
+  inventoryItemId: Uuid;
+  inventoryItemName: string;
+  inventoryItemCategory: InventoryCategory;
+  inventoryVariantId: Uuid;
+  variantLabel: string;
+  size: string | null;
+  number: string | null;
+  color: string | null;
+  athleteId: Uuid;
+  athleteName: string;
+  athletePrimaryGroupId: Uuid | null;
+  quantity: number;
+  assignedAt: string;
+  returnedAt: string | null;
+  isOpen: boolean;
+  notes: string | null;
+}
+
+export interface InventoryMovementSummary {
+  id: Uuid;
+  inventoryItemId: Uuid;
+  inventoryItemName: string;
+  inventoryVariantId: Uuid;
+  variantLabel: string;
+  type: InventoryMovementType;
+  quantity: number;
+  athleteId: Uuid | null;
+  athleteName: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface InventoryListResponse {
+  items: InventoryItemSummary[];
+  total: number;
+  counts: {
+    activeItems: number;
+    inactiveItems: number;
+    lowStockItems: number;
+    outOfStockItems: number;
+    totalAssignments: number;
+    byCategory: Record<InventoryCategory, number>;
+  };
+}
+
+export interface InventoryItemDetailResponse {
+  item: InventoryItemSummary;
+  activeAssignments: InventoryAssignmentSummary[];
+  recentMovements: InventoryMovementSummary[];
 }

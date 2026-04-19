@@ -108,3 +108,28 @@ export enum TenantMembershipRole {
   STAFF = 'staff',
   COACH = 'coach',
 }
+
+/**
+ * Inventory & Assignment Pack v1
+ * ------------------------------
+ * Categories are intentionally short and amateur-club friendly. They keep
+ * grouping useful (jerseys vs balls vs equipment) without forcing clubs into
+ * warehouse-style taxonomies. Items can always be re-categorised later.
+ */
+export enum InventoryCategory {
+  APPAREL = 'apparel',
+  BALLS = 'balls',
+  EQUIPMENT = 'equipment',
+  GEAR = 'gear',
+  OTHER = 'other',
+}
+
+/** Movement log event types. Kept compact on purpose for v1. */
+export enum InventoryMovementType {
+  STOCK_ADDED = 'stock_added',
+  STOCK_REMOVED = 'stock_removed',
+  STOCK_ADJUSTED = 'stock_adjusted',
+  ASSIGNED = 'assigned',
+  RETURNED = 'returned',
+  RETIRED = 'retired',
+}

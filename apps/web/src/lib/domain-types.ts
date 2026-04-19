@@ -731,3 +731,107 @@ export type PeriodicChargePreviewResponse = {
 export type PeriodicChargeGenerateResponse = PeriodicChargePreviewResponse & {
   createdIds: string[];
 };
+
+// —— Inventory & Assignment Pack v1 ——
+
+export type InventoryCategory = 'apparel' | 'balls' | 'equipment' | 'gear' | 'other';
+
+export type InventoryMovementType =
+  | 'stock_added'
+  | 'stock_removed'
+  | 'stock_adjusted'
+  | 'assigned'
+  | 'returned'
+  | 'retired';
+
+export type InventoryVariantSummary = {
+  id: string;
+  inventoryItemId: string;
+  size: string | null;
+  number: string | null;
+  color: string | null;
+  isDefault: boolean;
+  stockOnHand: number;
+  assignedCount: number;
+  available: number;
+  effectiveLowStockThreshold: number;
+  isLowStock: boolean;
+  isOutOfStock: boolean;
+  isActive: boolean;
+};
+
+export type InventoryItemSummary = {
+  id: string;
+  name: string;
+  category: InventoryCategory;
+  sportBranchId: string | null;
+  sportBranchName: string | null;
+  hasVariants: boolean;
+  trackAssignment: boolean;
+  description: string | null;
+  isActive: boolean;
+  lowStockThreshold: number;
+  totalStock: number;
+  totalAssigned: number;
+  totalAvailable: number;
+  variantCount: number;
+  lowStockVariantCount: number;
+  outOfStockVariantCount: number;
+  activeAssignmentCount: number;
+  variants: InventoryVariantSummary[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type InventoryAssignmentSummary = {
+  id: string;
+  inventoryItemId: string;
+  inventoryItemName: string;
+  inventoryItemCategory: InventoryCategory;
+  inventoryVariantId: string;
+  variantLabel: string;
+  size: string | null;
+  number: string | null;
+  color: string | null;
+  athleteId: string;
+  athleteName: string;
+  athletePrimaryGroupId: string | null;
+  quantity: number;
+  assignedAt: string;
+  returnedAt: string | null;
+  isOpen: boolean;
+  notes: string | null;
+};
+
+export type InventoryMovementSummary = {
+  id: string;
+  inventoryItemId: string;
+  inventoryItemName: string;
+  inventoryVariantId: string;
+  variantLabel: string;
+  type: InventoryMovementType;
+  quantity: number;
+  athleteId: string | null;
+  athleteName: string | null;
+  note: string | null;
+  createdAt: string;
+};
+
+export type InventoryListResponse = {
+  items: InventoryItemSummary[];
+  total: number;
+  counts: {
+    activeItems: number;
+    inactiveItems: number;
+    lowStockItems: number;
+    outOfStockItems: number;
+    totalAssignments: number;
+    byCategory: Record<InventoryCategory, number>;
+  };
+};
+
+export type InventoryItemDetailResponse = {
+  item: InventoryItemSummary;
+  activeAssignments: InventoryAssignmentSummary[];
+  recentMovements: InventoryMovementSummary[];
+};

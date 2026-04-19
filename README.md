@@ -10,7 +10,7 @@
 | `apps/api` | NestJS + TypeORM + PostgreSQL — athletes, guardians, training, attendance, finance primitives |
 | `packages/shared-types` | Shared TypeScript contracts |
 | `packages/shared-config` | Shared configuration helpers |
-| `docs/` | Architecture, domain, i18n, reporting notes |
+| `docs/` | Architecture, domain, i18n, reporting, inventory notes |
 
 ## Prerequisites
 
@@ -178,6 +178,7 @@ The current product wave extends the existing command center into a more complet
 - **Guardian Portal MVP:** the platform now includes a controlled guardian-facing portal with invitation/activation, linked-athlete visibility, pending family requests, and portal submissions that still flow through staff review before authoritative records change.
 - **Dashboard + reporting:** the dashboard and reports pages now surface live operational, coaching, private-lesson, and collection summaries instead of placeholder counts and disabled report affordances.
 - **Staff identity + tenant administration:** staff/admin users now have a real login flow, explicit tenant memberships, role-aware entry, and a lightweight admin/settings surface for platform vs club administration.
+- **Inventory & Assignment Pack v1:** clubs can manage physical stock (jerseys, sweatshirts, balls, cones, equipment) with optional size / number variants, assign items to athletes, return them, and read low-stock signals — all reusing the same reporting backbone. See [docs/inventory.md](docs/inventory.md).
 
 ## Domain: Group vs Team vs Athlete
 
@@ -193,6 +194,7 @@ The current product wave extends the existing command center into a more complet
 - [docs/i18n.md](docs/i18n.md) — localization
 - [docs/reporting.md](docs/reporting.md) — reporting and bulk placeholders
 - [docs/communication.md](docs/communication.md) — Communication & Follow-up Pack v1 (WhatsApp-first follow-up)
+- [docs/inventory.md](docs/inventory.md) — Inventory & Assignment Pack v1 (stock, athlete assignments, movements)
 
 ## Security
 

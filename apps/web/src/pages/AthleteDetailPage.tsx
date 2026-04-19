@@ -33,6 +33,7 @@ import type {
   FamilyActionRequest,
   FamilyActionRequestStatus,
   FamilyActionRequestType,
+  InventoryAssignmentSummary,
   PrivateLesson,
   Guardian,
   GuardianRelationshipType,
@@ -55,6 +56,7 @@ export function AthleteDetailPage() {
   const [charges, setCharges] = useState<AthleteCharge[]>([]);
   const [privateLessons, setPrivateLessons] = useState<PrivateLesson[]>([]);
   const [familyReadiness, setFamilyReadiness] = useState<AthleteFamilyReadiness | null>(null);
+  const [inventoryAssignments, setInventoryAssignments] = useState<InventoryAssignmentSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(searchParams.get('message'));
@@ -77,7 +79,7 @@ export function AthleteDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const [a, g, tm, ag, tr, ci, ac, lessons, readiness] = await Promise.all([
+      const [a, g, tm, ag, tr, ci, ac, lessons, readiness, inv] = await Promise.all([
         apiGet<Athlete>(`/api/athletes/${id}`),
         apiGet<AthleteGuardianLink[]>(`/api/athletes/${id}/guardians`),
         apiGet<TeamMembership[]>(`/api/athletes/${id}/teams`),
@@ -87,6 +89,7 @@ export function AthleteDetailPage() {
         apiGet<AthleteFinanceSummaryResponse>(`/api/finance/athlete-summaries?athleteId=${id}`),
         apiGet<{ items: PrivateLesson[] }>(`/api/private-lessons?athleteId=${id}&limit=20`),
         apiGet<AthleteFamilyReadiness>(`/api/athletes/${id}/family-readiness`),
+        apiGet<InventoryAssignmentSummary[]>(`/api/inventory/athletes/${id}/assignments`),
       ]);
       setAthlete(a);
       setGuardians(g);
@@ -96,6 +99,7 @@ export function AthleteDetailPage() {
       setCharges(ac.charges.slice(0, 20));
       setPrivateLessons(lessons.items);
       setFamilyReadiness(readiness);
+      setInventoryAssignments(inv);
       const sameBranch = tr.items.filter((x) => x.sportBranchId === a.sportBranchId);
       setAllTeams(sameBranch);
       if (!requestGuardianId && readiness.actions[0]?.guardianId) {
@@ -1100,6 +1104,56 @@ export function AthleteDetailPage() {
               </table>
             </div>
           </div>
+        )}
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-semibold">{t('pages.athletes.inventoryTitle')}</h3>
+            <p className="text-sm text-amateur-muted">{t('pages.athletes.inventoryHint')}</p>
+          </div>
+          <Link to="/app/inventory">
+            <Button variant="ghost">{t('pages.athletes.inventoryOpen')}</Button>
+          </Link>
+        </div>
+        {inventoryAssignments.length === 0 ? (
+          <p className="mt-3 text-sm text-amateur-muted">{t('pages.athletes.inventoryEmpty')}</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {inventoryAssignments.map((assignment) => (
+              <li
+                key={assignment.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm"
+              >
+                <div>
+                  <p className="font-medium text-amateur-ink">{assignment.inventoryItemName}</p>
+                  <p className="text-xs text-amateur-muted">
+                    {assignment.variantLabel}
+                    {assignment.quantity > 1 ? ` · ×${assignment.quantity}` : ''}
+                    {assignment.assignedAt
+                      ? ` · ${formatDate(assignment.assignedAt, i18n.language)}`
+                      : ''}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={async () => {
+                    try {
+                      await apiPost(`/api/inventory/assignments/${assignment.id}/return`, {});
+                      setMessage(t('pages.athletes.inventoryReturned'));
+                      await load();
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : t('app.errors.saveFailed'));
+                    }
+                  }}
+                >
+                  {t('pages.athletes.inventoryReturn')}
+                </Button>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 
