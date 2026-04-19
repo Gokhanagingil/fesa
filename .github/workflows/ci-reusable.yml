@@ -70,6 +70,12 @@ jobs:
       - name: Reporting starter-view integrity smoke
         run: npm run reporting:starter-views:test
 
+      - name: Athlete photo / media storage isolation smoke
+        run: npm run media:isolation:test
+
+      - name: WhatsApp delivery contract smoke
+        run: npm run whatsapp:delivery:test
+
       - name: Migration readiness (disposable PostgreSQL)
         run: npm run migration:run -w @amateur/api
 

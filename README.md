@@ -135,13 +135,13 @@ CI validates the monorepo on **pull requests** and **pushes to `main`**. There i
 
 | Workflow | Purpose |
 |----------|---------|
-| [CI](.github/workflows/ci.yml) | Installs with `npm ci`, runs a small [repo guard](scripts/repo-guard.mjs), then `npm run lint`, `npm run frontend:smoke`, `npm run i18n:check`, `npm run build`, `npm run reporting:filter-tree:test`, `npm run reporting:starter-views:test`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke`. |
+| [CI](.github/workflows/ci.yml) | Installs with `npm ci`, runs a small [repo guard](scripts/repo-guard.mjs), then `npm run lint`, `npm run frontend:smoke`, `npm run i18n:check`, `npm run build`, `npm run reporting:filter-tree:test`, `npm run reporting:starter-views:test`, `npm run media:isolation:test`, `npm run whatsapp:delivery:test`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke`. |
 | [Manual validation](.github/workflows/manual-validate.yml) | Same checks on demand via **Actions → Manual validation → Run workflow** (useful when you are not opening a PR). |
 | [Staging SSH check](.github/workflows/staging-ssh-check.yml) | Optional: verify GitHub → server SSH only (no deploy). Use when fixing `Permission denied (publickey)`. |
 
 Reusable steps live in [.github/workflows/ci-reusable.yml](.github/workflows/ci-reusable.yml) so primary CI and manual runs stay in sync.
 
-**Locally:** `npm run repo:guard` runs the structure/workspace checks only; fuller parity with CI is `npm ci`, `npm run repo:guard`, `npm run lint`, `npm run frontend:smoke`, `npm run i18n:check`, `npm run build`, `npm run reporting:filter-tree:test`, `npm run reporting:starter-views:test`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke` with `DATABASE_URL` pointed at a local PostgreSQL instance.
+**Locally:** `npm run repo:guard` runs the structure/workspace checks only; fuller parity with CI is `npm ci`, `npm run repo:guard`, `npm run lint`, `npm run frontend:smoke`, `npm run i18n:check`, `npm run build`, `npm run reporting:filter-tree:test`, `npm run reporting:starter-views:test`, `npm run media:isolation:test`, `npm run whatsapp:delivery:test`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke` with `DATABASE_URL` pointed at a local PostgreSQL instance.
 
 **Limitations:** CI still uses a lightweight disposable PostgreSQL service rather than a full end-to-end environment. It now validates frontend reporting smoke, migration execution, repeatable seed behavior, and runtime boot, but it does not yet cover full browser E2E or staging infrastructure such as Nginx.
 
@@ -180,6 +180,7 @@ The current product wave extends the existing command center into a more complet
 - **Staff identity + tenant administration:** staff/admin users now have a real login flow, explicit tenant memberships, role-aware entry, and a lightweight admin/settings surface for platform vs club administration.
 - **Inventory & Assignment Pack v1:** clubs can manage physical stock (jerseys, sweatshirts, balls, cones, equipment) with optional size / number variants, assign items to athletes, return them, and read low-stock signals — all reusing the same reporting backbone. See [docs/inventory.md](docs/inventory.md).
 - **Import / Export & Bulk Operations Foundation v1:** clubs can import athletes, guardians, and athlete↔guardian relationships through a guided wizard with preview / validation / commit, run a small set of high-value bulk actions (lifecycle updates, guardian delete, inventory bulk return), and pull practical CSV exports without leaving the page. See [docs/import-export.md](docs/import-export.md).
+- **Athlete Photo & Media Foundation v1:** athletes now have a calm profile photo capability — upload, replace, and remove are tenant-isolated and validated server-side, with avatars surfaced wherever recognition matters (athlete detail, athletes list). See [docs/media.md](docs/media.md).
 
 ## Domain: Group vs Team vs Athlete
 
@@ -197,6 +198,7 @@ The current product wave extends the existing command center into a more complet
 - [docs/communication.md](docs/communication.md) — Communication & Follow-up Pack v1 (WhatsApp-first follow-up)
 - [docs/inventory.md](docs/inventory.md) — Inventory & Assignment Pack v1 (stock, athlete assignments, movements)
 - [docs/import-export.md](docs/import-export.md) — Import / Export & Bulk Operations Foundation v1 (athlete / guardian / link imports, shared bulk bar, CSV exports)
+- [docs/media.md](docs/media.md) — Athlete Photo & Media Foundation v1 (profile photo upload / replace / remove, tenant-isolated storage)
 
 ## Security
 
