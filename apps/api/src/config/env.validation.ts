@@ -9,6 +9,8 @@ export interface EnvVars {
   DB_SYNCHRONIZE?: string;
   DB_RUN_MIGRATIONS?: string;
   DEV_TENANT_ID?: string;
+  /** Optional override for the on-disk media storage root. Defaults to <cwd>/storage/media. */
+  MEDIA_STORAGE_ROOT?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvVars {
@@ -27,6 +29,12 @@ export function validateEnv(config: Record<string, unknown>): EnvVars {
     DB_RUN_MIGRATIONS: Joi.string().valid('true', 'false').optional(),
     /** Optional UUID for local/dev requests when no auth tenant exists (header X-Tenant-Id overrides). */
     DEV_TENANT_ID: Joi.string().uuid().optional(),
+    /**
+     * Wave 16 — optional override for the local media storage root.  If unset
+     * the API uses `<cwd>/storage/media`; production deployments can point
+     * this at a persistent volume.
+     */
+    MEDIA_STORAGE_ROOT: Joi.string().optional().allow(''),
   });
 
   const { error, value } = schema.validate(config, {

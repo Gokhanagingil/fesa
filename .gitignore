@@ -33,3 +33,7 @@ coverage/
 # Misc
 .turbo
 .cache
+
+# Athlete Photo & Media Foundation v1 — uploaded media lives outside source control.
+storage/
+apps/api/storage/

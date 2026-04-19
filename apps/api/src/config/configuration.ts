@@ -24,4 +24,15 @@ export const configuration = () => ({
     /** Run pending migrations on API startup (typical for production/staging). */
     runMigrations: envBool(process.env.DB_RUN_MIGRATIONS, false),
   },
+  media: {
+    /**
+     * Where uploaded athlete photos live on disk. Tenant-scoped subfolders
+     * are created lazily by the media service. Override with
+     * MEDIA_STORAGE_ROOT in production deployments to a persistent volume.
+     */
+    storageRoot:
+      process.env.MEDIA_STORAGE_ROOT && process.env.MEDIA_STORAGE_ROOT.trim().length > 0
+        ? process.env.MEDIA_STORAGE_ROOT.trim()
+        : 'storage/media',
+  },
 });

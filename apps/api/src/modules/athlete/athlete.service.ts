@@ -13,6 +13,10 @@ import { AthleteTeamMembership } from '../../database/entities/athlete-team-memb
 import { Team } from '../../database/entities/team.entity';
 import { FamilyActionService } from '../family-action/family-action.service';
 import { BulkUpdateAthletesDto } from './dto/bulk-update-athletes.dto';
+import {
+  AllowedPhotoMimeType,
+  MediaStorageService,
+} from '../media/media-storage.service';
 
 @Injectable()
 export class AthleteService {
@@ -30,6 +34,7 @@ export class AthleteService {
     @InjectRepository(AthleteTeamMembership)
     private readonly teamMemberships: Repository<AthleteTeamMembership>,
     private readonly familyActions: FamilyActionService,
+    private readonly media: MediaStorageService,
   ) {}
 
   private async assertBranch(tenantId: string, sportBranchId: string): Promise<void> {
@@ -353,5 +358,79 @@ export class AthleteService {
     if (!m) throw new NotFoundException('Membership not found');
     m.endedAt = new Date();
     return this.teamMemberships.save(m);
+  }
+
+  /**
+   * Wave 16 — store/replace an athlete profile photo.  Replacing is
+   * destructive on purpose: clubs need a single trustworthy current photo,
+   * not a media history.  Tenant isolation is enforced by `findOne`, which
+   * scopes the load to the request tenant before any filesystem write.
+   */
+  async setAthletePhoto(
+    tenantId: string,
+    athleteId: string,
+    buffer: Buffer,
+    contentType: AllowedPhotoMimeType,
+  ): Promise<Athlete> {
+    const athlete = await this.findOne(tenantId, athleteId);
+    const previousFileName = athlete.photoFileName;
+
+    const stored = await this.media.storePhoto(tenantId, 'athletes', athleteId, buffer, contentType);
+
+    athlete.photoFileName = stored.fileName;
+    athlete.photoContentType = stored.contentType;
+    athlete.photoSizeBytes = stored.sizeBytes;
+    athlete.photoUploadedAt = stored.uploadedAt;
+    const saved = await this.athletes.save(athlete);
+
+    if (previousFileName && previousFileName !== stored.fileName) {
+      await this.media.removeFile(tenantId, 'athletes', athleteId, previousFileName);
+    }
+    return saved;
+  }
+
+  async removeAthletePhoto(tenantId: string, athleteId: string): Promise<Athlete> {
+    const athlete = await this.findOne(tenantId, athleteId);
+    if (!athlete.photoFileName) {
+      return athlete;
+    }
+    const previousFileName = athlete.photoFileName;
+    athlete.photoFileName = null;
+    athlete.photoContentType = null;
+    athlete.photoSizeBytes = null;
+    athlete.photoUploadedAt = null;
+    const saved = await this.athletes.save(athlete);
+    await this.media.removeFile(tenantId, 'athletes', athleteId, previousFileName);
+    return saved;
+  }
+
+  /**
+   * Locate the current profile photo on disk, scoped to the tenant.
+   * Returns null when the athlete exists but no photo is stored.
+   */
+  async getAthletePhotoFile(
+    tenantId: string,
+    athleteId: string,
+  ): Promise<{
+    absolutePath: string;
+    contentType: string;
+    sizeBytes: number | null;
+    uploadedAt: Date | null;
+  } | null> {
+    const athlete = await this.findOne(tenantId, athleteId);
+    if (!athlete.photoFileName) return null;
+    const absolutePath = this.media.resolveExistingFile(
+      tenantId,
+      'athletes',
+      athleteId,
+      athlete.photoFileName,
+    );
+    if (!absolutePath) return null;
+    return {
+      absolutePath,
+      contentType: athlete.photoContentType ?? 'application/octet-stream',
+      sizeBytes: athlete.photoSizeBytes,
+      uploadedAt: athlete.photoUploadedAt,
+    };
   }
 }

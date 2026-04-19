@@ -82,6 +82,31 @@ export class Athlete {
   @Column({ type: 'varchar', length: 500, nullable: true })
   notes!: string | null;
 
+  /**
+   * Athlete photo (Wave 16 — Athlete Photo & Media Foundation v1).
+   *
+   * Single active profile photo per athlete is enough for v1.  The file
+   * itself lives in the per-tenant media directory; only the relative
+   * filename, content type, byte size, and the upload moment are kept on
+   * the athlete row so we can render thumbnails, validate file constraints,
+   * and cache-bust on replace without expanding the data model.
+   *
+   * Replacing the photo overwrites these columns and unlinks the previous
+   * file; removing clears them.  No history is kept by design — clubs do
+   * not need a media library here, just a trustworthy profile picture.
+   */
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  photoFileName!: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  photoContentType!: string | null;
+
+  @Column({ type: 'integer', nullable: true })
+  photoSizeBytes!: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  photoUploadedAt!: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
