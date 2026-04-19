@@ -634,7 +634,7 @@ export function AthleteChargesPage() {
                             <option value="all">{t('pages.athleteCharges.bulkStatusScopeAll')}</option>
                             {(['trial', 'active', 'paused', 'inactive', 'archived'] as AthleteStatus[]).map((athleteStatus) => (
                               <option key={athleteStatus} value={athleteStatus}>
-                                {t('pages.athleteCharges.bulkStatusSingle', {
+                                {t('pages.athleteCharges.bulkStatusScopeSingle', {
                                   status: getAthleteStatusLabel(t, athleteStatus),
                                 })}
                               </option>
