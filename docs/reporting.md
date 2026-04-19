@@ -392,6 +392,16 @@ Frontend changes:
   **grouped saved-view round-trip**, and **grouped CSV export** across every
   accessible tenant.
 
+The two pure-Node checks intentionally read compiled files from
+`apps/api/dist/modules/reporting`, so they should be run after `npm run build`.
+If that build output is missing, the scripts now fail with an explicit
+"run `npm run build` first" message instead of a raw module-load error.
+
+`reporting:smoke` remains the live API contract check. It now fails unless
+invalid filter and invalid grouping requests return the documented `400 Bad
+Request`, and its startup error explains that the API must be running and the
+demo login must be available.
+
 ### Intentionally still deferred (v2)
 
 - Multi-axis pivot tables (one dimension is enough today).

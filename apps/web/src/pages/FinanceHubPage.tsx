@@ -231,7 +231,7 @@ export function FinanceHubPage() {
             ) : summary && summary.athletes.length > 0 ? (
               <ul className="mt-4 divide-y divide-amateur-border">
                 {summary.athletes.slice(0, 5).map((entry) => (
-                  <li key={entry.athlete.id} className="flex items-center justify-between gap-3 py-3">
+                  <li key={entry.athlete.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-medium text-amateur-ink">
                         {entry.athlete.preferredName || `${entry.athlete.firstName} ${entry.athlete.lastName}`}
@@ -242,10 +242,10 @@ export function FinanceHubPage() {
                       </p>
                     </div>
                     <Link
-                      to={`/app/athletes/${entry.athlete.id}`}
+                      to={`/app/finance/athlete-charges?athleteId=${entry.athlete.id}`}
                       className="text-sm font-semibold text-amateur-accent hover:underline"
                     >
-                      {t('pages.athleteCharges.openAthlete')}
+                      {t('pages.finance.athleteChargesLink')}
                     </Link>
                   </li>
                 ))}
@@ -269,7 +269,7 @@ export function FinanceHubPage() {
             {summary?.privateLessons?.length ? (
               <ul className="mt-4 divide-y divide-amateur-border">
                 {summary.privateLessons.slice(0, 5).map((lesson) => (
-                  <li key={lesson.id} className="flex items-center justify-between gap-3 py-3">
+                  <li key={lesson.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-medium text-amateur-ink">
                         {lesson.athlete ? getPersonName(lesson.athlete) : t('pages.athleteCharges.openAthlete')}

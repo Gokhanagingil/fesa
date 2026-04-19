@@ -97,21 +97,31 @@ npm run build
 npm run lint
 ```
 
-### Reporting Foundation v1
+### Reporting validation
 
-The new advanced filtering and Report Builder spine is documented in
-[docs/reporting.md](docs/reporting.md). After `npm run build`, you can
-exercise the validator without a database:
+The reporting and Report Builder backbone is documented in
+[docs/reporting.md](docs/reporting.md). After `npm run build`, you can run
+the compiled, no-database checks:
 
 ```bash
 npm run reporting:filter-tree:test
+npm run reporting:starter-views:test
 ```
+
+Both checks load the compiled API reporting modules from `apps/api/dist`, so
+they fail fast with a clear "run npm run build" message if the build output is
+missing.
 
 With the API running, exercise catalog / run / export / saved views end to end:
 
 ```bash
 npm run reporting:smoke
 ```
+
+`reporting:smoke` is a live API check. It expects a reachable API, working
+staff login, seeded/demo-accessible tenants, and a real database behind that
+runtime. If the API is not running, the script now fails with an explicit hint
+instead of a vague fetch error.
 
 For lightweight frontend coverage of the reporting journeys themselves:
 
@@ -125,13 +135,13 @@ CI validates the monorepo on **pull requests** and **pushes to `main`**. There i
 
 | Workflow | Purpose |
 |----------|---------|
-| [CI](.github/workflows/ci.yml) | Installs with `npm ci`, runs a small [repo guard](scripts/repo-guard.mjs), then `npm run lint`, `npm run frontend:smoke`, `npm run i18n:check`, `npm run build`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke`. |
+| [CI](.github/workflows/ci.yml) | Installs with `npm ci`, runs a small [repo guard](scripts/repo-guard.mjs), then `npm run lint`, `npm run frontend:smoke`, `npm run i18n:check`, `npm run build`, `npm run reporting:filter-tree:test`, `npm run reporting:starter-views:test`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke`. |
 | [Manual validation](.github/workflows/manual-validate.yml) | Same checks on demand via **Actions → Manual validation → Run workflow** (useful when you are not opening a PR). |
 | [Staging SSH check](.github/workflows/staging-ssh-check.yml) | Optional: verify GitHub → server SSH only (no deploy). Use when fixing `Permission denied (publickey)`. |
 
 Reusable steps live in [.github/workflows/ci-reusable.yml](.github/workflows/ci-reusable.yml) so primary CI and manual runs stay in sync.
 
-**Locally:** `npm run repo:guard` runs the structure/workspace checks only; fuller parity with CI is `npm ci`, `npm run repo:guard`, `npm run lint`, `npm run frontend:smoke`, `npm run i18n:check`, `npm run build`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke` with `DATABASE_URL` pointed at a local PostgreSQL instance.
+**Locally:** `npm run repo:guard` runs the structure/workspace checks only; fuller parity with CI is `npm ci`, `npm run repo:guard`, `npm run lint`, `npm run frontend:smoke`, `npm run i18n:check`, `npm run build`, `npm run reporting:filter-tree:test`, `npm run reporting:starter-views:test`, `npm run migration:check -w @amateur/api`, `npm run seed:demo:verify`, and `npm run api:boot:smoke` with `DATABASE_URL` pointed at a local PostgreSQL instance.
 
 **Limitations:** CI still uses a lightweight disposable PostgreSQL service rather than a full end-to-end environment. It now validates frontend reporting smoke, migration execution, repeatable seed behavior, and runtime boot, but it does not yet cover full browser E2E or staging infrastructure such as Nginx.
 

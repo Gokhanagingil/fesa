@@ -246,14 +246,10 @@ export function DashboardPage() {
         actions={
           <div className="flex flex-wrap gap-2">
             <Link to="/app/report-builder">
-              <div className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3 text-sm font-semibold text-amateur-accent shadow-sm">
-                {t('pages.dashboard.openReportBuilder')}
-              </div>
+              <Button variant="ghost">{t('pages.dashboard.openReportBuilder')}</Button>
             </Link>
             <Link to="/app/reports">
-              <div className="rounded-xl border border-amateur-border bg-amateur-surface px-4 py-3 text-sm font-semibold text-amateur-accent shadow-sm">
-                {t('pages.dashboard.openCommandCenter')}
-              </div>
+              <Button variant="ghost">{t('pages.dashboard.openCommandCenter')}</Button>
             </Link>
           </div>
         }
@@ -571,6 +567,27 @@ export function DashboardPage() {
           </div>
         </section>
       ) : null}
+
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        {statCards.map((card) => (
+          <Link
+            key={card.key}
+            to={card.href}
+            className="transition hover:translate-y-[-1px]"
+          >
+            <StatCard
+              label={card.label}
+              value={loading && !summary ? '…' : card.value}
+              tone={
+                card.key === 'overdue' || card.key === 'follow-up' || card.key === 'action-center'
+                  ? 'danger'
+                  : 'default'
+              }
+            />
+          </Link>
+        ))}
+      </div>
+
       <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -607,13 +624,33 @@ export function DashboardPage() {
               compact
             />
             <StatCard
-              label={t('pages.dashboard.context.visibleAthletes')}
-              value={clubOverview?.counts.athletes ?? summary?.stats.athletes ?? 0}
+              label={t('pages.dashboard.context.visibleGuardians')}
+              value={clubOverview?.counts.guardians ?? summary?.stats.guardians ?? 0}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.context.portalAccess')}
+              value={clubOverview?.counts.portalAccess ?? 0}
               compact
             />
             <StatCard
               label={t('pages.dashboard.context.visibleGroups')}
               value={clubOverview?.counts.groups ?? 0}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.context.visibleTeams')}
+              value={clubOverview?.counts.teams ?? 0}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.context.visibleCoaches')}
+              value={clubOverview?.counts.coaches ?? coaches.length}
+              compact
+            />
+            <StatCard
+              label={t('pages.dashboard.context.visibleAthletes')}
+              value={clubOverview?.counts.athletes ?? summary?.stats.athletes ?? 0}
               compact
             />
           </div>
@@ -644,54 +681,6 @@ export function DashboardPage() {
               ? t('pages.dashboard.context.switchHint')
               : t('pages.dashboard.context.clubReadyHint')}
           </p>
-        </section>
-
-        <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="font-display text-lg font-semibold text-amateur-ink">
-                {t('pages.dashboard.context.snapshotTitle')}
-              </h2>
-              <p className="mt-1 text-sm text-amateur-muted">
-                {t('pages.dashboard.context.snapshotHint')}
-              </p>
-            </div>
-            <Link to="/app/settings" className="text-sm font-semibold text-amateur-accent hover:underline">
-              {t('app.nav.settings')}
-            </Link>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <StatCard
-              label={t('pages.dashboard.stats.athletes')}
-              value={clubOverview?.counts.athletes ?? summary?.stats.athletes ?? 0}
-              compact
-            />
-            <StatCard
-              label={t('pages.dashboard.stats.guardians')}
-              value={clubOverview?.counts.guardians ?? summary?.stats.guardians ?? 0}
-              compact
-            />
-            <StatCard
-              label={t('pages.dashboard.context.portalAccess')}
-              value={clubOverview?.counts.portalAccess ?? 0}
-              compact
-            />
-            <StatCard
-              label={t('pages.dashboard.context.coaches')}
-              value={clubOverview?.counts.coaches ?? coaches.length}
-              compact
-            />
-            <StatCard
-              label={t('pages.dashboard.context.groups')}
-              value={clubOverview?.counts.groups ?? 0}
-              compact
-            />
-            <StatCard
-              label={t('pages.dashboard.context.teams')}
-              value={clubOverview?.counts.teams ?? 0}
-              compact
-            />
-          </div>
         </section>
       </div>
 
@@ -890,26 +879,6 @@ export function DashboardPage() {
           </div>
         </section>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        {statCards.map((card) => (
-          <Link
-            key={card.key}
-            to={card.href}
-            className="transition hover:translate-y-[-1px]"
-          >
-            <StatCard
-              label={card.label}
-              value={loading && !summary ? '…' : card.value}
-              tone={
-                card.key === 'overdue' || card.key === 'follow-up' || card.key === 'action-center'
-                  ? 'danger'
-                  : 'default'
-              }
-            />
-          </Link>
-        ))}
-      </div>
-
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">

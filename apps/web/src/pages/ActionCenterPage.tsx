@@ -261,42 +261,19 @@ export function ActionCenterPage() {
           <div className="space-y-6">
             <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
+                <div className="max-w-3xl">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-accent">
                     {t('pages.actionCenter.workQueueEyebrow')}
                   </p>
                   <h2 className="mt-2 font-display text-xl font-semibold text-amateur-ink">
                     {t('pages.actionCenter.workQueueTitle')}
                   </h2>
-                  <p className="mt-2 max-w-3xl text-sm text-amateur-muted">
+                  <p className="mt-2 text-sm text-amateur-muted">
                     {t('pages.actionCenter.workQueueHint')}
                   </p>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm">
-                    <p className="text-xs uppercase tracking-wide text-amateur-muted">
-                      {t('pages.actionCenter.summary.overdue')}
-                    </p>
-                    <p className="mt-2 font-display text-2xl font-semibold text-red-700">
-                      {response.counts.overdue}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm">
-                    <p className="text-xs uppercase tracking-wide text-amateur-muted">
-                      {t('pages.actionCenter.summary.today')}
-                    </p>
-                    <p className="mt-2 font-display text-2xl font-semibold text-amateur-ink">
-                      {response.counts.today}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm">
-                    <p className="text-xs uppercase tracking-wide text-amateur-muted">
-                      {t('pages.actionCenter.summary.unread')}
-                    </p>
-                    <p className="mt-2 font-display text-2xl font-semibold text-amateur-ink">
-                      {response.counts.unread}
-                    </p>
-                  </div>
+                <div className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 text-sm text-amateur-muted">
+                  {t('pages.actionCenter.selectedCount', { count: selectedItems.length })}
                 </div>
               </div>
             </section>
@@ -315,26 +292,32 @@ export function ActionCenterPage() {
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {bulkActions.map((action) => (
-                    <Button
-                      key={action}
-                      type="button"
-                      variant={action === 'mark_read' ? 'ghost' : 'primary'}
-                      onClick={() => void runBulkAction(action)}
-                      disabled={saving}
-                    >
-                      {getActionCenterMutationLabel(t, action)}
-                    </Button>
-                  ))}
+                  <Button type="button" onClick={() => void runBulkAction('complete')} disabled={saving}>
+                    {getActionCenterMutationLabel(t, 'complete')}
+                  </Button>
+                  <details className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2">
+                    <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
+                      {t('app.actions.more')}
+                    </summary>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {bulkActions
+                        .filter((action) => action !== 'complete')
+                        .map((action) => (
+                          <Button
+                            key={action}
+                            type="button"
+                            variant="ghost"
+                            onClick={() => void runBulkAction(action)}
+                            disabled={saving}
+                          >
+                            {getActionCenterMutationLabel(t, action)}
+                          </Button>
+                        ))}
+                    </div>
+                  </details>
                 </div>
               </section>
             ) : null}
-
-            <section className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
-              {groupedItems.map((group) => (
-                <CategorySummaryCard key={group.category} group={group} />
-              ))}
-            </section>
 
             <div className="space-y-6">
               {groupedItems.map((group) => (
@@ -342,7 +325,6 @@ export function ActionCenterPage() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <StatusBadge tone="default">{getActionCenterCategoryLabel(t, group.category)}</StatusBadge>
                         {group.unread > 0 ? (
                           <StatusBadge tone="warning">
                             {t('pages.actionCenter.groupUnread', { count: group.unread })}
@@ -354,7 +336,7 @@ export function ActionCenterPage() {
                           </StatusBadge>
                         ) : null}
                       </div>
-                      <h2 className="mt-3 font-display text-lg font-semibold text-amateur-ink">
+                      <h2 className="mt-1 font-display text-lg font-semibold text-amateur-ink">
                         {getActionCenterCategoryLabel(t, group.category)}
                       </h2>
                       <p className="mt-1 text-sm text-amateur-muted">
@@ -394,35 +376,6 @@ type ActionCenterRowProps = {
   onToggleSelected: () => void;
   onRefresh: () => Promise<void>;
 };
-
-function CategorySummaryCard({ group }: { group: ActionCenterItemGroup }) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="rounded-2xl border border-amateur-border bg-amateur-surface p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-amateur-muted">
-            {getActionCenterCategoryLabel(t, group.category)}
-          </p>
-          <p className="mt-2 font-display text-2xl font-semibold text-amateur-ink">{group.count}</p>
-        </div>
-        <StatusBadge tone={group.overdue > 0 ? 'danger' : group.unread > 0 ? 'warning' : 'success'}>
-          {group.overdue > 0
-            ? t('pages.actionCenter.groupStatusOverdue')
-            : group.unread > 0
-              ? t('pages.actionCenter.groupStatusUnread')
-              : t('pages.actionCenter.groupStatusStable')}
-        </StatusBadge>
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2 text-xs text-amateur-muted">
-        <span>{t('pages.actionCenter.groupUnread', { count: group.unread })}</span>
-        <span>·</span>
-        <span>{t('pages.actionCenter.groupOverdue', { count: group.overdue })}</span>
-      </div>
-    </div>
-  );
-}
 
 function ActionCenterRow({ item, selected, onToggleSelected, onRefresh }: ActionCenterRowProps) {
   const { t, i18n } = useTranslation();

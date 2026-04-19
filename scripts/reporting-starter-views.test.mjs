@@ -13,16 +13,24 @@
  * Failures print and exit non-zero. Run after `npm run build`.
  */
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const distRoot = resolve(here, '..', 'apps', 'api', 'dist', 'modules', 'reporting');
+const catalogPath = resolve(distRoot, 'catalog.js');
+const filterTreePath = resolve(distRoot, 'filter-tree.js');
 
-const { listStarterViews, listCatalogEntities, getFieldDefinition } = await import(
-  resolve(distRoot, 'catalog.js')
-);
-const { validateFilterTree } = await import(resolve(distRoot, 'filter-tree.js'));
+if (!existsSync(catalogPath) || !existsSync(filterTreePath)) {
+  console.error('reporting-starter-views.test could not find the compiled reporting modules.');
+  console.error(`Expected build output at: ${distRoot}`);
+  console.error('Run `npm run build` before running this check.');
+  process.exit(1);
+}
+
+const { listStarterViews, listCatalogEntities, getFieldDefinition } = await import(catalogPath);
+const { validateFilterTree } = await import(filterTreePath);
 
 const entities = listCatalogEntities();
 const entityKeys = new Set(entities.map((entity) => entity.key));

@@ -879,6 +879,7 @@
       "bulkStatusScope": "Eligible athlete status",
       "bulkStatusScopeDefault": "Active + trial only",
       "bulkStatusScopeAll": "All visible statuses",
+      "bulkStatusScopeSingle": "{{status}} only",
       "bulkScopeHint": "Use status scope for group/team targeting so paused or inactive athletes are not charged silently.",
       "bulkTargetSummarySelected_one": "{{count}} reviewed athlete will receive the charge.",
       "bulkTargetSummarySelected_other": "{{count}} reviewed athletes will receive the charge.",
