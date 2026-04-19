@@ -146,6 +146,7 @@
     },
     "states": {
       "loading": "Yükleniyor…",
+      "saving": "Kaydediliyor…",
       "empty": "Henüz kayıt yok",
       "emptyHint": "Kayıt eklediğinizde burada listelenir."
     },
@@ -651,6 +652,7 @@
       "teamOptional": "İsteğe bağlı takım",
       "teamHint": "Takım seçerseniz yoklama bu takımın aktif üyeleriyle sınırlandırılır.",
       "searchRoster": "Sporcu ara",
+      "rosterTruncatedHint": "Bu antrenman için ilk {{count}} sporcu yüklendi. Daha fazlası varsa yoklama almadan önce takım seçerek listeyi daraltın.",
       "markAll": "Tümünü {{status}} yap",
       "unknownGroup": "Bilinmeyen grup",
       "unknownTeam": "Bilinmeyen takım",

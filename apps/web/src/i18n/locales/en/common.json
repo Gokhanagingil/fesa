@@ -37,6 +37,7 @@
     },
     "states": {
       "loading": "Loading…",
+      "saving": "Saving…",
       "empty": "Nothing here yet",
       "emptyHint": "When you add records, they will show up in this list."
     },
@@ -628,6 +629,7 @@
       "startTime": "Start time",
       "endTime": "End time",
       "searchRoster": "Search roster",
+      "rosterTruncatedHint": "We loaded the first {{count}} athletes for this session. If your roster is larger than that, narrow the audience by team before marking attendance.",
       "markAll": "Mark all {{status}}",
       "unknownGroup": "Unknown group",
       "unknownTeam": "Unknown team",

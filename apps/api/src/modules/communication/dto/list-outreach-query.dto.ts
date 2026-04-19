@@ -22,4 +22,14 @@ export class ListOutreachQueryDto {
   @IsString()
   @MaxLength(64)
   templateKey?: string;
+
+  /**
+   * Lifecycle filter.  When omitted we return logged + draft rows so the
+   * default history view shows both ready-to-resume drafts and completed
+   * intents.  Pass an explicit value (eg. `status=draft`) to scope the
+   * list further.
+   */
+  @IsOptional()
+  @IsEnum({ draft: 'draft', logged: 'logged', archived: 'archived' })
+  status?: 'draft' | 'logged' | 'archived';
 }

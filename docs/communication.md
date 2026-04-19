@@ -1,5 +1,96 @@
 # Communication & Follow-up
 
+## Wave 13.1 — Communication & Follow-up Pack v1.1
+
+This refinement layers on top of v1 without introducing a parallel
+communication module.  The headline shifts:
+
+> from “we can prepare a WhatsApp-first follow-up”
+> to “we can comfortably manage, revisit, refine, and reuse follow-up
+> work in daily club operations.”
+
+### What ships in v1.1
+
+| Area | Change |
+|------|--------|
+| Lifecycle | `OutreachActivity` gains a lightweight `status` column (`draft` / `logged` / `archived`). Existing rows are backfilled to `logged`; the previous "log a follow-up" button still works exactly as before. |
+| Endpoints | `GET /api/communications/outreach/:id`, `PUT /api/communications/outreach/:id`, and `PATCH /api/communications/outreach/:id/status` join the existing list/log endpoints, all behind `TenantGuard`. List filtering accepts `?status=draft|logged|archived`. |
+| Tokens | Template body interpolation now supports a curated catalog: `{{athleteName}}`, `{{guardianName}}`, `{{groupName}}`, `{{teamName}}`, `{{coachName}}`, `{{branchName}}`, `{{sessionLocation}}`, `{{nextSession}}`, `{{outstandingAmount}}`, `{{overdueAmount}}`, `{{clubName}}`. Missing values fall back to `—` and are flagged in the recipient card before the operator opens WhatsApp. The catalog is exposed via `GET /api/communications/templates` (`tokens` field) so the client can render a chip palette. |
+| History / reuse | The history tab now offers status filters (`Drafts` / `Logged` / `Archived`), a “Continue this draft” / “Reuse this context” button per row, and re-hydrates the audience source, channel, template, and message body when reopened. |
+| Reachability honesty | The audience source banner now includes a one-line reach summary, and each `RecipientCard` shows a colour-coded reach chip (`Reachable on WhatsApp` / `No phone on file` / `No email on file` / `No guardian linked`). |
+| Mobile UX | Tabs use a clearer pressed-state pill style; recipient cards have larger tap targets and a stacked layout under `sm`; the attendance roster (also touched by the bug fix) uses a card-per-row layout with one-tap status pills and a sticky save bar on mobile. |
+| Copy / tone | Strings reframed for warmth (“Draft saved — you can come back anytime.”, “Pick up where you left off.”) without dropping the WhatsApp-first bias. |
+
+### Lifecycle states
+
+| State | Meaning | Default visibility |
+|-------|---------|--------------------|
+| `draft` | The operator is still preparing; safe to come back to. | Listed under Active + Drafts; never archived automatically. |
+| `logged` | The assisted “sent” state; outreach intent recorded. | Listed under Active + Logged. |
+| `archived` | Superseded or no longer relevant. | Hidden by default; visible under the Archived filter. |
+
+The lifecycle is intentionally tiny.  We deliberately avoided building a
+workflow engine — there is no scheduled state, no required approver,
+and no implicit transition.  The operator decides via the `Save as
+draft`, `Save to follow-up log`, and `Archive` actions on the draft
+panel, plus `PATCH .../status` on the API.
+
+### Token resolution
+
+Tokens are resolved client-side per recipient using
+`renderTemplate(...)` in `apps/web/src/lib/communication.ts`.  The
+function:
+
+- replaces every `{{token}}` with the resolved value or `—` when
+  missing;
+- returns the list of `missing` token names so the UI can warn the
+  operator before they open WhatsApp;
+- treats `{{name}}` as an alias of `{{athleteName}}` (v1 contract).
+
+Tokens that depend on the audience build context (`coachName`,
+`sessionLocation`, `nextSession`) come from the currently-selected
+training session or coach filter.  We never invent values; if the
+context cannot fill a token we degrade to `—` and surface the gap
+clearly rather than send a placeholder-looking message.
+
+### Training attendance bug fix
+
+The attendance surface used to surface the raw API error
+`limit must not be greater than 200` whenever a training session was
+opened with a roster larger than the global athletes-list page cap.
+
+**Root cause:** `apps/web/src/pages/TrainingSessionDetailPage.tsx`
+fetched the roster with `?limit=500` to load the entire group, but the
+shared `ListAthletesQueryDto` (used everywhere — paginated lists, audience
+builders, attendance) restricted `limit` to `Max(200)`.  TypeORM's
+ValidationPipe rejected the request, and the UI rendered the validation
+message verbatim.
+
+**Fix:** raise the DTO cap to 500 (matching the legitimate roster need
+of the only call-site that requests above 200), keep all other
+list-page consumers unchanged (they request ≤50 by default), and add a
+soft `rosterTruncatedHint` banner in the attendance UI when a session's
+group really would exceed 500 athletes — so we never silently truncate
+a roster.  The `ATTENDANCE_ROSTER_LIMIT` constant in the page makes the
+guardrail discoverable in code, and the DTO's docblock explains why
+this single endpoint has a slightly larger cap.
+
+### Migration
+
+`Wave13CommunicationFollowUpV1_1` adds the `status` column with a
+default of `'logged'` and an index on `(tenantId, status)`.  Existing
+rows are backfilled to `logged` so the v1 history view is unchanged.
+
+### What is intentionally deferred (still)
+
+- Real WhatsApp Business API delivery.
+- Scheduled / recurring follow-ups.
+- Reply tracking and inbox surfaces.
+- Custom templates / a template management UI.
+- A multi-step workflow engine (review queues, approvals, etc.).
+
+---
+
 ## Wave 13 — Communication & Follow-up Pack v1
 
 The Communication & Follow-up Pack is the first real product capability for
@@ -43,7 +134,9 @@ using `lib/communication.ts` helpers:
 
 `{{athleteName}}` is the only supported template token in v1; it is
 replaced per recipient before the link is generated, so the WhatsApp
-chat opens with a personalized message ready.
+chat opens with a personalized message ready.  v1.1 expands this to a
+curated catalog (see above) while keeping `{{athleteName}}` and
+`{{name}}` working unchanged.
 
 ### Outreach activity log
 

@@ -1,15 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { OutreachActivity } from '../../database/entities/outreach-activity.entity';
 import { StaffUser } from '../../database/entities/staff-user.entity';
 import { isRelationTableMissingError } from '../core/database-error.util';
-import { LogOutreachDto } from './dto/log-outreach.dto';
+import { LogOutreachDto, OutreachStatus } from './dto/log-outreach.dto';
 import { ListOutreachQueryDto } from './dto/list-outreach-query.dto';
 
 export type OutreachActivityRecord = {
   id: string;
   channel: string;
+  status: OutreachStatus;
   sourceSurface: string;
   sourceKey: string | null;
   templateKey: string | null;
@@ -22,7 +23,17 @@ export type OutreachActivityRecord = {
   createdByStaffUserId: string | null;
   createdByName: string | null;
   createdAt: string;
+  updatedAt: string;
 };
+
+const VALID_STATUSES: OutreachStatus[] = ['draft', 'logged', 'archived'];
+
+function normalizeStatus(value: string | null | undefined): OutreachStatus {
+  if (value && (VALID_STATUSES as string[]).includes(value)) {
+    return value as OutreachStatus;
+  }
+  return 'logged';
+}
 
 @Injectable()
 export class OutreachService {
@@ -41,6 +52,7 @@ export class OutreachService {
     return {
       id: row.id,
       channel: row.channel,
+      status: normalizeStatus(row.status),
       sourceSurface: row.sourceSurface,
       sourceKey: row.sourceKey,
       templateKey: row.templateKey,
@@ -53,6 +65,7 @@ export class OutreachService {
       createdByStaffUserId: row.createdByStaffUserId,
       createdByName,
       createdAt: row.createdAt.toISOString(),
+      updatedAt: (row.updatedAt ?? row.createdAt).toISOString(),
     };
   }
 
@@ -81,6 +94,7 @@ export class OutreachService {
     const row = this.activities.create({
       tenantId,
       channel: payload.channel,
+      status: normalizeStatus(payload.status),
       sourceSurface: payload.sourceSurface,
       sourceKey: payload.sourceKey ?? null,
       templateKey: payload.templateKey ?? null,
@@ -97,6 +111,56 @@ export class OutreachService {
     return this.toRecord(saved, staffByUser);
   }
 
+  async findOne(tenantId: string, id: string): Promise<OutreachActivityRecord> {
+    const row = await this.activities.findOne({ where: { tenantId, id } });
+    if (!row) throw new NotFoundException('Follow-up not found');
+    const staffByUser = await this.hydrateStaff([row]);
+    return this.toRecord(row, staffByUser);
+  }
+
+  async update(
+    tenantId: string,
+    id: string,
+    payload: LogOutreachDto,
+  ): Promise<OutreachActivityRecord> {
+    const row = await this.activities.findOne({ where: { tenantId, id } });
+    if (!row) throw new NotFoundException('Follow-up not found');
+
+    row.channel = payload.channel;
+    row.status = normalizeStatus(payload.status ?? row.status);
+    row.sourceSurface = payload.sourceSurface;
+    row.sourceKey = payload.sourceKey ?? null;
+    row.templateKey = payload.templateKey ?? null;
+    row.topic = payload.topic;
+    row.messagePreview = payload.messagePreview ?? null;
+    row.recipientCount = payload.recipientCount ?? payload.athleteIds?.length ?? row.recipientCount;
+    row.reachableGuardianCount =
+      payload.reachableGuardianCount ?? payload.guardianIds?.length ?? row.reachableGuardianCount;
+    row.audienceSnapshot = {
+      athleteIds: payload.athleteIds ?? [],
+      guardianIds: payload.guardianIds ?? [],
+      audienceSummary: payload.audienceSummary ?? null,
+    };
+    row.note = payload.note ?? null;
+
+    const saved = await this.activities.save(row);
+    const staffByUser = await this.hydrateStaff([saved]);
+    return this.toRecord(saved, staffByUser);
+  }
+
+  async setStatus(
+    tenantId: string,
+    id: string,
+    status: OutreachStatus,
+  ): Promise<OutreachActivityRecord> {
+    const row = await this.activities.findOne({ where: { tenantId, id } });
+    if (!row) throw new NotFoundException('Follow-up not found');
+    row.status = normalizeStatus(status);
+    const saved = await this.activities.save(row);
+    const staffByUser = await this.hydrateStaff([saved]);
+    return this.toRecord(saved, staffByUser);
+  }
+
   async list(
     tenantId: string,
     query: ListOutreachQueryDto,
@@ -108,6 +172,9 @@ export class OutreachService {
       phone: number;
       email: number;
       manual: number;
+      draft: number;
+      logged: number;
+      archived: number;
     };
   }> {
     try {
@@ -116,11 +183,16 @@ export class OutreachService {
       if (query.channel) where.channel = query.channel;
       if (query.sourceSurface) where.sourceSurface = query.sourceSurface;
       if (query.templateKey) where.templateKey = query.templateKey;
+      if (query.status) {
+        where.status = query.status;
+      } else {
+        where.status = In(['draft', 'logged']);
+      }
 
-      const [rows, totalsByChannel] = await Promise.all([
+      const [rows, totalsByChannel, totalsByStatus] = await Promise.all([
         this.activities.find({
           where,
-          order: { createdAt: 'DESC' },
+          order: { updatedAt: 'DESC', createdAt: 'DESC' },
           take: limit,
         }),
         this.activities
@@ -128,8 +200,16 @@ export class OutreachService {
           .select('activity.channel', 'channel')
           .addSelect('COUNT(activity.id)', 'count')
           .where('activity.tenantId = :tenantId', { tenantId })
+          .andWhere("activity.status <> 'archived'")
           .groupBy('activity.channel')
           .getRawMany<{ channel: string; count: string }>(),
+        this.activities
+          .createQueryBuilder('activity')
+          .select('activity.status', 'status')
+          .addSelect('COUNT(activity.id)', 'count')
+          .where('activity.tenantId = :tenantId', { tenantId })
+          .groupBy('activity.status')
+          .getRawMany<{ status: string | null; count: string }>(),
       ]);
 
       const staffByUser = await this.hydrateStaff(rows);
@@ -139,7 +219,10 @@ export class OutreachService {
         phone: 0,
         email: 0,
         manual: 0,
-      } as Record<'total' | 'whatsapp' | 'phone' | 'email' | 'manual', number>;
+        draft: 0,
+        logged: 0,
+        archived: 0,
+      };
       for (const item of totalsByChannel) {
         const value = Number.parseInt(item.count, 10) || 0;
         counts.total += value;
@@ -147,6 +230,11 @@ export class OutreachService {
         else if (item.channel === 'phone') counts.phone = value;
         else if (item.channel === 'email') counts.email = value;
         else counts.manual += value;
+      }
+      for (const item of totalsByStatus) {
+        const value = Number.parseInt(item.count, 10) || 0;
+        const status = normalizeStatus(item.status);
+        counts[status] += value;
       }
 
       return {
@@ -157,7 +245,16 @@ export class OutreachService {
       if (isRelationTableMissingError(error)) {
         return {
           items: [],
-          counts: { total: 0, whatsapp: 0, phone: 0, email: 0, manual: 0 },
+          counts: {
+            total: 0,
+            whatsapp: 0,
+            phone: 0,
+            email: 0,
+            manual: 0,
+            draft: 0,
+            logged: 0,
+            archived: 0,
+          },
         };
       }
       throw error;

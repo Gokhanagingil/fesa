@@ -88,3 +88,92 @@ export function getTemplateByKey(key: string | null | undefined): CommunicationT
 }
 
 export const COMMUNICATION_CHANNELS: CommunicationChannel[] = ['whatsapp', 'phone', 'email', 'manual'];
+
+/**
+ * Catalog of personalization tokens that can appear in a draft message.
+ * The catalog is shared with the client so the draft editor can show a
+ * grounded list of supported tokens and explain which can be filled
+ * reliably for the current audience.
+ *
+ * `name` is also accepted as an alias for `athleteName` to preserve the
+ * v1 contract.
+ */
+export type CommunicationTemplateToken = {
+  /** The bare token name (rendered as `{{name}}` in the message). */
+  key: string;
+  /** i18n key for the human label shown in the draft editor. */
+  labelKey: string;
+  /** i18n key for a short hint about what the token resolves to. */
+  hintKey: string;
+  /** Whether the token always resolves for any recipient or may be missing. */
+  alwaysAvailable: boolean;
+};
+
+export const COMMUNICATION_TEMPLATE_TOKENS: CommunicationTemplateToken[] = [
+  {
+    key: 'athleteName',
+    labelKey: 'pages.communications.tokens.athleteName.label',
+    hintKey: 'pages.communications.tokens.athleteName.hint',
+    alwaysAvailable: true,
+  },
+  {
+    key: 'guardianName',
+    labelKey: 'pages.communications.tokens.guardianName.label',
+    hintKey: 'pages.communications.tokens.guardianName.hint',
+    alwaysAvailable: false,
+  },
+  {
+    key: 'groupName',
+    labelKey: 'pages.communications.tokens.groupName.label',
+    hintKey: 'pages.communications.tokens.groupName.hint',
+    alwaysAvailable: false,
+  },
+  {
+    key: 'teamName',
+    labelKey: 'pages.communications.tokens.teamName.label',
+    hintKey: 'pages.communications.tokens.teamName.hint',
+    alwaysAvailable: false,
+  },
+  {
+    key: 'coachName',
+    labelKey: 'pages.communications.tokens.coachName.label',
+    hintKey: 'pages.communications.tokens.coachName.hint',
+    alwaysAvailable: false,
+  },
+  {
+    key: 'branchName',
+    labelKey: 'pages.communications.tokens.branchName.label',
+    hintKey: 'pages.communications.tokens.branchName.hint',
+    alwaysAvailable: false,
+  },
+  {
+    key: 'sessionLocation',
+    labelKey: 'pages.communications.tokens.sessionLocation.label',
+    hintKey: 'pages.communications.tokens.sessionLocation.hint',
+    alwaysAvailable: false,
+  },
+  {
+    key: 'nextSession',
+    labelKey: 'pages.communications.tokens.nextSession.label',
+    hintKey: 'pages.communications.tokens.nextSession.hint',
+    alwaysAvailable: false,
+  },
+  {
+    key: 'outstandingAmount',
+    labelKey: 'pages.communications.tokens.outstandingAmount.label',
+    hintKey: 'pages.communications.tokens.outstandingAmount.hint',
+    alwaysAvailable: false,
+  },
+  {
+    key: 'overdueAmount',
+    labelKey: 'pages.communications.tokens.overdueAmount.label',
+    hintKey: 'pages.communications.tokens.overdueAmount.hint',
+    alwaysAvailable: false,
+  },
+  {
+    key: 'clubName',
+    labelKey: 'pages.communications.tokens.clubName.label',
+    hintKey: 'pages.communications.tokens.clubName.hint',
+    alwaysAvailable: false,
+  },
+];

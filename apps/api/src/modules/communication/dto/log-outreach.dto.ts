@@ -43,9 +43,24 @@ export class OutreachAudienceSummaryDto {
   contextLabel?: string;
 }
 
+export type OutreachStatus = 'draft' | 'logged' | 'archived';
+
 export class LogOutreachDto {
   @IsEnum({ whatsapp: 'whatsapp', phone: 'phone', email: 'email', manual: 'manual' })
   channel!: 'whatsapp' | 'phone' | 'email' | 'manual';
+
+  /**
+   * Lifecycle status:
+   *  - "draft"     — work in progress, kept for the operator to come back to
+   *  - "logged"    — outreach intent recorded (the assisted "sent" state)
+   *  - "archived"  — superseded or no longer relevant; hidden by default
+   *
+   * Optional on the wire to keep v1 clients working: when omitted we
+   * default to "logged" to preserve the original behaviour.
+   */
+  @IsOptional()
+  @IsEnum({ draft: 'draft', logged: 'logged', archived: 'archived' })
+  status?: OutreachStatus;
 
   @IsString()
   @MaxLength(64)
