@@ -21,7 +21,6 @@ import {
 } from '../lib/display';
 import type {
   ActionCenterItem,
-  ActionCenterItemGroup,
   ActionCenterItemCategory,
   ActionCenterItemMutation,
   ActionCenterItemUrgency,
