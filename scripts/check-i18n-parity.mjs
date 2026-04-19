@@ -97,6 +97,17 @@ const scopedPrefixes = [
   'pages.athleteCharges.previewPeriodic',
   'pages.athleteCharges.generatePeriodic',
   'pages.athleteCharges.generatedPeriodic',
+  // Reports launch surface - explicit parity protection so the launchpad,
+  // continue panel and definition action labels never silently regress to
+  // raw key rendering (Wave 16 bugfix).
+  'pages.reports.launch',
+  'pages.reports.definitionActions',
+  'pages.reports.continueHint',
+  'pages.reports.continueEmpty',
+  'pages.reports.continueEmptyHint',
+  'pages.reports.communicationReadyContext',
+  // Athlete photo surface - keep upload/replace/remove copy aligned across locales.
+  'pages.athletes.photo',
 ];
 
 function flattenKeys(input, prefix = '') {
