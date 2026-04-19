@@ -7,6 +7,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
+import { AthleteAvatar } from '../components/ui/AthleteAvatar';
 import { DataExplorer } from '../components/reporting/DataExplorer';
 import { apiGet, apiPatch } from '../lib/api';
 import { getAthleteStatusLabel, getFamilyReadinessStatusLabel, getPersonName } from '../lib/display';
@@ -498,15 +499,20 @@ export function AthletesPage() {
                       />
                     </td>
                     <td className="py-3 pr-4">
-                      <p className="font-medium text-amateur-ink">{getPersonName(a)}</p>
-                      <p className="text-xs text-amateur-muted">
-                        {[
-                          a.jerseyNumber ? `${t('pages.athletes.jersey')} ${a.jerseyNumber}` : null,
-                          a.sportBranch?.name ?? null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ') || '—'}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <AthleteAvatar athlete={a} size="sm" />
+                        <div>
+                          <p className="font-medium text-amateur-ink">{getPersonName(a)}</p>
+                          <p className="text-xs text-amateur-muted">
+                            {[
+                              a.jerseyNumber ? `${t('pages.athletes.jersey')} ${a.jerseyNumber}` : null,
+                              a.sportBranch?.name ?? null,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ') || '—'}
+                          </p>
+                        </div>
+                      </div>
                     </td>
                     <td className="py-3 pr-4 text-amateur-muted">{groupMap.get(a.primaryGroupId ?? '') ?? '—'}</td>
                     <td className="py-3 pr-4 text-amateur-muted">{getAthleteStatusLabel(t, a.status)}</td>
