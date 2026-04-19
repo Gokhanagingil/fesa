@@ -482,6 +482,7 @@
       "bulkActionPreviewIdle": "Choose a status, a primary group move, or both before applying the bulk action.",
       "bulkSafetyNote": "Team memberships outside the new primary group are ended automatically, and inactive or archived athletes are removed from active team rosters.",
       "bulkApply": "Apply bulk update",
+      "bulkPrepareMessage": "Prepare message",
       "bulkSuccess": "{{count}} athlete records were updated: {{action}}",
       "bulkEndedTeams_one": "{{count}} active team membership was ended to keep roster data consistent.",
       "bulkEndedTeams_other": "{{count}} active team memberships were ended to keep roster data consistent.",
@@ -1817,6 +1818,11 @@
           "relationshipType": "Relationship",
           "isPrimaryContact": "Primary contact",
           "notes": "Notes"
+        },
+        "groups": {
+          "name": "Group name",
+          "sportBranch": "Sport branch",
+          "headCoachName": "Head coach"
         }
       },
       "entities": {
@@ -1831,6 +1837,10 @@
         "athleteGuardians": {
           "title": "Athlete ↔ guardian links",
           "description": "Connect existing athletes to existing guardians with relationship metadata."
+        },
+        "groups": {
+          "title": "Groups",
+          "description": "Create training groups in bulk so you can map athletes to them right away."
         }
       },
       "hints": {
@@ -1838,8 +1848,15 @@
         "sportBranch": "Use the branch name or its short code.",
         "primaryGroup": "Group must already exist in the chosen sport branch.",
         "athleteStatus": "trial · active · paused · inactive · archived.",
-        "relationshipType": "mother · father · guardian · other."
+        "relationshipType": "mother · father · guardian · other.",
+        "headCoach": "Match an existing coach by full name. Unknown names create the group without a head coach."
       },
+      "historyTitle": "Recent imports",
+      "historyHint": "A short, on-device record of the imports you committed from this browser.",
+      "historyLine": "{{source}} — {{created}} created · {{updated}} updated · {{skipped}} skipped",
+      "historyPasted": "Pasted CSV",
+      "historyClear": "Clear history",
+      "historyClearConfirm": "Clear the on-device import history?",
       "exportsTitle": "Practical exports",
       "exportsHint": "These are quick wrappers around the reporting engine. For advanced filtering use the Report Builder.",
       "exportButtons": {

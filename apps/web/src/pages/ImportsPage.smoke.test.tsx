@@ -76,6 +76,30 @@ beforeEach(() => {
         },
       ],
     },
+    {
+      entity: 'groups',
+      labelKey: 'pages.imports.entities.groups.title',
+      descriptionKey: 'pages.imports.entities.groups.description',
+      sample: [],
+      fields: [
+        {
+          key: 'name',
+          labelKey: 'pages.imports.fields.groups.name',
+          required: true,
+          type: 'string',
+          aliases: ['name', 'group'],
+          maxLength: 200,
+        },
+        {
+          key: 'sportBranch',
+          labelKey: 'pages.imports.fields.groups.sportBranch',
+          required: true,
+          type: 'string',
+          aliases: ['sport branch'],
+          maxLength: 160,
+        },
+      ],
+    },
   ]);
   mockPreviewImport.mockResolvedValue({
     entity: 'guardians',
@@ -132,5 +156,14 @@ describe('ImportsPage smoke coverage', () => {
     });
     expect(await screen.findByText(/Ayşe Yıldız/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Import these rows/i })).toBeEnabled();
+  });
+
+  it('exposes the new groups entity card', async () => {
+    renderWithRoute(<ImportsPage />, {
+      path: '/app/imports',
+      initialEntry: '/app/imports',
+    });
+
+    expect(await screen.findByRole('button', { name: /Groups/i })).toBeInTheDocument();
   });
 });

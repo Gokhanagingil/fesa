@@ -483,6 +483,7 @@
       "bulkActionPreviewIdle": "Durum veya grup seçerek toplu işlemin etkisini netleştirin.",
       "bulkSafetyNote": "Pasif veya arşiv durumuna alınan sporcuların açık takım üyelikleri otomatik kapatılır. Grup değişirse çelişen takım üyelikleri sonlandırılır.",
       "bulkApply": "Toplu işlemi uygula",
+      "bulkPrepareMessage": "Mesaj hazırla",
       "bulkSuccess": "{{count}} sporcu güncellendi: {{action}}",
       "bulkEndedTeams_one": "{{count}} takım üyeliği uyum için kapatıldı.",
       "bulkEndedTeams_other": "{{count}} takım üyeliği uyum için kapatıldı.",
@@ -1846,6 +1847,11 @@
           "relationshipType": "Yakınlık",
           "isPrimaryContact": "Birincil iletişim",
           "notes": "Not"
+        },
+        "groups": {
+          "name": "Grup adı",
+          "sportBranch": "Spor branşı",
+          "headCoachName": "Baş antrenör"
         }
       },
       "entities": {
@@ -1860,6 +1866,10 @@
         "athleteGuardians": {
           "title": "Sporcu ↔ veli bağları",
           "description": "Mevcut sporcu ve velileri yakınlık bilgisiyle birbirine bağlayın."
+        },
+        "groups": {
+          "title": "Gruplar",
+          "description": "Antrenman gruplarını toplu oluşturun, sporcuları hemen bu gruplara eşleyin."
         }
       },
       "hints": {
@@ -1867,8 +1877,15 @@
         "sportBranch": "Branş adı veya kısa kodu kullanılabilir.",
         "primaryGroup": "Grup, seçili spor branşında zaten bulunmalı.",
         "athleteStatus": "trial · active · paused · inactive · archived.",
-        "relationshipType": "mother · father · guardian · other."
+        "relationshipType": "mother · father · guardian · other.",
+        "headCoach": "Mevcut bir antrenörü tam adıyla eşleyin. Bilinmeyen ad girilirse grup baş antrenörsüz oluşturulur."
       },
+      "historyTitle": "Son içe aktarımlar",
+      "historyHint": "Bu tarayıcıdan onayladığınız içe aktarımların kısa, cihazda tutulan kaydı.",
+      "historyLine": "{{source}} — {{created}} oluşturuldu · {{updated}} güncellendi · {{skipped}} atlandı",
+      "historyPasted": "Yapıştırılan CSV",
+      "historyClear": "Geçmişi temizle",
+      "historyClearConfirm": "Cihazdaki içe aktarım geçmişi silinsin mi?",
       "exportsTitle": "Pratik dışa aktarımlar",
       "exportsHint": "Bunlar raporlama motorunun hızlı sarmalayıcılarıdır. Gelişmiş filtreler için Rapor Oluşturucu’yu kullanın.",
       "exportButtons": {
