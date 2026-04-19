@@ -64,6 +64,19 @@ export class ListCommunicationAudienceQueryDto {
   @IsUUID('4', { each: true })
   athleteIds?: string[];
 
+  /**
+   * Optional list of guardian UUIDs.  When supplied, the audience is
+   * derived from the athletes those guardians are linked to.  This is
+   * used by the "prepare message" bulk action on the guardian list so
+   * staff can flow naturally from a reviewed guardian set into a warm
+   * follow-up draft without inventing a separate guardian audience model.
+   */
+  @IsOptional()
+  @Type(() => String)
+  @IsArray()
+  @IsUUID('4', { each: true })
+  guardianIds?: string[];
+
   @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()

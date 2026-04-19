@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { BulkActionBar, type BulkActionDescriptor } from '../components/ui/BulkActionBar';
@@ -25,6 +25,7 @@ type BulkDeleteResponse = {
 
 export function GuardiansPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { tenantId, loading: tenantLoading } = useTenant();
   const [q, setQ] = useState('');
   const [items, setItems] = useState<Guardian[]>([]);
@@ -131,11 +132,28 @@ export function GuardiansPage() {
     }
   }
 
+  const handlePrepareMessage = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    const params = new URLSearchParams();
+    selectedIds.forEach((id) => params.append('guardianIds', id));
+    params.set('source', 'guardians_selection');
+    params.set('sourceKey', `guardians-bulk-${selectedIds.length}`);
+    params.set('primaryContactsOnly', 'true');
+    params.set('channel', 'whatsapp');
+    navigate(`/app/communications?${params.toString()}`);
+  }, [navigate, selectedIds]);
+
   const bulkActions: BulkActionDescriptor[] = useMemo(() => {
     const runDelete = () => {
       void bulkDelete();
     };
     return [
+      {
+        id: 'prepare-message',
+        ghost: true,
+        label: t('pages.guardians.bulkPrepareMessage'),
+        onClick: handlePrepareMessage,
+      },
       {
         id: 'export-selection',
         ghost: true,
@@ -153,7 +171,7 @@ export function GuardiansPage() {
     // bulkDelete reads the latest state via closure; we only need to refresh
     // button bindings when label translations or the export helper change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exportSelection, t]);
+  }, [exportSelection, handlePrepareMessage, t]);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const view = (searchParams.get('view') as 'list' | 'advanced') ?? 'list';

@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type {
   CommunicationAudienceMember,
   CommunicationAudienceResponse,
@@ -122,6 +123,9 @@ export function setOutreachStatus(
  * Anything that is missing for a given recipient is rendered as a blank
  * string with a visible "—" placeholder so the operator can see what the
  * gap is before opening the chat.
+ *
+ * The catalog only grows with tokens that we can resolve reliably; we
+ * never invent values.
  */
 export type TokenContext = {
   athleteName: string;
@@ -136,6 +140,44 @@ export type TokenContext = {
   overdueAmount?: string | null;
   clubName?: string | null;
 };
+
+/**
+ * The reachability story we present to the operator before they open
+ * WhatsApp.  We keep it intentionally small and human:
+ *
+ *  - `whatsapp` — best case, a primary phone is on file
+ *  - `phone`    — phone is present but the operator picked a non-WhatsApp channel
+ *  - `email`    — only an email is on file (WhatsApp is hidden as fallback)
+ *  - `unreachable` — no guardian, or no usable contact at all
+ */
+export type RecipientReachState = 'whatsapp' | 'phone' | 'email' | 'unreachable';
+
+/**
+ * Compute the most accurate reachability label for a member.  This is
+ * the single source of truth used by the recipient card chip, the
+ * audience banner, and the bulk preview so the language stays consistent.
+ */
+export function classifyMemberReach(
+  member: CommunicationAudienceMember,
+  channel: CommunicationChannel,
+): RecipientReachState {
+  if (member.guardians.length === 0) return 'unreachable';
+  const anyPhone = member.guardians.some((guardian) => Boolean(guardian.phone));
+  const anyEmail = member.guardians.some((guardian) => Boolean(guardian.email));
+  if (channel === 'whatsapp' || channel === 'phone') {
+    if (anyPhone) return channel === 'whatsapp' ? 'whatsapp' : 'phone';
+    if (anyEmail) return 'email';
+    return 'unreachable';
+  }
+  if (channel === 'email') {
+    if (anyEmail) return 'email';
+    if (anyPhone) return 'whatsapp';
+    return 'unreachable';
+  }
+  if (anyPhone) return 'whatsapp';
+  if (anyEmail) return 'email';
+  return 'unreachable';
+}
 
 const TOKEN_PATTERN = /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g;
 const MISSING_TOKEN_PLACEHOLDER = '—';
@@ -211,7 +253,9 @@ export function extractTokens(template: string): string[] {
 /**
  * Build the per-recipient TokenContext from an audience member plus any
  * draft-level extras the editor knows about (eg. selected coach, next
- * training session, club name).
+ * training session, club name).  We prefer the per-member sport branch
+ * over the optional draft-level branch fallback so each recipient sees
+ * their own real branch when the audience spans multiple branches.
  */
 export function buildTokenContext(
   member: CommunicationAudienceMember,
@@ -225,17 +269,67 @@ export function buildTokenContext(
 ): TokenContext {
   const guardian =
     member.guardians.find((g) => g.isPrimaryContact) ?? member.guardians[0] ?? null;
+  const branchName = member.sportBranchName ?? extras.branchName ?? null;
   return {
     athleteName: member.athleteName,
     guardianName: guardian?.name ?? null,
     groupName: member.groupName,
     teamName: member.teamNames[0] ?? null,
     coachName: extras.coachName ?? null,
-    branchName: extras.branchName ?? null,
+    branchName,
     sessionLocation: extras.sessionLocation ?? null,
     nextSession: extras.nextSession ?? null,
     outstandingAmount: member.outstandingAmount,
     overdueAmount: member.overdueAmount,
     clubName: extras.clubName ?? null,
   };
+}
+
+/**
+ * Days between two ISO timestamps, rounded down to whole days.  Used for
+ * the gentle stale-draft hint surfaced in the history list and at the
+ * top of the editor when an old draft is reopened.
+ */
+export function daysBetween(fromIso: string | null | undefined, now: Date = new Date()): number {
+  if (!fromIso) return 0;
+  const ms = now.getTime() - new Date(fromIso).getTime();
+  if (Number.isNaN(ms) || ms < 0) return 0;
+  return Math.floor(ms / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Returns true when a draft is older than the configured stale window.
+ * The window is small on purpose — we want a calm "still relevant?"
+ * nudge, never a blocking warning.
+ */
+export function isOutreachStale(
+  activity: { status?: string; updatedAt?: string | null; createdAt?: string | null },
+  staleAfterDays: number,
+  now: Date = new Date(),
+): boolean {
+  if (!activity || activity.status !== 'draft') return false;
+  if (!Number.isFinite(staleAfterDays) || staleAfterDays <= 0) return false;
+  const ts = activity.updatedAt ?? activity.createdAt ?? null;
+  return daysBetween(ts, now) >= staleAfterDays;
+}
+
+/**
+ * Pick the human "drafted X ago" / "logged X ago" label for an activity.
+ * Stays warm and short — never CRM-like.
+ */
+export function describeActivityAge(
+  t: TFunction,
+  activity: { status?: string; updatedAt?: string | null; createdAt?: string | null },
+  now: Date = new Date(),
+): string {
+  const ts = activity.updatedAt ?? activity.createdAt ?? null;
+  const days = daysBetween(ts, now);
+  const status = activity.status === 'draft' ? 'draft' : 'logged';
+  if (status === 'draft') {
+    if (days <= 0) return t('pages.communications.lifecycle.draftedToday');
+    if (days === 1) return t('pages.communications.lifecycle.draftedYesterday');
+    return t('pages.communications.lifecycle.draftedAgo', { count: days });
+  }
+  if (days <= 0) return t('pages.communications.lifecycle.draftedToday');
+  return t('pages.communications.lifecycle.loggedAgo', { count: Math.max(days, 1) });
 }

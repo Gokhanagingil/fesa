@@ -25,9 +25,12 @@ import {
   buildTokenContext,
   buildWhatsAppLink,
   buildWhatsAppShareLink,
+  classifyMemberReach,
   countReachable,
+  describeActivityAge,
   extractTokens,
   getOutreach,
+  isOutreachStale,
   isReachableForChannel,
   listOutreach,
   logOutreach,
@@ -76,6 +79,7 @@ type AudienceFilterSnapshot = {
   needsFollowUp?: boolean;
   primaryContactsOnly?: boolean;
   athleteIds?: string[];
+  guardianIds?: string[];
 };
 
 type QuickScenario = {
@@ -192,6 +196,7 @@ export function CommunicationsPage() {
   const [needsFollowUp, setNeedsFollowUp] = useState(searchParams.get('needsFollowUp') === 'true');
   const [primaryContactsOnly, setPrimaryContactsOnly] = useState(searchParams.get('primaryContactsOnly') === 'true');
   const [athleteIds, setAthleteIds] = useState<string[]>(searchParams.getAll('athleteIds').filter(Boolean));
+  const [guardianIds, setGuardianIds] = useState<string[]>(searchParams.getAll('guardianIds').filter(Boolean));
   const [showFilters, setShowFilters] = useState(false);
   const [tab, setTab] = useState<'draft' | 'history'>('draft');
 
@@ -221,6 +226,11 @@ export function CommunicationsPage() {
   const [tokens, setTokens] = useState<CommunicationTemplateToken[]>([]);
   const [history, setHistory] = useState<OutreachActivityListResponse | null>(null);
   const [historyStatus, setHistoryStatus] = useState<'all' | OutreachStatus>('all');
+  const [historyTemplate, setHistoryTemplate] = useState<string>('');
+  const [historyChannel, setHistoryChannel] = useState<string>('');
+  const [historySource, setHistorySource] = useState<string>('');
+  const [staleAfterDays, setStaleAfterDays] = useState<number>(5);
+  const [reachableOnly, setReachableOnly] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingOutreach, setSavingOutreach] = useState(false);
@@ -244,6 +254,7 @@ export function CommunicationsPage() {
     setNeedsFollowUp(searchParams.get('needsFollowUp') === 'true');
     setPrimaryContactsOnly(searchParams.get('primaryContactsOnly') === 'true');
     setAthleteIds(searchParams.getAll('athleteIds').filter(Boolean));
+    setGuardianIds(searchParams.getAll('guardianIds').filter(Boolean));
     setAudienceSource({
       surface: searchParams.get('source') ?? 'manual',
       key: searchParams.get('sourceKey'),
@@ -274,6 +285,7 @@ export function CommunicationsPage() {
     if (needsFollowUp) next.set('needsFollowUp', 'true');
     if (primaryContactsOnly) next.set('primaryContactsOnly', 'true');
     athleteIds.forEach((athleteId) => next.append('athleteIds', athleteId));
+    guardianIds.forEach((id) => next.append('guardianIds', id));
     if (channel && channel !== 'whatsapp') next.set('channel', channel);
     if (templateKey) next.set('template', templateKey);
     if (audienceSource.surface && audienceSource.surface !== 'manual') {
@@ -291,6 +303,7 @@ export function CommunicationsPage() {
     familyReadiness,
     financialState,
     groupId,
+    guardianIds,
     needsFollowUp,
     portalEnabledOnly,
     portalPendingOnly,
@@ -320,6 +333,9 @@ export function CommunicationsPage() {
         setSessions(sessionRes.items);
         setTemplates(templatesRes.items);
         setTokens(templatesRes.tokens ?? []);
+        if (typeof templatesRes.lifecycle?.staleAfterDays === 'number') {
+          setStaleAfterDays(templatesRes.lifecycle.staleAfterDays);
+        }
       } catch {
         setGroups([]);
         setTeams([]);
@@ -379,6 +395,7 @@ export function CommunicationsPage() {
       if (needsFollowUp) params.set('needsFollowUp', 'true');
       if (primaryContactsOnly) params.set('primaryContactsOnly', 'true');
       athleteIds.forEach((athleteId) => params.append('athleteIds', athleteId));
+      guardianIds.forEach((id) => params.append('guardianIds', id));
       const res = await apiGet<CommunicationAudienceResponse>(
         `/api/communications/audiences?${params.toString()}`,
       );
@@ -395,6 +412,7 @@ export function CommunicationsPage() {
     familyReadiness,
     financialState,
     groupId,
+    guardianIds,
     needsFollowUp,
     portalEnabledOnly,
     portalPendingOnly,
@@ -459,9 +477,9 @@ export function CommunicationsPage() {
       nextSession: trainingSession
         ? formatDateTime(trainingSession.scheduledStart, i18n.language)
         : null,
-      clubName: null as string | null,
+      clubName: audience?.meta?.clubName ?? null,
     };
-  }, [coachId, coaches, i18n.language, trainingSession]);
+  }, [audience?.meta?.clubName, coachId, coaches, i18n.language, trainingSession]);
 
   const recipientPlan = useMemo(() => {
     if (!audience) return [];
@@ -501,10 +519,64 @@ export function CommunicationsPage() {
     [recipientPlan],
   );
 
-  const visibleRecipients = useMemo(
-    () => (revealAllRecipients ? recipientPlan : recipientPlan.slice(0, 8)),
-    [recipientPlan, revealAllRecipients],
+  const filteredRecipients = useMemo(
+    () => (reachableOnly ? reachableRecipients : recipientPlan),
+    [reachableOnly, reachableRecipients, recipientPlan],
   );
+
+  const visibleRecipients = useMemo(
+    () => (revealAllRecipients ? filteredRecipients : filteredRecipients.slice(0, 8)),
+    [filteredRecipients, revealAllRecipients],
+  );
+
+  const activeDraft = useMemo(() => {
+    if (!activeDraftId || !history) return null;
+    return history.items.find((row) => row.id === activeDraftId) ?? null;
+  }, [activeDraftId, history]);
+
+  const showStaleDraftHint = useMemo(
+    () =>
+      activeDraftStatus === 'draft' && activeDraft
+        ? isOutreachStale(activeDraft, staleAfterDays)
+        : false,
+    [activeDraft, activeDraftStatus, staleAfterDays],
+  );
+
+  const filteredHistoryItems = useMemo(() => {
+    if (!history) return [] as OutreachActivity[];
+    return history.items.filter((item) => {
+      if (historyTemplate && item.templateKey !== historyTemplate) return false;
+      if (historyChannel && item.channel !== historyChannel) return false;
+      if (historySource && item.sourceSurface !== historySource) return false;
+      return true;
+    });
+  }, [history, historyChannel, historySource, historyTemplate]);
+
+  const historyTemplateOptions = useMemo(() => {
+    if (!history) return [] as string[];
+    return Array.from(
+      new Set(
+        history.items
+          .map((row) => row.templateKey)
+          .filter((value): value is string => Boolean(value)),
+      ),
+    );
+  }, [history]);
+
+  const historyChannelOptions = useMemo(() => {
+    if (!history) return [] as string[];
+    return Array.from(new Set(history.items.map((row) => row.channel))).filter(Boolean);
+  }, [history]);
+
+  const historySourceOptions = useMemo(() => {
+    if (!history) return [] as string[];
+    return Array.from(new Set(history.items.map((row) => row.sourceSurface))).filter(Boolean);
+  }, [history]);
+
+  const staleDraftCount = useMemo(() => {
+    if (!history) return 0;
+    return history.items.filter((row) => isOutreachStale(row, staleAfterDays)).length;
+  }, [history, staleAfterDays]);
 
   const contactLines = useMemo(() => {
     return recipientPlan.flatMap((row) =>
@@ -580,6 +652,7 @@ export function CommunicationsPage() {
     setNeedsFollowUp(false);
     setPrimaryContactsOnly(false);
     setAthleteIds([]);
+    setGuardianIds([]);
     setAudienceSource({ surface: 'manual' });
   }, []);
 
@@ -599,6 +672,7 @@ export function CommunicationsPage() {
       ...(needsFollowUp ? { needsFollowUp: true } : {}),
       ...(primaryContactsOnly ? { primaryContactsOnly: true } : {}),
       ...(athleteIds.length > 0 ? { athleteIds } : {}),
+      ...(guardianIds.length > 0 ? { guardianIds } : {}),
     }),
     [
       athleteIds,
@@ -607,6 +681,7 @@ export function CommunicationsPage() {
       familyReadiness,
       financialState,
       groupId,
+      guardianIds,
       needsFollowUp,
       portalEnabledOnly,
       portalPendingOnly,
@@ -746,6 +821,11 @@ export function CommunicationsPage() {
               ? snapshot.athleteIds
               : [],
         );
+        setGuardianIds(
+          Array.isArray(savedFilters?.guardianIds)
+            ? savedFilters.guardianIds
+            : [],
+        );
         setAudienceSource({ surface: fresh.sourceSurface, key: fresh.sourceKey });
         setTab('draft');
         setSavedNotice(
@@ -788,7 +868,7 @@ export function CommunicationsPage() {
               type="button"
               onClick={() => setTab('draft')}
               aria-pressed={tab === 'draft'}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+              className={`min-h-[40px] rounded-full border px-4 py-1.5 text-xs font-medium transition ${
                 tab === 'draft'
                   ? 'border-amateur-accent bg-amateur-accent-soft text-amateur-accent'
                   : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
@@ -800,7 +880,7 @@ export function CommunicationsPage() {
               type="button"
               onClick={() => setTab('history')}
               aria-pressed={tab === 'history'}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+              className={`min-h-[40px] rounded-full border px-4 py-1.5 text-xs font-medium transition ${
                 tab === 'history'
                   ? 'border-amateur-accent bg-amateur-accent-soft text-amateur-accent'
                   : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
@@ -853,10 +933,22 @@ export function CommunicationsPage() {
       {tab === 'history' ? (
         <FollowUpHistory
           history={history}
+          filteredItems={filteredHistoryItems}
           templates={templates}
           languageTag={i18n.language}
           statusFilter={historyStatus}
           onChangeStatusFilter={setHistoryStatus}
+          templateFilter={historyTemplate}
+          onChangeTemplateFilter={setHistoryTemplate}
+          channelFilter={historyChannel}
+          onChangeChannelFilter={setHistoryChannel}
+          sourceFilter={historySource}
+          onChangeSourceFilter={setHistorySource}
+          templateOptions={historyTemplateOptions}
+          channelOptions={historyChannelOptions}
+          sourceOptions={historySourceOptions}
+          staleAfterDays={staleAfterDays}
+          staleDraftCount={staleDraftCount}
           onReopen={(activity) => void handleReopenActivity(activity)}
         />
       ) : (
@@ -962,6 +1054,13 @@ export function CommunicationsPage() {
                         })}
                       </span>
                     ) : null}
+                    {(audience.counts.athletesUnreachable ?? 0) > 0 ? (
+                      <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700">
+                        {t('pages.communications.audience.reachUnreachable', {
+                          count: audience.counts.athletesUnreachable,
+                        })}
+                      </span>
+                    ) : null}
                     {audience.counts.needingFollowUp > 0 ? (
                       <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
                         {t('pages.communications.audience.needFollowUp', {
@@ -971,6 +1070,24 @@ export function CommunicationsPage() {
                     ) : null}
                   </div>
                 </div>
+                {audience.counts.athletes > 0 ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-amateur-border pt-3">
+                    <label className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-amateur-border bg-amateur-surface px-3 py-1.5 text-xs font-medium text-amateur-muted">
+                      <input
+                        type="checkbox"
+                        checked={reachableOnly}
+                        onChange={(e) => setReachableOnly(e.target.checked)}
+                        className="h-4 w-4 accent-emerald-600"
+                      />
+                      <span>{t('pages.communications.audience.reachableOnly')}</span>
+                    </label>
+                    {(audience.counts.athletesUnreachable ?? 0) === 0 ? (
+                      <span className="text-xs text-amateur-muted">
+                        {t('pages.communications.audience.reachAllReachable')}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
               </section>
 
               <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -1015,7 +1132,7 @@ export function CommunicationsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="mt-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
                     {channelButtons.map((option) => {
                       const active = channel === option.value;
                       return (
@@ -1023,7 +1140,7 @@ export function CommunicationsPage() {
                           key={option.value}
                           type="button"
                           onClick={() => setChannel(option.value)}
-                          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                          className={`min-h-[40px] shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition sm:shrink ${
                             active
                               ? CHANNEL_TONE[option.value]
                               : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
@@ -1060,17 +1177,17 @@ export function CommunicationsPage() {
                           subject={draftSubject || draftTopic}
                         />
                       ))}
-                      {recipientPlan.length > visibleRecipients.length ? (
+                      {filteredRecipients.length > visibleRecipients.length ? (
                         <Button
                           type="button"
                           variant="ghost"
                           onClick={() => setRevealAllRecipients(true)}
                         >
                           {t('pages.communications.recipientList.showMore', {
-                            count: recipientPlan.length - visibleRecipients.length,
+                            count: filteredRecipients.length - visibleRecipients.length,
                           })}
                         </Button>
-                      ) : revealAllRecipients && recipientPlan.length > 8 ? (
+                      ) : revealAllRecipients && filteredRecipients.length > 8 ? (
                         <Button
                           type="button"
                           variant="ghost"
@@ -1091,11 +1208,11 @@ export function CommunicationsPage() {
                     <p className="mt-1 text-sm text-amateur-muted">
                       {t('pages.communications.templatePickerHint')}
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="mt-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
                       <button
                         type="button"
                         onClick={() => handleApplyTemplate(null)}
-                        className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                        className={`min-h-[40px] shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition sm:shrink ${
                           !templateKey
                             ? 'border-amateur-accent bg-amateur-accent-soft text-amateur-accent'
                             : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
@@ -1108,7 +1225,7 @@ export function CommunicationsPage() {
                           key={template.key}
                           type="button"
                           onClick={() => handleApplyTemplate(template)}
-                          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                          className={`min-h-[40px] shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition sm:shrink ${
                             templateKey === template.key
                               ? 'border-amateur-accent bg-amateur-accent-soft text-amateur-accent'
                               : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
@@ -1140,17 +1257,41 @@ export function CommunicationsPage() {
                         </p>
                       </div>
                       {activeDraftId ? (
-                        <span
-                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${STATUS_TONE[activeDraftStatus]}`}
-                        >
-                          {t(`pages.communications.lifecycle.${activeDraftStatus}`)}
-                        </span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span
+                            className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${STATUS_TONE[activeDraftStatus]}`}
+                            title={
+                              activeDraftStatus === 'draft'
+                                ? t('pages.communications.lifecycle.draftBadge')
+                                : activeDraftStatus === 'logged'
+                                  ? t('pages.communications.lifecycle.loggedBadge')
+                                  : t(`pages.communications.lifecycle.${activeDraftStatus}`)
+                            }
+                          >
+                            {t(`pages.communications.lifecycle.${activeDraftStatus}`)}
+                          </span>
+                          {activeDraft ? (
+                            <span className="text-[11px] text-amateur-muted">
+                              {describeActivityAge(t, activeDraft)}
+                            </span>
+                          ) : null}
+                        </div>
                       ) : (
                         <span className="rounded-full border border-amateur-border bg-amateur-surface px-2.5 py-0.5 text-[11px] font-medium text-amateur-muted">
                           {t('pages.communications.lifecycle.unsaved')}
                         </span>
                       )}
                     </div>
+                    {showStaleDraftHint ? (
+                      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                        <p className="font-semibold">
+                          {t('pages.communications.lifecycle.stillRelevant')}
+                        </p>
+                        <p className="mt-0.5 text-amber-800">
+                          {t('pages.communications.lifecycle.stillRelevantHint')}
+                        </p>
+                      </div>
+                    ) : null}
                     {tokens.length > 0 ? (
                       <div className="mt-3 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
@@ -1531,28 +1672,24 @@ function RecipientCard({
   subject: string;
 }) {
   const { t } = useTranslation();
-  const reachState =
-    member.guardians.length === 0
-      ? 'no_guardian'
-      : link
-        ? 'reachable'
-        : channel === 'email'
-          ? 'no_email'
-          : 'no_phone';
+  const reachState = classifyMemberReach(member, channel);
+  const wantedChannel = channel === 'email' ? 'email' : 'phone';
   const reachToneClass =
-    reachState === 'reachable'
+    reachState === 'whatsapp' || reachState === 'phone'
       ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-      : reachState === 'no_guardian'
-        ? 'border-rose-200 bg-rose-50 text-rose-700'
-        : 'border-amber-200 bg-amber-50 text-amber-800';
+      : reachState === 'email'
+        ? 'border-violet-200 bg-violet-50 text-violet-700'
+        : 'border-rose-200 bg-rose-50 text-rose-700';
   const reachLabel =
-    reachState === 'reachable'
-      ? t(`pages.communications.recipientList.reach.${channel}`)
-      : reachState === 'no_guardian'
-        ? t('pages.communications.recipientList.reach.no_guardian')
-        : reachState === 'no_email'
+    reachState === 'unreachable' && member.guardians.length === 0
+      ? t('pages.communications.recipientList.reach.no_guardian')
+      : reachState === 'unreachable'
+        ? wantedChannel === 'email'
           ? t('pages.communications.recipientList.reach.no_email')
-          : t('pages.communications.recipientList.reach.no_phone');
+          : t('pages.communications.recipientList.reach.no_phone')
+        : reachState === 'email' && wantedChannel === 'phone'
+          ? t('pages.communications.recipientList.reach.email')
+          : t(`pages.communications.recipientList.reach.${reachState}`);
   return (
     <article className="rounded-2xl border border-amateur-border bg-amateur-surface px-4 py-3 shadow-sm sm:px-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1706,17 +1843,41 @@ function RecipientCard({
 
 function FollowUpHistory({
   history,
+  filteredItems,
   templates,
   languageTag,
   statusFilter,
   onChangeStatusFilter,
+  templateFilter,
+  onChangeTemplateFilter,
+  channelFilter,
+  onChangeChannelFilter,
+  sourceFilter,
+  onChangeSourceFilter,
+  templateOptions,
+  channelOptions,
+  sourceOptions,
+  staleAfterDays,
+  staleDraftCount,
   onReopen,
 }: {
   history: OutreachActivityListResponse | null;
+  filteredItems: OutreachActivity[];
   templates: CommunicationTemplate[];
   languageTag: string;
   statusFilter: 'all' | OutreachStatus;
   onChangeStatusFilter: (status: 'all' | OutreachStatus) => void;
+  templateFilter: string;
+  onChangeTemplateFilter: (value: string) => void;
+  channelFilter: string;
+  onChangeChannelFilter: (value: string) => void;
+  sourceFilter: string;
+  onChangeSourceFilter: (value: string) => void;
+  templateOptions: string[];
+  channelOptions: string[];
+  sourceOptions: string[];
+  staleAfterDays: number;
+  staleDraftCount: number;
   onReopen: (activity: OutreachActivity) => void;
 }) {
   const { t } = useTranslation();
@@ -1738,6 +1899,14 @@ function FollowUpHistory({
         <StatCard label={t('pages.communications.channels.whatsapp')} value={counts.whatsapp} compact />
         <StatCard label={t('pages.communications.channels.email')} value={counts.email} compact />
       </section>
+      {staleDraftCount > 0 ? (
+        <InlineAlert tone="info">
+          {t('pages.communications.history.staleDraftsSummary', {
+            count: staleDraftCount,
+            days: staleAfterDays,
+          })}
+        </InlineAlert>
+      ) : null}
       <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -1754,7 +1923,7 @@ function FollowUpHistory({
                   key={button.value}
                   type="button"
                   onClick={() => onChangeStatusFilter(button.value)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                  className={`min-h-[36px] rounded-full border px-3 py-1 text-xs font-medium transition ${
                     active
                       ? 'border-amateur-accent bg-amateur-accent-soft text-amateur-accent'
                       : 'border-amateur-border bg-amateur-surface text-amateur-muted hover:text-amateur-ink'
@@ -1768,21 +1937,92 @@ function FollowUpHistory({
             })}
           </div>
         </div>
-        {history.items.length === 0 ? (
+        {(templateOptions.length > 0 ||
+          channelOptions.length > 0 ||
+          sourceOptions.length > 0) ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {templateOptions.length > 0 ? (
+              <label className="flex items-center gap-1.5 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-1.5 text-xs text-amateur-muted">
+                <span className="font-medium uppercase tracking-wide">
+                  {t('pages.communications.history.filterTemplate')}
+                </span>
+                <select
+                  value={templateFilter}
+                  onChange={(e) => onChangeTemplateFilter(e.target.value)}
+                  className="bg-transparent text-amateur-ink outline-none"
+                >
+                  <option value="">{t('pages.communications.history.filterTemplateAll')}</option>
+                  {templateOptions.map((key) => {
+                    const tpl = templates.find((entry) => entry.key === key);
+                    return (
+                      <option key={key} value={key}>
+                        {tpl ? t(tpl.titleKey) : key}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+            ) : null}
+            {channelOptions.length > 0 ? (
+              <label className="flex items-center gap-1.5 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-1.5 text-xs text-amateur-muted">
+                <span className="font-medium uppercase tracking-wide">
+                  {t('pages.communications.history.filterChannel')}
+                </span>
+                <select
+                  value={channelFilter}
+                  onChange={(e) => onChangeChannelFilter(e.target.value)}
+                  className="bg-transparent text-amateur-ink outline-none"
+                >
+                  <option value="">{t('pages.communications.history.filterChannelAll')}</option>
+                  {channelOptions.map((value) => (
+                    <option key={value} value={value}>
+                      {getCommunicationChannelLabel(t, value)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {sourceOptions.length > 0 ? (
+              <label className="flex items-center gap-1.5 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-1.5 text-xs text-amateur-muted">
+                <span className="font-medium uppercase tracking-wide">
+                  {t('pages.communications.history.filterSource')}
+                </span>
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => onChangeSourceFilter(e.target.value)}
+                  className="bg-transparent text-amateur-ink outline-none"
+                >
+                  <option value="">{t('pages.communications.history.filterSourceAll')}</option>
+                  {sourceOptions.map((value) => (
+                    <option key={value} value={value}>
+                      {getCommunicationSourceLabel(t, value)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
+        ) : null}
+        {filteredItems.length === 0 ? (
           <div className="mt-4">
             <EmptyState
               title={t('pages.communications.history.title')}
-              hint={t('pages.communications.history.empty')}
+              hint={
+                history.items.length === 0
+                  ? t('pages.communications.history.empty')
+                  : t('pages.communications.history.emptyFiltered')
+              }
             />
           </div>
         ) : (
           <ul className="mt-4 space-y-3">
-            {history.items.map((activity) => (
+            {filteredItems.map((activity) => (
               <FollowUpHistoryRow
                 key={activity.id}
                 activity={activity}
                 templates={templates}
                 languageTag={languageTag}
+                staleAfterDays={staleAfterDays}
                 onReopen={onReopen}
               />
             ))}
@@ -1797,11 +2037,13 @@ function FollowUpHistoryRow({
   activity,
   templates,
   languageTag,
+  staleAfterDays,
   onReopen,
 }: {
   activity: OutreachActivity;
   templates: CommunicationTemplate[];
   languageTag: string;
+  staleAfterDays: number;
   onReopen: (activity: OutreachActivity) => void;
 }) {
   const { t } = useTranslation();
@@ -1812,6 +2054,8 @@ function FollowUpHistoryRow({
     | { contextLabel?: string }
     | null;
   const status = (activity.status ?? 'logged') as OutreachStatus;
+  const isStale = isOutreachStale(activity, staleAfterDays);
+  const ageLabel = describeActivityAge(t, activity);
   return (
     <li className="rounded-2xl border border-amateur-border bg-amateur-surface px-4 py-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1835,10 +2079,15 @@ function FollowUpHistoryRow({
                 {t(template.titleKey)}
               </span>
             ) : null}
+            {isStale ? (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                {t('pages.communications.lifecycle.stillRelevant')}
+              </span>
+            ) : null}
           </div>
           <p className="mt-2 font-medium text-amateur-ink">{activity.topic}</p>
           <p className="mt-1 text-xs text-amateur-muted">
-            {formatDateTime(activity.createdAt, languageTag)} ·{' '}
+            {ageLabel} · {formatDateTime(activity.createdAt, languageTag)} ·{' '}
             {activity.createdByName
               ? t('pages.communications.history.savedBy', { name: activity.createdByName })
               : t('pages.communications.history.savedAnonymous')}

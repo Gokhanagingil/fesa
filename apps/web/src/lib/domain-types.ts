@@ -242,6 +242,8 @@ export type CommunicationAudienceMember = {
   groupName: string | null;
   teamIds: string[];
   teamNames: string[];
+  sportBranchId?: string | null;
+  sportBranchName?: string | null;
   guardians: Array<{
     guardianId: string;
     name: string;
@@ -268,12 +270,17 @@ export type CommunicationAudienceResponse = {
     guardiansWithPhone: number;
     guardiansWithEmail: number;
     athletesWithPhoneReach: number;
+    athletesWithEmailReach?: number;
+    athletesUnreachable?: number;
     athletesMissingPhone: number;
     withOverdueBalance: number;
     incompleteAthletes: number;
     awaitingGuardianAction: number;
     awaitingStaffReview: number;
     needingFollowUp: number;
+  };
+  meta?: {
+    clubName?: string | null;
   };
 };
 
@@ -308,6 +315,14 @@ export type CommunicationTemplatesResponse = {
   channels: CommunicationChannel[];
   items: CommunicationTemplate[];
   tokens?: CommunicationTemplateToken[];
+  lifecycle?: {
+    /**
+     * Drafts older than this many days surface a quiet "still relevant?"
+     * hint in the history surface and at the top of the draft editor when
+     * a stale draft is reopened.  Lifecycle stays intentionally tiny.
+     */
+    staleAfterDays: number;
+  };
 };
 
 export type OutreachStatus = 'draft' | 'logged' | 'archived';

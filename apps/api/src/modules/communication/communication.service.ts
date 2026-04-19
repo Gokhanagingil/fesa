@@ -9,6 +9,7 @@ import { Guardian } from '../../database/entities/guardian.entity';
 import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.entity';
 import { Team } from '../../database/entities/team.entity';
+import { Tenant } from '../../database/entities/tenant.entity';
 import { TrainingSession } from '../../database/entities/training-session.entity';
 import { GuardianPortalAccess } from '../../database/entities/guardian-portal-access.entity';
 import { AthleteStatus, FamilyReadinessStatus } from '../../database/enums';
@@ -26,6 +27,8 @@ type AudienceMember = {
   groupName: string | null;
   teamIds: string[];
   teamNames: string[];
+  sportBranchId: string | null;
+  sportBranchName: string | null;
   guardians: Array<{
     guardianId: string;
     name: string;
@@ -33,6 +36,7 @@ type AudienceMember = {
     phone: string | null;
     email: string | null;
     isPrimaryContact: boolean;
+    portalAccessStatus: 'invited' | 'active' | 'disabled' | null;
   }>;
   outstandingAmount: string;
   overdueAmount: string;
@@ -65,9 +69,24 @@ export class CommunicationService {
     private readonly presets: Repository<SavedFilterPreset>,
     @InjectRepository(GuardianPortalAccess)
     private readonly guardianPortalAccesses: Repository<GuardianPortalAccess>,
+    @InjectRepository(Tenant)
+    private readonly tenants: Repository<Tenant>,
     private readonly finance: FinanceService,
     private readonly familyActions: FamilyActionService,
   ) {}
+
+  /**
+   * Fetch the lightweight tenant context that gets exposed via the audience
+   * meta block.  It powers `{{clubName}}` token resolution on the client and
+   * is intentionally kept tiny — we never expose tenant settings here.
+   */
+  private async getTenantMeta(tenantId: string): Promise<{ clubName: string | null }> {
+    const tenant = await this.tenants.findOne({
+      where: { id: tenantId },
+      select: { id: true, name: true },
+    });
+    return { clubName: tenant?.name ?? null };
+  }
 
   private unique(values: string[]): string[] {
     return Array.from(new Set(values.filter(Boolean)));
@@ -167,6 +186,14 @@ export class CommunicationService {
       query.athleteIds.forEach((id) => ids.add(id));
     }
 
+    if (query.guardianIds && query.guardianIds.length > 0) {
+      const links = await this.athleteGuardians.find({
+        where: { tenantId, guardianId: In(query.guardianIds) },
+        select: { athleteId: true },
+      });
+      links.forEach((link) => ids.add(link.athleteId));
+    }
+
     if (query.financialState === 'overdue' || query.financialState === 'outstanding') {
       const financeSummary = await this.finance.listAthleteFinanceSummaries(tenantId, {});
       financeSummary.athletes
@@ -222,17 +249,34 @@ export class CommunicationService {
   async listAudience(tenantId: string, query: ListCommunicationAudienceQueryDto) {
     const athleteIds = await this.getCandidateAthleteIds(tenantId, query);
     if (athleteIds.length === 0) {
+      const meta = await this.getTenantMeta(tenantId);
       return {
         items: [],
-        counts: { athletes: 0, guardians: 0, primaryContacts: 0, withOverdueBalance: 0 },
+        counts: {
+          athletes: 0,
+          guardians: 0,
+          primaryContacts: 0,
+          guardiansWithPhone: 0,
+          guardiansWithEmail: 0,
+          athletesWithPhoneReach: 0,
+          athletesWithEmailReach: 0,
+          athletesUnreachable: 0,
+          athletesMissingPhone: 0,
+          withOverdueBalance: 0,
+          incompleteAthletes: 0,
+          awaitingGuardianAction: 0,
+          awaitingStaffReview: 0,
+          needingFollowUp: 0,
+        },
+        meta,
       };
     }
 
-    const [athletes, guardians, memberships, groups, teams, financeSummary, upcomingLessons, readinessMap, portalAccesses] =
+    const [athletes, guardians, memberships, groups, teams, financeSummary, upcomingLessons, readinessMap, portalAccesses, tenantMeta] =
       await Promise.all([
         this.athletes.find({
           where: { tenantId, id: In(athleteIds) },
-          relations: ['primaryGroup'],
+          relations: ['primaryGroup', 'sportBranch'],
           order: { lastName: 'ASC', firstName: 'ASC' },
         }),
         this.athleteGuardians.find({
@@ -254,6 +298,7 @@ export class CommunicationService {
         }),
         this.familyActions.getReadinessMap(tenantId, athleteIds),
         this.safeListPortalAccesses(tenantId),
+        this.getTenantMeta(tenantId),
       ]);
 
     const financeMap = new Map(financeSummary.athletes.map((row) => [row.athlete.id, row]));
@@ -355,14 +400,20 @@ export class CommunicationService {
         groupName: athlete.primaryGroup?.name ?? null,
         teamIds: this.unique(activeMemberships.map((membership) => membership.teamId)),
         teamNames: this.unique(activeMemberships.map((membership) => membership.team?.name ?? '')),
-        guardians: (guardiansByAthlete.get(athlete.id) ?? []).map((link) => ({
-          guardianId: link.guardian.id,
-          name: `${link.guardian.firstName} ${link.guardian.lastName}`,
-          relationshipType: link.relationshipType,
-          phone: link.guardian.phone,
-          email: link.guardian.email,
-          isPrimaryContact: link.isPrimaryContact,
-        })),
+        sportBranchId: athlete.sportBranchId ?? null,
+        sportBranchName: athlete.sportBranch?.name ?? null,
+        guardians: (guardiansByAthlete.get(athlete.id) ?? []).map((link) => {
+          const status = portalStatusByGuardian.get(link.guardian.id) ?? null;
+          return {
+            guardianId: link.guardian.id,
+            name: `${link.guardian.firstName} ${link.guardian.lastName}`,
+            relationshipType: link.relationshipType,
+            phone: link.guardian.phone,
+            email: link.guardian.email,
+            isPrimaryContact: link.isPrimaryContact,
+            portalAccessStatus: (status as 'invited' | 'active' | 'disabled' | null) ?? null,
+          };
+        }),
         outstandingAmount: (financeRow?.totalOutstanding ?? 0).toFixed(2),
         overdueAmount: (financeRow?.totalOverdue ?? 0).toFixed(2),
         hasOverdueBalance: (financeRow?.totalOverdue ?? 0) > 0,
@@ -437,6 +488,14 @@ export class CommunicationService {
     const athletesWithPhoneReach = items.filter((item) =>
       item.guardians.some((guardian) => Boolean(guardian.phone)),
     ).length;
+    const athletesWithEmailReach = items.filter((item) =>
+      item.guardians.some((guardian) => Boolean(guardian.email)),
+    ).length;
+    const athletesUnreachable = items.filter(
+      (item) =>
+        item.guardians.length === 0 ||
+        item.guardians.every((guardian) => !guardian.phone && !guardian.email),
+    ).length;
     const athletesMissingPhone = items.length - athletesWithPhoneReach;
 
     return {
@@ -448,6 +507,8 @@ export class CommunicationService {
         guardiansWithPhone,
         guardiansWithEmail,
         athletesWithPhoneReach,
+        athletesWithEmailReach,
+        athletesUnreachable,
         athletesMissingPhone,
         withOverdueBalance: items.filter((item) => item.hasOverdueBalance).length,
         incompleteAthletes: items.filter((item) => item.familyReadinessStatus === FamilyReadinessStatus.INCOMPLETE).length,
@@ -459,6 +520,7 @@ export class CommunicationService {
         ).length,
         needingFollowUp: items.filter((item) => item.familyReadinessStatus !== FamilyReadinessStatus.COMPLETE).length,
       },
+      meta: tenantMeta,
     };
   }
 
@@ -476,6 +538,8 @@ export class CommunicationService {
             guardiansWithPhone: 0,
             guardiansWithEmail: 0,
             athletesWithPhoneReach: 0,
+            athletesWithEmailReach: 0,
+            athletesUnreachable: 0,
             athletesMissingPhone: 0,
             withOverdueBalance: 0,
             incompleteAthletes: 0,
@@ -483,6 +547,7 @@ export class CommunicationService {
             awaitingStaffReview: 0,
             needingFollowUp: 0,
           },
+          meta: { clubName: null },
         };
       }
       throw error;
