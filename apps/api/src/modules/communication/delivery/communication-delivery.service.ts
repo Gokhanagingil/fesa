@@ -41,6 +41,15 @@ export type ResolvedDeliveryPlan = {
  * The orchestrator is intentionally thin.  It never reads the database
  * directly; readiness queries go through `WhatsAppReadinessService`,
  * recipient/audience hydration stays inside `OutreachService`.
+ *
+ * Wave 16 honest-state semantics:
+ *   - `sent`     — every recipient confirmed by the provider
+ *   - `sent` with `partial_sent:` detail — at least one delivered
+ *     (failed recipients are still listed per-recipient so the UX can
+ *     offer assisted follow-up for the gaps).
+ *   - `failed`   — no recipient delivered, no fallback used
+ *   - `fallback` — direct attempt failed end-to-end and the assisted
+ *     deep-link was prepared instead.
  */
 @Injectable()
 export class CommunicationDeliveryService {
@@ -64,10 +73,12 @@ export class CommunicationDeliveryService {
 
   /**
    * Attempt delivery using the operator-requested mode, falling back
-   * to assisted when direct fails.  The aggregate `DeliveryResult`
-   * will carry `state: 'fallback'` whenever a direct attempt failed
-   * but the assisted path succeeded — that is the keystone for honest
-   * UX copy.
+   * to assisted when direct fails end-to-end.  Aggregate state stays
+   * honest:
+   *   - direct + at least one delivered → `sent` (partial detail kept)
+   *   - direct + all failed             → assisted attempt → `fallback`
+   *   - direct unavailable              → assisted attempt → `fallback`
+   *   - assisted only                   → `prepared`
    */
   async deliver(
     requestedMode: DeliveryMode,
@@ -89,6 +100,10 @@ export class CommunicationDeliveryService {
       const directCap = await this.whatsappCloudApi.capability(request.tenantId, request.channel);
       if (directCap.state === 'direct_capable') {
         const directResult = await this.whatsappCloudApi.deliver(request);
+        // `sent` covers the all-delivered AND partial-delivered cases.
+        // The provider keeps per-recipient outcomes intact so the UX
+        // can offer the assisted path for the failed subset without
+        // re-classifying the whole row.
         if (directResult.state === 'sent') {
           return directResult;
         }
@@ -101,8 +116,6 @@ export class CommunicationDeliveryService {
             : 'direct_failed_assisted_used',
         };
       }
-      // Direct not capable — degrade silently to assisted but mark the
-      // result with a state that explains the soft fallback to history.
       const fallback = await this.assisted.deliver(request);
       return {
         ...fallback,

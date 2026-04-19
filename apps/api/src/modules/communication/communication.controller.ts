@@ -84,7 +84,13 @@ export class CommunicationController {
   }
 
   @Post('readiness/whatsapp/validate')
-  validateWhatsAppReadiness(@Req() req: Request) {
+  validateWhatsAppReadiness(
+    @Req() req: Request,
+    @Body() body?: { mode?: 'local' | 'live' },
+  ) {
+    if (body?.mode === 'live') {
+      return this.readiness.runLiveValidation(req.tenantId!);
+    }
     return this.readiness.runValidation(req.tenantId!);
   }
 

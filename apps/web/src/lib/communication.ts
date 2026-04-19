@@ -143,10 +143,12 @@ export function saveWhatsAppReadiness(payload: {
   return apiPut<WhatsAppReadinessSummary>('/api/communications/readiness/whatsapp', payload);
 }
 
-export function validateWhatsAppReadiness(): Promise<WhatsAppReadinessSummary> {
+export function validateWhatsAppReadiness(
+  mode: 'local' | 'live' = 'local',
+): Promise<WhatsAppReadinessSummary> {
   return apiPost<WhatsAppReadinessSummary>(
     '/api/communications/readiness/whatsapp/validate',
-    {},
+    { mode },
   );
 }
 

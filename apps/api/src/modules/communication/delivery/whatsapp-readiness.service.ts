@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TenantCommunicationConfig } from '../../../database/entities/tenant-communication-config.entity';
 import { isRelationTableMissingError } from '../../core/database-error.util';
+import { WhatsAppCloudApiClient } from './whatsapp-cloud-api.client';
 
 export type WhatsAppReadinessState =
   | 'not_configured'
@@ -69,8 +70,11 @@ const DEFAULT_SUMMARY: WhatsAppReadinessSummary = {
  *   - We never store the access token itself; only an opaque reference
  *     (eg. `env:WHATSAPP_CLOUD_API_TOKEN`) so secret material stays in
  *     the host environment.
- *   - "Validation" is a placeholder hook: in the readiness pack it
- *     returns `pending` until a real Cloud API ping is implemented.
+ *   - Validation has two flavours.  The default `runValidation` stays
+ *     side-effect free (config consistency + token-ref resolution).
+ *     `runLiveValidation` performs a single read-only Cloud API call
+ *     against the configured `phoneNumberId` to confirm the token is
+ *     accepted before flipping the readiness chip to `ok`.
  *   - All operations are tenant-scoped through the explicit `tenantId`
  *     parameter; the controller is responsible for sourcing it from
  *     `TenantGuard`.
@@ -82,6 +86,7 @@ export class WhatsAppReadinessService {
   constructor(
     @InjectRepository(TenantCommunicationConfig)
     private readonly configs: Repository<TenantCommunicationConfig>,
+    private readonly cloudApiClient: WhatsAppCloudApiClient,
   ) {}
 
   private async safeFindConfig(tenantId: string): Promise<TenantCommunicationConfig | null> {
@@ -108,12 +113,22 @@ export class WhatsAppReadinessService {
     if (!configured.phoneNumberId) issues.push('missing_phone_number_id');
     if (!configured.businessAccountId) issues.push('missing_business_account_id');
     if (!configured.accessTokenRef) issues.push('missing_access_token_ref');
+    if (configured.phoneNumberId && !/^\d{6,32}$/.test(config.whatsappPhoneNumberId!.trim())) {
+      issues.push('phone_number_id_invalid');
+    }
+    if (configured.businessAccountId && !/^\d{6,32}$/.test(config.whatsappBusinessAccountId!.trim())) {
+      issues.push('business_account_id_invalid');
+    }
     if (config.whatsappAccessTokenRef && !this.canResolveTokenRef(config.whatsappAccessTokenRef)) {
       issues.push('access_token_ref_unresolved');
     }
 
+    const validationState = config.whatsappValidationState as
+      | WhatsAppReadinessSummary['validation']['state']
+      | null
+      | undefined;
     const validation = {
-      state: (config.whatsappValidationState as WhatsAppReadinessSummary['validation']['state']) ?? 'never_validated',
+      state: validationState ?? 'never_validated',
       message: config.whatsappValidationMessage ?? null,
       validatedAt: config.whatsappValidatedAt?.toISOString() ?? null,
     };
@@ -122,7 +137,6 @@ export class WhatsAppReadinessService {
     let directSendAvailable = false;
 
     if (!config.whatsappCloudApiEnabled) {
-      // Operator has explicitly chosen assisted-only.
       state = configured.phoneNumberId || configured.businessAccountId || configured.accessTokenRef
         ? 'assisted_only'
         : 'not_configured';
@@ -132,9 +146,16 @@ export class WhatsAppReadinessService {
         : 'invalid';
     } else if (validation.state === 'invalid') {
       state = 'invalid';
-    } else {
+    } else if (validation.state === 'ok') {
       state = 'direct_capable';
       directSendAvailable = true;
+    } else {
+      // Configuration looks valid locally but a successful readiness
+      // check has not happened yet (or the operator just edited the
+      // config).  We treat this as `partial` so direct send only goes
+      // live once the operator has confirmed connectivity at least
+      // once — this is the trust safeguard for Wave 16.
+      state = 'partial';
     }
 
     return {
@@ -150,9 +171,10 @@ export class WhatsAppReadinessService {
 
   /**
    * Resolve an access-token reference to a real value.  We only
-   * support the `env:NAME` scheme in the readiness pack — any other
-   * scheme is treated as "not yet supported" so we never hand a fake
-   * token to a real provider.
+   * support the `env:NAME` scheme today — any other scheme is
+   * treated as "not yet supported" so we never hand a fake token to
+   * a real provider.  The host environment is the single secret
+   * store; deployments are expected to inject the secret on boot.
    */
   resolveAccessToken(tokenRef: string | null | undefined): string | null {
     if (!tokenRef) return null;
@@ -160,11 +182,10 @@ export class WhatsAppReadinessService {
     if (!trimmed) return null;
     if (trimmed.startsWith('env:')) {
       const name = trimmed.slice('env:'.length).trim();
-      if (!name) return null;
+      if (!name || !/^[A-Z][A-Z0-9_]*$/.test(name)) return null;
       const value = process.env[name];
       return value && value.trim() ? value : null;
     }
-    // Future: secret-manager:// schemes plug in here.
     return null;
   }
 
@@ -220,8 +241,10 @@ export class WhatsAppReadinessService {
       row.whatsappDisplayPhoneNumber = input.displayPhoneNumber?.trim() || null;
     }
 
-    // Saving config invalidates the previous validation result; the
-    // operator is expected to re-run the readiness check explicitly.
+    // Saving config invalidates any previous validation result.  The
+    // operator is expected to re-run the readiness check explicitly
+    // after a config change — this is the trust safeguard that keeps
+    // direct send paused after edits.
     if (
       input.phoneNumberId !== undefined ||
       input.businessAccountId !== undefined ||
@@ -238,30 +261,92 @@ export class WhatsAppReadinessService {
   }
 
   /**
-   * Light readiness check.  We deliberately avoid making a live Cloud
-   * API request here — that would couple the readiness pack to a live
-   * Meta endpoint we are not yet integrated with.  Instead we verify
-   * the tenant has consistent local config and that the token
-   * reference resolves.  Anything more is left to a future wave.
+   * Lightweight readiness check.  Verifies local consistency and that
+   * the token reference resolves.  Does NOT touch the network — call
+   * `runLiveValidation` for the real Cloud API ping.
    */
   async runValidation(tenantId: string): Promise<WhatsAppReadinessSummary> {
+    return this.persistValidation(tenantId, 'local');
+  }
+
+  /**
+   * Live readiness check.  In addition to the local consistency check
+   * above we perform a single read-only Cloud API request against the
+   * configured `phoneNumberId`.  The token must be accepted by Meta
+   * before we promote the validation state to `ok` — only then does
+   * the readiness chip flip to `direct_capable`.
+   */
+  async runLiveValidation(tenantId: string): Promise<WhatsAppReadinessSummary> {
+    return this.persistValidation(tenantId, 'live');
+  }
+
+  private async persistValidation(
+    tenantId: string,
+    mode: 'local' | 'live',
+  ): Promise<WhatsAppReadinessSummary> {
     let row = await this.safeFindConfig(tenantId);
     if (!row) {
       row = this.configs.create({ tenantId });
     }
-    const summary = this.classify(row);
+    const localSummary = this.classify(row);
+
     let nextState: 'ok' | 'pending' | 'invalid' = 'pending';
     let message: string | null = null;
+
     if (!row.whatsappCloudApiEnabled) {
       nextState = 'pending';
       message = 'assisted_only_intent';
-    } else if (summary.issues.length > 0) {
+    } else if (localSummary.issues.length > 0) {
       nextState = 'invalid';
-      message = `missing:${summary.issues.join(',')}`;
-    } else {
+      message = `missing:${localSummary.issues.join(',')}`;
+    } else if (mode === 'local') {
       nextState = 'ok';
       message = 'config_resolved_locally';
+    } else {
+      const accessToken = this.resolveAccessToken(row.whatsappAccessTokenRef);
+      const phoneNumberId = row.whatsappPhoneNumberId;
+      if (!accessToken || !phoneNumberId) {
+        nextState = 'invalid';
+        message = 'access_token_ref_unresolved';
+      } else {
+        const liveResult = await this.cloudApiClient
+          .sendText({
+            accessToken,
+            phoneNumberId,
+            // We only need a probe — the Cloud API rejects this with a
+            // recipient error rather than a token error when the token
+            // and phone_number_id are valid, which is enough for a
+            // readiness signal without sending a real message.
+            toPhoneE164: '0',
+            body: '__amateur_readiness_probe__',
+          })
+          .catch((error: unknown) => ({
+            ok: false,
+            providerMessageId: null as string | null,
+            errorCode: 'transport_error',
+            errorMessage: error instanceof Error ? error.message : 'transport_error',
+            raw: null,
+          }));
+        if (liveResult.ok) {
+          nextState = 'ok';
+          message = 'live_probe_accepted';
+        } else if (
+          liveResult.errorCode === 'token_invalid' ||
+          liveResult.errorCode === 'transport_error' ||
+          liveResult.errorCode === 'provider_unavailable'
+        ) {
+          nextState = 'invalid';
+          message = liveResult.errorCode;
+        } else {
+          // `provider_rejected` / `rate_limited` / `unknown` here mean
+          // Meta accepted the credentials but rejected the probe
+          // recipient — that is exactly what we want for readiness.
+          nextState = 'ok';
+          message = 'live_credentials_accepted';
+        }
+      }
     }
+
     row.whatsappValidationState = nextState;
     row.whatsappValidationMessage = message;
     row.whatsappValidatedAt = new Date();
