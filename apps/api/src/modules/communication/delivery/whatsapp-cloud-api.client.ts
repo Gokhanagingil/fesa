@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 
 /**
  * Lightweight HTTP fetcher seam.  Defaults to the global `fetch` (Node
@@ -8,6 +8,14 @@ import { Injectable, Logger } from '@nestjs/common';
  * Cloud API send path is a single POST per recipient and we want this
  * dependency surface to stay tiny so `WhatsAppCloudApiProvider` is the
  * only seam that future provider replacements need to think about.
+ *
+ * Wiring discipline: `WhatsAppFetcher` is a TypeScript function alias,
+ * not a class.  `emitDecoratorMetadata` therefore serialises a `Function`
+ * for any constructor parameter typed as `WhatsAppFetcher`, which Nest
+ * cannot resolve without help.  The `WHATSAPP_CLOUD_API_FETCHER` token
+ * below is the explicit DI handle — both the consumer (`@Inject(...)` in
+ * `WhatsAppCloudApiClient`) and the producer (a `useFactory` provider in
+ * `CommunicationModule`) speak through this symbol.
  */
 export type WhatsAppFetcher = (
   url: string,
@@ -20,6 +28,23 @@ export type WhatsAppFetcher = (
 }>;
 
 export const WHATSAPP_CLOUD_API_FETCHER = Symbol('WHATSAPP_CLOUD_API_FETCHER');
+
+/**
+ * Default fetcher provider value.  Resolves the global `fetch` lazily
+ * so the module still loads cleanly on runtimes where `fetch` is
+ * polyfilled later in boot, and so unit tests can swap a deterministic
+ * fetcher via `useValue` in the module override.
+ */
+export const defaultWhatsAppFetcher: WhatsAppFetcher = (url, init) => {
+  const f = (globalThis as { fetch?: WhatsAppFetcher }).fetch;
+  if (!f) {
+    return Promise.reject(new Error('global fetch is not available in this runtime'));
+  }
+  return (f as unknown as typeof fetch)(
+    url,
+    init as unknown as RequestInit,
+  ) as unknown as ReturnType<WhatsAppFetcher>;
+};
 
 export type WhatsAppSendInput = {
   accessToken: string;
@@ -76,16 +101,18 @@ export class WhatsAppCloudApiClient {
   private readonly logger = new Logger(WhatsAppCloudApiClient.name);
   private readonly fetcher: WhatsAppFetcher;
 
-  constructor(fetcher?: WhatsAppFetcher) {
-    this.fetcher =
-      fetcher ??
-      ((url, init) => {
-        const f = (globalThis as { fetch?: WhatsAppFetcher }).fetch;
-        if (!f) {
-          return Promise.reject(new Error('global fetch is not available in this runtime'));
-        }
-        return (f as unknown as typeof fetch)(url, init as unknown as RequestInit) as unknown as ReturnType<WhatsAppFetcher>;
-      });
+  /**
+   * The fetcher is injected via the `WHATSAPP_CLOUD_API_FETCHER` token
+   * because `WhatsAppFetcher` is a function-type alias, not a class —
+   * Nest cannot infer a usable DI token from the TypeScript metadata
+   * alone.  `@Optional()` keeps the constructor usable from focused
+   * unit tests (`new WhatsAppCloudApiClient(fakeFetcher)`) that
+   * deliberately bypass the Nest container.
+   */
+  constructor(
+    @Optional() @Inject(WHATSAPP_CLOUD_API_FETCHER) fetcher?: WhatsAppFetcher,
+  ) {
+    this.fetcher = fetcher ?? defaultWhatsAppFetcher;
   }
 
   async sendText(input: WhatsAppSendInput): Promise<WhatsAppSendResult> {

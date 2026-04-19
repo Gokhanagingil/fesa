@@ -6,9 +6,10 @@
  * fixture so we can verify honest delivery state transitions without
  * booting Nest or hitting Meta.
  */
+import 'reflect-metadata';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -26,10 +27,16 @@ for (const path of [clientPath, providerPath, orchestratorPath, assistedPath]) {
   }
 }
 
-const { WhatsAppCloudApiClient } = await import(clientPath);
-const { WhatsAppCloudApiProvider } = await import(providerPath);
-const { CommunicationDeliveryService } = await import(orchestratorPath);
-const { AssistedDeliveryProvider } = await import(assistedPath);
+const {
+  WhatsAppCloudApiClient,
+  WHATSAPP_CLOUD_API_FETCHER,
+  defaultWhatsAppFetcher,
+} = await import(pathToFileURL(clientPath).href);
+const { WhatsAppCloudApiProvider } = await import(pathToFileURL(providerPath).href);
+const { CommunicationDeliveryService } = await import(pathToFileURL(orchestratorPath).href);
+const { AssistedDeliveryProvider } = await import(pathToFileURL(assistedPath).href);
+const { Module } = await import('@nestjs/common');
+const { NestFactory } = await import('@nestjs/core');
 
 function makeFetcher(handler) {
   return async (url, init) => handler(url, init);
@@ -377,6 +384,49 @@ tests.push([
     });
     assert.equal(called, false);
     assert.equal(result.state, 'fallback');
+  },
+]);
+
+tests.push([
+  'WhatsAppCloudApiClient can be resolved by Nest when the fetcher token is provided',
+  async () => {
+    class CommunicationDIRegressionModule {}
+    Module({
+      providers: [
+        { provide: WHATSAPP_CLOUD_API_FETCHER, useValue: defaultWhatsAppFetcher },
+        WhatsAppCloudApiClient,
+      ],
+    })(CommunicationDIRegressionModule);
+
+    const app = await NestFactory.createApplicationContext(CommunicationDIRegressionModule, {
+      logger: false,
+      abortOnError: false,
+    });
+    try {
+      const instance = app.get(WhatsAppCloudApiClient);
+      assert.ok(instance instanceof WhatsAppCloudApiClient);
+    } finally {
+      await app.close();
+    }
+  },
+]);
+
+tests.push([
+  'WhatsAppCloudApiClient still resolves with @Optional fetcher when the token is absent',
+  async () => {
+    class StandaloneClientModule {}
+    Module({ providers: [WhatsAppCloudApiClient] })(StandaloneClientModule);
+
+    const app = await NestFactory.createApplicationContext(StandaloneClientModule, {
+      logger: false,
+      abortOnError: false,
+    });
+    try {
+      const instance = app.get(WhatsAppCloudApiClient);
+      assert.ok(instance instanceof WhatsAppCloudApiClient);
+    } finally {
+      await app.close();
+    }
   },
 ]);
 
