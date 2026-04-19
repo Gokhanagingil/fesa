@@ -260,6 +260,9 @@ export function CommunicationsPage() {
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [deliveryAttemptState, setDeliveryAttemptState] = useState<DeliveryState | null>(null);
   const [deliveryNotice, setDeliveryNotice] = useState<string | null>(null);
+  const [deliveryCounts, setDeliveryCounts] = useState<{ sent: number; failed: number; attempted: number } | null>(
+    null,
+  );
   const [sendingDirect, setSendingDirect] = useState(false);
 
   useEffect(() => {
@@ -858,10 +861,27 @@ export function CommunicationsPage() {
       });
       const next = result.delivery?.state ?? 'prepared';
       setDeliveryAttemptState(next);
+      const counts = result.delivery?.attemptCounts ?? null;
+      setDeliveryCounts(
+        counts
+          ? { sent: counts.sent, failed: counts.failed, attempted: counts.attempted }
+          : null,
+      );
       if (next === 'sent') {
-        setDeliveryNotice(
-          t('pages.communications.delivery.actions.directSent', { count: recipients.length }),
-        );
+        const sentCount = counts?.sent ?? recipients.length;
+        const failedCount = counts?.failed ?? 0;
+        if (failedCount > 0) {
+          setDeliveryNotice(
+            t('pages.communications.delivery.actions.directPartial', {
+              sent: sentCount,
+              total: counts?.attempted ?? recipients.length,
+            }),
+          );
+        } else {
+          setDeliveryNotice(
+            t('pages.communications.delivery.actions.directSent', { count: sentCount }),
+          );
+        }
       } else if (next === 'fallback') {
         setDeliveryNotice(t('pages.communications.delivery.actions.directFallback'));
       } else if (next === 'failed') {
@@ -870,6 +890,7 @@ export function CommunicationsPage() {
       await loadHistory();
     } catch (e) {
       setDeliveryAttemptState('failed');
+      setDeliveryCounts(null);
       setDeliveryNotice(
         e instanceof Error ? e.message : t('pages.communications.delivery.actions.directFailed'),
       );
@@ -1505,7 +1526,9 @@ export function CommunicationsPage() {
                       <InlineAlert
                         tone={
                           deliveryAttemptState === 'sent'
-                            ? 'info'
+                            ? deliveryCounts && deliveryCounts.failed > 0
+                              ? 'warning'
+                              : 'info'
                             : deliveryAttemptState === 'failed'
                               ? 'error'
                               : 'warning'
@@ -2258,9 +2281,18 @@ function FollowUpHistoryRow({
   const isStale = isOutreachStale(activity, staleAfterDays);
   const ageLabel = describeActivityAge(t, activity);
   const deliveryState = (activity.delivery?.state ?? 'prepared') as DeliveryState;
-  const deliveryLabel = t(`pages.communications.delivery.history.${deliveryState}`, {
-    defaultValue: t('pages.communications.delivery.history.prepared'),
-  });
+  const attemptCounts = activity.delivery?.attemptCounts ?? null;
+  const isPartial =
+    deliveryState === 'sent' && attemptCounts ? attemptCounts.failed > 0 : false;
+  const deliveryLabel = isPartial
+    ? t('pages.communications.delivery.history.partial', {
+        sent: attemptCounts?.sent ?? 0,
+        total: attemptCounts?.attempted ?? 0,
+        defaultValue: t('pages.communications.delivery.history.sent'),
+      })
+    : t(`pages.communications.delivery.history.${deliveryState}`, {
+        defaultValue: t('pages.communications.delivery.history.prepared'),
+      });
   return (
     <li className="rounded-2xl border border-amateur-border bg-amateur-surface px-4 py-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2290,7 +2322,11 @@ function FollowUpHistoryRow({
               </span>
             ) : null}
             <span
-              className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${DELIVERY_STATE_TONE[deliveryState]}`}
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                isPartial
+                  ? 'border-amber-200 bg-amber-50 text-amber-800'
+                  : DELIVERY_STATE_TONE[deliveryState]
+              }`}
               title={activity.delivery?.detail ?? undefined}
             >
               {deliveryLabel}

@@ -339,12 +339,14 @@
           "preparingDirect": "Preparing the direct send…",
           "directSent": "Direct send completed for {{count}} family.",
           "directSent_other": "Direct send completed for {{count}} families.",
+          "directPartial": "Direct send completed for {{sent}} of {{total}} families. Open WhatsApp for the rest if you'd like.",
           "directFallback": "Direct send didn't go through — assisted fallback is ready.",
           "directFailed": "Direct send didn't complete. The assisted path is still available."
         },
         "history": {
           "prepared": "Prepared",
           "sent": "Sent directly",
+          "partial": "Sent to {{sent}} of {{total}}",
           "failed": "Direct send failed",
           "fallback": "Used assisted fallback"
         },
@@ -371,7 +373,25 @@
             "missing_business_account_id": "WhatsApp business account ID is missing.",
             "missing_access_token_ref": "Access token reference is missing.",
             "access_token_ref_unresolved": "Access token reference cannot be resolved in this environment.",
+            "phone_number_id_invalid": "WhatsApp phone number ID should be digits only.",
+            "business_account_id_invalid": "WhatsApp business account ID should be digits only.",
             "no_config_row": "Direct delivery has not been set up for this club yet."
+          },
+          "validationStates": {
+            "ok": "Configuration accepted.",
+            "pending": "Run a readiness check to confirm direct send.",
+            "invalid": "The last check could not validate this setup.",
+            "never_validated": "No readiness check has been run yet."
+          },
+          "validationMessages": {
+            "config_resolved_locally": "Local configuration looks complete. Run the live check to confirm direct send.",
+            "live_probe_accepted": "WhatsApp accepted the credentials. Direct send is ready.",
+            "live_credentials_accepted": "WhatsApp accepted the credentials. Direct send is ready.",
+            "assisted_only_intent": "Direct send is intentionally off — assisted only.",
+            "access_token_ref_unresolved": "We couldn't resolve the access token in this environment.",
+            "token_invalid": "WhatsApp didn't accept the access token. Please check the secret.",
+            "transport_error": "We couldn't reach WhatsApp from this environment.",
+            "provider_unavailable": "WhatsApp is temporarily unavailable. Please retry shortly."
           }
         },
         "config": {
@@ -393,9 +413,11 @@
           "saving": "Saving…",
           "saved": "Delivery setup saved.",
           "validateAction": "Run readiness check",
+          "validateLiveAction": "Run live readiness check",
           "validating": "Checking…",
           "validatedAt": "Last checked: {{when}}",
-          "neverValidated": "Not checked yet."
+          "neverValidated": "Not checked yet.",
+          "liveCheckHint": "The live check makes a single read-only request to WhatsApp to confirm the access token is accepted. No real message is sent."
         }
       }
     }

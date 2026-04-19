@@ -339,12 +339,14 @@
           "preparingDirect": "Doğrudan gönderim hazırlanıyor…",
           "directSent": "Doğrudan gönderim {{count}} aile için tamamlandı.",
           "directSent_other": "Doğrudan gönderim {{count}} aile için tamamlandı.",
+          "directPartial": "Doğrudan gönderim {{sent}}/{{total}} aile için tamamlandı. Kalanlar için isterseniz WhatsApp'ı açabilirsiniz.",
           "directFallback": "Doğrudan gönderim tamamlanamadı — yardımlı yedek hazır.",
           "directFailed": "Doğrudan gönderim tamamlanamadı. Yardımlı yol hâlâ kullanılabilir."
         },
         "history": {
           "prepared": "Hazırlandı",
           "sent": "Doğrudan gönderildi",
+          "partial": "{{sent}}/{{total}} aileye gönderildi",
           "failed": "Doğrudan gönderim başarısız",
           "fallback": "Yardımlı yedek kullanıldı"
         },
@@ -371,7 +373,25 @@
             "missing_business_account_id": "WhatsApp işletme hesabı kimliği eksik.",
             "missing_access_token_ref": "Erişim belirteci referansı eksik.",
             "access_token_ref_unresolved": "Erişim belirteci referansı bu ortamda çözümlenemiyor.",
+            "phone_number_id_invalid": "WhatsApp telefon numarası kimliği yalnızca rakam olmalıdır.",
+            "business_account_id_invalid": "WhatsApp işletme hesabı kimliği yalnızca rakam olmalıdır.",
             "no_config_row": "Bu kulüp için doğrudan gönderim henüz kurulmadı."
+          },
+          "validationStates": {
+            "ok": "Yapılandırma kabul edildi.",
+            "pending": "Doğrudan gönderimi onaylamak için hazırlık kontrolü çalıştırın.",
+            "invalid": "Son kontrol bu kurulumu doğrulayamadı.",
+            "never_validated": "Henüz hazırlık kontrolü yapılmadı."
+          },
+          "validationMessages": {
+            "config_resolved_locally": "Yerel yapılandırma tamam görünüyor. Doğrudan gönderimi onaylamak için canlı kontrolü çalıştırın.",
+            "live_probe_accepted": "WhatsApp kimlik bilgilerini kabul etti. Doğrudan gönderim hazır.",
+            "live_credentials_accepted": "WhatsApp kimlik bilgilerini kabul etti. Doğrudan gönderim hazır.",
+            "assisted_only_intent": "Doğrudan gönderim bilinçli olarak kapalı — yalnızca yardımlı.",
+            "access_token_ref_unresolved": "Erişim belirtecini bu ortamda çözümleyemedik.",
+            "token_invalid": "WhatsApp erişim belirtecini kabul etmedi. Lütfen sırrı kontrol edin.",
+            "transport_error": "Bu ortamdan WhatsApp'a ulaşamadık.",
+            "provider_unavailable": "WhatsApp şu an geçici olarak erişilemez. Kısa süre sonra tekrar deneyin."
           }
         },
         "config": {
@@ -393,9 +413,11 @@
           "saving": "Kaydediliyor…",
           "saved": "Gönderim kurulumu kaydedildi.",
           "validateAction": "Hazırlık kontrolü çalıştır",
+          "validateLiveAction": "Canlı hazırlık kontrolü çalıştır",
           "validating": "Kontrol ediliyor…",
           "validatedAt": "Son kontrol: {{when}}",
-          "neverValidated": "Henüz kontrol edilmedi."
+          "neverValidated": "Henüz kontrol edilmedi.",
+          "liveCheckHint": "Canlı kontrol, erişim belirtecinin kabul edildiğini doğrulamak için WhatsApp'a tek bir salt-okunur istek gönderir. Gerçek bir mesaj gönderilmez."
         }
       }
     }

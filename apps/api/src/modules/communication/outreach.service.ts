@@ -10,6 +10,12 @@ import { DeliverOutreachDto } from './dto/deliver-outreach.dto';
 import { LogOutreachDto, OutreachStatus } from './dto/log-outreach.dto';
 import { ListOutreachQueryDto } from './dto/list-outreach-query.dto';
 
+export type OutreachDeliveryAttemptCounts = {
+  attempted: number;
+  sent: number;
+  failed: number;
+};
+
 export type OutreachActivityRecord = {
   id: string;
   channel: string;
@@ -35,6 +41,11 @@ export type OutreachActivityRecord = {
     detail: string | null;
     attemptedAt: string | null;
     completedAt: string | null;
+    /**
+     * Tally of the most recent attempt for honest "X of Y delivered"
+     * UX copy.  Null for rows that have never had a direct attempt.
+     */
+    attemptCounts: OutreachDeliveryAttemptCounts | null;
   };
 };
 
@@ -71,6 +82,10 @@ export class OutreachService {
     const createdByName = staff
       ? staff.preferredName?.trim() || `${staff.firstName} ${staff.lastName}`.trim() || null
       : null;
+    const snapshot = (row.audienceSnapshot ?? {}) as Record<string, unknown>;
+    const lastAttempt = (snapshot.lastDeliveryAttempt ?? null) as
+      | OutreachDeliveryAttemptCounts
+      | null;
     return {
       id: row.id,
       channel: row.channel,
@@ -82,7 +97,7 @@ export class OutreachService {
       messagePreview: row.messagePreview,
       recipientCount: row.recipientCount,
       reachableGuardianCount: row.reachableGuardianCount,
-      audienceSnapshot: row.audienceSnapshot ?? {},
+      audienceSnapshot: snapshot,
       note: row.note,
       createdByStaffUserId: row.createdByStaffUserId,
       createdByName,
@@ -96,6 +111,13 @@ export class OutreachService {
         detail: row.deliveryDetail ?? null,
         attemptedAt: row.deliveryAttemptedAt?.toISOString() ?? null,
         completedAt: row.deliveryCompletedAt?.toISOString() ?? null,
+        attemptCounts:
+          lastAttempt &&
+          typeof lastAttempt.attempted === 'number' &&
+          typeof lastAttempt.sent === 'number' &&
+          typeof lastAttempt.failed === 'number'
+            ? lastAttempt
+            : null,
       },
     };
   }
@@ -193,6 +215,18 @@ export class OutreachService {
     row.deliveryDetail = result.detail;
     row.deliveryAttemptedAt = result.attemptedAt;
     row.deliveryCompletedAt = result.completedAt ?? null;
+
+    const sentCount = result.recipients.filter((r) => r.state === 'sent').length;
+    const failedCount = result.recipients.filter((r) => r.state === 'failed').length;
+    const attemptCounts: OutreachDeliveryAttemptCounts = {
+      attempted: result.recipients.length,
+      sent: sentCount,
+      failed: failedCount,
+    };
+    row.audienceSnapshot = {
+      ...(row.audienceSnapshot ?? {}),
+      lastDeliveryAttempt: attemptCounts,
+    };
 
     // Direct + sent transitions also bump the lifecycle to `logged`
     // automatically — the row IS the audit trail of a real send.

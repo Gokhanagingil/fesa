@@ -193,10 +193,45 @@ function makeHistoryResponse(): OutreachActivityListResponse {
   };
 }
 
-function setupApiMocks(audience = makeAudienceResponse()) {
+function makeReadinessResponse(
+  state: 'not_configured' | 'assisted_only' | 'partial' | 'direct_capable' | 'invalid' = 'assisted_only',
+) {
+  const directCapable = state === 'direct_capable';
+  return {
+    channel: 'whatsapp',
+    whatsapp: {
+      state,
+      directSendAvailable: directCapable,
+      cloudApiEnabled: state !== 'not_configured' && state !== 'assisted_only',
+      configured: {
+        phoneNumberId: state !== 'not_configured',
+        businessAccountId: state !== 'not_configured',
+        accessTokenRef: directCapable,
+      },
+      displayPhoneNumber: directCapable ? '+90 555 000 0000' : null,
+      validation: {
+        state: directCapable ? 'ok' : 'never_validated',
+        message: null,
+        validatedAt: null,
+      },
+      issues: state === 'partial' ? ['missing_access_token_ref'] : [],
+    },
+    plan: {
+      preferredMode: directCapable ? 'direct' : 'assisted',
+      fallbackMode: directCapable ? 'assisted' : null,
+      capabilities: [],
+    },
+  };
+}
+
+function setupApiMocks(
+  audience = makeAudienceResponse(),
+  readiness = makeReadinessResponse('assisted_only'),
+) {
   mockApiGet.mockImplementation(async (path: string) => {
     if (path.startsWith('/api/communications/audiences')) return audience;
     if (path === '/api/communications/templates') return makeTemplatesResponse();
+    if (path.startsWith('/api/communications/readiness')) return readiness;
     if (path.startsWith('/api/communications/outreach/activity-2')) {
       const history = makeHistoryResponse();
       return history.items[1];
@@ -410,6 +445,94 @@ describe('communications follow-up smoke coverage', () => {
       expect(screen.queryByText('Mert Demir')).not.toBeInTheDocument();
     });
     expect(screen.getByText('Deniz Kaya')).toBeInTheDocument();
+  });
+
+  it('keeps Send via WhatsApp hidden when direct send is not configured', async () => {
+    renderWithRoute(<CommunicationsPage />, {
+      path: '/app/communications',
+      initialEntry: '/app/communications',
+    });
+    await screen.findByText('Deniz Kaya');
+    expect(screen.queryByRole('button', { name: 'Send via WhatsApp' })).not.toBeInTheDocument();
+    // Assisted mode label is still visible on the delivery banner.
+    expect(await screen.findByText('Assisted')).toBeInTheDocument();
+  });
+
+  it('renders the direct-send action when readiness reports direct_capable', async () => {
+    setupApiMocks(makeAudienceResponse(), makeReadinessResponse('direct_capable'));
+    renderWithRoute(<CommunicationsPage />, {
+      path: '/app/communications',
+      initialEntry: '/app/communications',
+    });
+    await screen.findByText('Deniz Kaya');
+    expect(await screen.findByRole('button', { name: 'Send via WhatsApp' })).toBeInTheDocument();
+    expect(await screen.findByText('Direct send')).toBeInTheDocument();
+  });
+
+  it('reports an honest partial-sent notice from a direct delivery attempt', async () => {
+    setupApiMocks(makeAudienceResponse(), makeReadinessResponse('direct_capable'));
+    mockApiPost.mockImplementation(async (path: string) => {
+      if (path.endsWith('/deliver')) {
+        return {
+          id: 'activity-1',
+          status: 'logged',
+          delivery: {
+            mode: 'direct',
+            state: 'sent',
+            provider: 'whatsapp_cloud_api',
+            providerMessageId: 'wamid.x',
+            detail: 'partial_sent:1_of_2',
+            attemptedAt: '2026-04-19T10:00:00.000Z',
+            completedAt: '2026-04-19T10:00:01.000Z',
+            attemptCounts: { attempted: 2, sent: 1, failed: 1 },
+          },
+        };
+      }
+      return { id: 'activity-new', status: 'logged' };
+    });
+    renderWithRoute(<CommunicationsPage />, {
+      path: '/app/communications',
+      initialEntry: '/app/communications',
+    });
+    await screen.findByText('Deniz Kaya');
+    const user = userEvent.setup();
+    const sendButton = await screen.findByRole('button', { name: 'Send via WhatsApp' });
+    await user.click(sendButton);
+    expect(
+      await screen.findByText(/Direct send completed for 1 of 2 families/i),
+    ).toBeInTheDocument();
+  });
+
+  it('reports a calm fallback notice when the direct attempt rolls back to assisted', async () => {
+    setupApiMocks(makeAudienceResponse(), makeReadinessResponse('direct_capable'));
+    mockApiPost.mockImplementation(async (path: string) => {
+      if (path.endsWith('/deliver')) {
+        return {
+          id: 'activity-1',
+          status: 'logged',
+          delivery: {
+            mode: 'assisted',
+            state: 'fallback',
+            provider: 'assisted_whatsapp',
+            providerMessageId: null,
+            detail: 'direct_failed:token_invalid',
+            attemptedAt: '2026-04-19T10:00:00.000Z',
+            completedAt: '2026-04-19T10:00:01.000Z',
+            attemptCounts: { attempted: 2, sent: 0, failed: 2 },
+          },
+        };
+      }
+      return { id: 'activity-new', status: 'logged' };
+    });
+    renderWithRoute(<CommunicationsPage />, {
+      path: '/app/communications',
+      initialEntry: '/app/communications',
+    });
+    await screen.findByText('Deniz Kaya');
+    const user = userEvent.setup();
+    const sendButton = await screen.findByRole('button', { name: 'Send via WhatsApp' });
+    await user.click(sendButton);
+    expect(await screen.findByText(/assisted fallback is ready/i)).toBeInTheDocument();
   });
 
   it('opens the original audience list with preserved filters from history', async () => {

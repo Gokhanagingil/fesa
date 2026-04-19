@@ -23,6 +23,7 @@ import { OutreachService } from './outreach.service';
 import { AssistedDeliveryProvider } from './delivery/assisted-provider';
 import { CommunicationDeliveryService } from './delivery/communication-delivery.service';
 import { WhatsAppCloudApiProvider } from './delivery/whatsapp-cloud-api-provider';
+import { WhatsAppCloudApiClient } from './delivery/whatsapp-cloud-api.client';
 import { WhatsAppReadinessService } from './delivery/whatsapp-readiness.service';
 
 @Module({
@@ -52,6 +53,7 @@ import { WhatsAppReadinessService } from './delivery/whatsapp-readiness.service'
     CommunicationService,
     OutreachService,
     AssistedDeliveryProvider,
+    WhatsAppCloudApiClient,
     WhatsAppCloudApiProvider,
     WhatsAppReadinessService,
     CommunicationDeliveryService,

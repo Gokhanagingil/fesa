@@ -37,7 +37,7 @@ export function CommunicationDeliveryReadinessPanel({ tenantId, languageTag }: P
   const [summary, setSummary] = useState<WhatsAppReadinessSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [validating, setValidating] = useState(false);
+  const [validating, setValidating] = useState<null | 'local' | 'live'>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -114,20 +114,24 @@ export function CommunicationDeliveryReadinessPanel({ tenantId, languageTag }: P
     tenantId,
   ]);
 
-  const handleValidate = useCallback(async () => {
-    if (!tenantId) return;
-    setValidating(true);
-    setError(null);
-    try {
-      const next = await validateWhatsAppReadiness();
-      hydrateFromSummary(next);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
-    } finally {
-      setValidating(false);
-    }
-  }, [hydrateFromSummary, load, t, tenantId]);
+  const handleValidate = useCallback(
+    async (mode: 'local' | 'live') => {
+      if (!tenantId) return;
+      setValidating(mode);
+      setError(null);
+      setNotice(null);
+      try {
+        const next = await validateWhatsAppReadiness(mode);
+        hydrateFromSummary(next);
+        await load();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
+      } finally {
+        setValidating(null);
+      }
+    },
+    [hydrateFromSummary, load, t, tenantId],
+  );
 
   if (!tenantId) {
     return null;
@@ -141,6 +145,18 @@ export function CommunicationDeliveryReadinessPanel({ tenantId, languageTag }: P
     defaultValue: '',
   });
   const validatedAt = summary?.validation.validatedAt ?? null;
+  const validationStateKey = summary?.validation.state ?? 'never_validated';
+  const validationStateLabel = t(
+    `pages.communications.delivery.readiness.validationStates.${validationStateKey}`,
+    { defaultValue: '' },
+  );
+  const validationMessageRaw = summary?.validation.message ?? null;
+  const validationMessageLabel = validationMessageRaw
+    ? t(
+        `pages.communications.delivery.readiness.validationMessages.${validationMessageRaw.split(':')[0]}`,
+        { defaultValue: '' },
+      )
+    : '';
 
   return (
     <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
@@ -286,12 +302,22 @@ export function CommunicationDeliveryReadinessPanel({ tenantId, languageTag }: P
             <Button
               type="button"
               variant="ghost"
-              onClick={() => void handleValidate()}
-              disabled={validating || loading}
+              onClick={() => void handleValidate('local')}
+              disabled={validating !== null || loading}
             >
-              {validating
+              {validating === 'local'
                 ? t('pages.communications.delivery.config.validating')
                 : t('pages.communications.delivery.config.validateAction')}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => void handleValidate('live')}
+              disabled={validating !== null || loading}
+            >
+              {validating === 'live'
+                ? t('pages.communications.delivery.config.validating')
+                : t('pages.communications.delivery.config.validateLiveAction')}
             </Button>
           </div>
           <p className="mt-3 text-xs text-amateur-muted">
@@ -300,6 +326,14 @@ export function CommunicationDeliveryReadinessPanel({ tenantId, languageTag }: P
                   when: formatDateTime(validatedAt, languageTag),
                 })
               : t('pages.communications.delivery.config.neverValidated')}
+          </p>
+          {validationStateLabel || validationMessageLabel ? (
+            <p className="mt-1 text-xs text-amateur-muted">
+              {[validationStateLabel, validationMessageLabel].filter(Boolean).join(' ')}
+            </p>
+          ) : null}
+          <p className="mt-2 text-[11px] text-amateur-muted">
+            {t('pages.communications.delivery.config.liveCheckHint')}
           </p>
         </div>
 

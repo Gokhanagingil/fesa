@@ -330,6 +330,12 @@ export type OutreachStatus = 'draft' | 'logged' | 'archived';
 export type DeliveryMode = 'assisted' | 'direct';
 export type DeliveryState = 'prepared' | 'sent' | 'failed' | 'fallback';
 
+export type OutreachDeliveryAttemptCounts = {
+  attempted: number;
+  sent: number;
+  failed: number;
+};
+
 export type OutreachDelivery = {
   mode: DeliveryMode;
   state: DeliveryState;
@@ -338,6 +344,8 @@ export type OutreachDelivery = {
   detail: string | null;
   attemptedAt: string | null;
   completedAt: string | null;
+  /** Counts from the most recent delivery attempt; null when never attempted. */
+  attemptCounts?: OutreachDeliveryAttemptCounts | null;
 };
 
 export type OutreachActivity = {
