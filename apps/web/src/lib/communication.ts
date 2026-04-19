@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type {
   CommunicationAudienceMember,
   CommunicationAudienceResponse,
@@ -283,8 +284,6 @@ export function buildTokenContext(
     clubName: extras.clubName ?? null,
   };
 }
-
-import type { TFunction } from 'i18next';
 
 /**
  * Days between two ISO timestamps, rounded down to whole days.  Used for
