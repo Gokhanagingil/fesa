@@ -26,6 +26,7 @@
       "communications": "İletişim",
       "reports": "Raporlar",
       "reportBuilder": "Rapor oluşturucu",
+      "imports": "İçe / Dışa aktarma",
       "settings": "Ayarlar",
       "admin": "Yönetim"
     },
@@ -151,6 +152,32 @@
       "saving": "Kaydediliyor…",
       "empty": "Henüz kayıt yok",
       "emptyHint": "Kayıt eklediğinizde burada listelenir."
+    },
+    "bulk": {
+      "selectionLabel": "{{name}} kaydını seç",
+      "selectionLabelGeneric": "Bu satırı seç",
+      "selectVisible": "Görünenleri seç",
+      "deselectVisible": "Görünenleri kaldır",
+      "clearSelection": "Seçimi temizle",
+      "selectedCount_one": "{{count}} kayıt seçildi",
+      "selectedCount_other": "{{count}} kayıt seçildi",
+      "actionsTitle": "Toplu işlemler",
+      "actionsHint": "Aşağıdan birkaç satır seçin, sonra ne yapacağınızı belirleyin.",
+      "noActions": "Bir toplu işlem seçin.",
+      "exportSelection": "Seçimi dışa aktar (CSV)",
+      "noSelection": "Toplu işlemleri etkinleştirmek için birkaç satır seçin.",
+      "confirmTitle": "Toplu işlemi onayla",
+      "confirmRunning": "Seçili kayıtlar üzerinde çalışılıyor…",
+      "confirmDone": "Toplu işlem tamamlandı.",
+      "confirmFailed": "Toplu işlem başarısız."
+    },
+    "exportCsv": {
+      "label": "Görünenleri dışa aktar (CSV)",
+      "labelSelection": "Seçimi dışa aktar (CSV)",
+      "downloadingHint": "Bu görünüm için CSV indirme hazırlanıyor.",
+      "successHint_one": "{{count}} kayıt CSV olarak indirildi.",
+      "successHint_other": "{{count}} kayıt CSV olarak indirildi.",
+      "emptyHint": "Dışa aktaracak bir şey yok — filtreleri değiştirin veya satır seçin."
     },
     "language": {
       "label": "Dil",
@@ -564,6 +591,10 @@
       "unlink": "Bağı kaldır",
       "linkSuccess": "Veli sporcuyla ilişkilendirildi.",
       "unlinkSuccess": "Veli ilişkisi kaldırıldı.",
+      "bulkTitle": "Veli toplu işlemleri",
+      "bulkHint": "Gözden geçirilmiş velileri toplu olarak dışa aktarın veya güvenle silin.",
+      "bulkDelete": "Seçilenleri sil",
+      "bulkDeleteConfirm": "Seçili veliler silinsin mi? Sporcuya bağlı veliler korunur.",
       "familyReadiness": {
         "title": "Aile hazırlığı",
         "subtitle": "Bu velinin eksik bilgi, bekleyen sporcu aksiyonu veya personel incelemesi gerektirip gerektirmediğini görün.",
@@ -1534,6 +1565,11 @@
       "activeAssignments": "Şu anda atanmış",
       "noActiveAssignments": "Bu kalemi şu anda taşıyan sporcu yok.",
       "returnButton": "İade / geri al",
+      "bulkReturnAll_one": "Tümünü iade et ({{count}})",
+      "bulkReturnAll_other": "Tümünü iade et ({{count}})",
+      "bulkReturnConfirm_one": "Seçili zimmet stoğa iade edilsin mi?",
+      "bulkReturnConfirm_other": "{{count}} seçili zimmet stoğa iade edilsin mi?",
+      "bulkReturnedDone": "{{requested}} zimmetin {{returned}} tanesi iade edildi.",
       "recentMovements": "Son hareketler",
       "noMovements": "Henüz hareket geçmişi yok.",
       "variantStockSummary": "Stok {{stock}} · Atanan {{assigned}} · Uygun {{available}}",
@@ -1715,6 +1751,131 @@
         "submit": "Yanıtı gönder",
         "readOnlyHint": "Bu talep artık sizden aksiyon beklemiyor.",
         "historyTitle": "Talep geçmişi"
+      }
+    },
+    "imports": {
+      "title": "İçe / Dışa aktarma",
+      "subtitle": "Mevcut verileri güvenle platforma taşıyın — pratik listeleri kolayca dışa aktarın.",
+      "introTitle": "Burada ne oluyor",
+      "intro": "Sporcu, veli ve aile verilerini platforma taşımak için kılavuzlu akışları kullanın. Her içe aktarım, kayıt değişmeden önce doğrulama uyarılarını gösterir.",
+      "pickEntity": "Neyi içe aktarıyorsunuz",
+      "templateButton": "CSV şablonunu indir",
+      "templateHint": "Şablonu açın, doldurun, sonra aşağıya geri yapıştırın.",
+      "uploadTitle": "CSV yapıştırın veya dosya yükleyin",
+      "uploadHint": "Bir .csv dosyası bırakın veya satırları doğrudan yapıştırın. İlk satır başlık olmalı.",
+      "fileButton": "CSV dosyası seç",
+      "filePicked": "{{name}} yüklendi ({{count}} satır).",
+      "rawLabel": "CSV içeriği",
+      "parseButton": "Satırları oku",
+      "parseAgain": "Yeniden oku",
+      "parsedHint": "{{count}} satır okundu. Aşağıdaki sütunları eşleyin.",
+      "mappingTitle": "Sütunları eşle",
+      "mappingHint": "Tablo sütunlarınızı platformun anladığı alanlarla eşleyin. Zorunlu alanlar işaretlidir.",
+      "mappingSource": "Sizin sütunlarınız",
+      "mappingTarget": "Eşlendiği alan",
+      "mappingIgnore": "Bu sütunu yok say",
+      "mappingAuto": "Otomatik eşlendi",
+      "mappingRequiredMissing": "Önizleme almadan önce tüm zorunlu alanları eşleyin.",
+      "previewButton": "Önizleme al",
+      "previewLoading": "Satırlar kontrol ediliyor…",
+      "previewHint": "Önizlemede hiçbir kayıt değişmez. Uyarıları çözüp içe aktarın.",
+      "previewTitle": "Önizleme",
+      "previewEmpty": "Sütunlar eşlenince önizleme alın.",
+      "rowOutcome": {
+        "create": "Oluşturulacak",
+        "update": "Güncellenecek",
+        "skip": "Zaten var",
+        "reject": "İçe alınamaz"
+      },
+      "rowOutcomeShort": {
+        "create": "Oluştur",
+        "update": "Güncelle",
+        "skip": "Atla",
+        "reject": "Engelli"
+      },
+      "summaryCreate_one": "{{count}} satır oluşturulacak",
+      "summaryCreate_other": "{{count}} satır oluşturulacak",
+      "summaryUpdate_one": "{{count}} satır güncellenecek",
+      "summaryUpdate_other": "{{count}} satır güncellenecek",
+      "summarySkip_one": "{{count}} satır zaten var",
+      "summarySkip_other": "{{count}} satır zaten var",
+      "summaryReject_one": "{{count}} satır engelli",
+      "summaryReject_other": "{{count}} satır engelli",
+      "summaryWarnings_one": "{{count}} uyarıya bakın",
+      "summaryWarnings_other": "{{count}} uyarıya bakın",
+      "missingRequired_one": "{{count}} satırda zorunlu {{field}} alanı boş",
+      "missingRequired_other": "{{count}} satırda zorunlu {{field}} alanı boş",
+      "commitButton": "Bu satırları içe aktar",
+      "committing": "İçe aktarılıyor…",
+      "commitSuccess": "{{created}} yeni kayıt oluşturuldu, {{updated}} kayıt güncellendi; {{skipped}} kayıt atlandı.",
+      "commitBlocked": "İçe aktarmayı etkinleştirmek için işaretli sorunları çözün.",
+      "rowNumber": "Satır",
+      "rowDisplay": "Kayıt",
+      "rowIssues": "Uyarılar",
+      "rowReady": "Hazır",
+      "noIssues": "Sorun yok",
+      "loadFailed": "İçe aktarım tanımları yüklenemedi.",
+      "defaultBranchLabel": "Varsayılan spor branşı",
+      "defaultBranchHint": "Bir satırda spor branşı boş kaldığında kullanılır.",
+      "anyBranch": "— bir branş seçin —",
+      "fields": {
+        "athletes": {
+          "firstName": "Ad",
+          "lastName": "Soyad",
+          "preferredName": "Çağrılan ad",
+          "birthDate": "Doğum tarihi",
+          "gender": "Cinsiyet",
+          "sportBranch": "Spor branşı",
+          "primaryGroup": "Birincil grup",
+          "status": "Durum",
+          "jerseyNumber": "Forma no",
+          "notes": "Not"
+        },
+        "guardians": {
+          "firstName": "Ad",
+          "lastName": "Soyad",
+          "phone": "Telefon",
+          "email": "E-posta",
+          "notes": "Not"
+        },
+        "athleteGuardians": {
+          "athleteFirstName": "Sporcu adı",
+          "athleteLastName": "Sporcu soyadı",
+          "guardianFirstName": "Veli adı",
+          "guardianLastName": "Veli soyadı",
+          "relationshipType": "Yakınlık",
+          "isPrimaryContact": "Birincil iletişim",
+          "notes": "Not"
+        }
+      },
+      "entities": {
+        "athletes": {
+          "title": "Sporcular",
+          "description": "Sporcu listenizi spor branşı ve grup bağlamıyla birlikte platforma taşıyın."
+        },
+        "guardians": {
+          "title": "Veliler",
+          "description": "Velilere ulaşmak ve sporcuya bağlamak için iletişim bilgilerini ekleyin."
+        },
+        "athleteGuardians": {
+          "title": "Sporcu ↔ veli bağları",
+          "description": "Mevcut sporcu ve velileri yakınlık bilgisiyle birbirine bağlayın."
+        }
+      },
+      "hints": {
+        "dateFormat": "YYYY-AA-GG veya GG/AA/YYYY kabul edilir.",
+        "sportBranch": "Branş adı veya kısa kodu kullanılabilir.",
+        "primaryGroup": "Grup, seçili spor branşında zaten bulunmalı.",
+        "athleteStatus": "trial · active · paused · inactive · archived.",
+        "relationshipType": "mother · father · guardian · other."
+      },
+      "exportsTitle": "Pratik dışa aktarımlar",
+      "exportsHint": "Bunlar raporlama motorunun hızlı sarmalayıcılarıdır. Gelişmiş filtreler için Rapor Oluşturucu’yu kullanın.",
+      "exportButtons": {
+        "athletes": "Mevcut sporcuları dışa aktar (CSV)",
+        "guardians": "Mevcut velileri dışa aktar (CSV)",
+        "training": "Yaklaşan antrenmanları dışa aktar (CSV)",
+        "finance": "Vadesi geçen tahsilatları dışa aktar (CSV)"
       }
     }
   },
