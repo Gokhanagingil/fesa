@@ -4,6 +4,9 @@ import { In, Repository } from 'typeorm';
 import { OutreachActivity } from '../../database/entities/outreach-activity.entity';
 import { StaffUser } from '../../database/entities/staff-user.entity';
 import { isRelationTableMissingError } from '../core/database-error.util';
+import { CommunicationDeliveryService } from './delivery/communication-delivery.service';
+import { DeliveryMode, DeliveryRequest, DeliveryResult, DeliveryState } from './delivery/types';
+import { DeliverOutreachDto } from './dto/deliver-outreach.dto';
 import { LogOutreachDto, OutreachStatus } from './dto/log-outreach.dto';
 import { ListOutreachQueryDto } from './dto/list-outreach-query.dto';
 
@@ -24,6 +27,15 @@ export type OutreachActivityRecord = {
   createdByName: string | null;
   createdAt: string;
   updatedAt: string;
+  delivery: {
+    mode: DeliveryMode;
+    state: DeliveryState;
+    provider: string | null;
+    providerMessageId: string | null;
+    detail: string | null;
+    attemptedAt: string | null;
+    completedAt: string | null;
+  };
 };
 
 const VALID_STATUSES: OutreachStatus[] = ['draft', 'logged', 'archived'];
@@ -35,6 +47,15 @@ function normalizeStatus(value: string | null | undefined): OutreachStatus {
   return 'logged';
 }
 
+function normalizeDeliveryMode(value: string | null | undefined): DeliveryMode {
+  return value === 'direct' ? 'direct' : 'assisted';
+}
+
+function normalizeDeliveryState(value: string | null | undefined): DeliveryState {
+  if (value === 'sent' || value === 'failed' || value === 'fallback') return value;
+  return 'prepared';
+}
+
 @Injectable()
 export class OutreachService {
   constructor(
@@ -42,6 +63,7 @@ export class OutreachService {
     private readonly activities: Repository<OutreachActivity>,
     @InjectRepository(StaffUser)
     private readonly staffUsers: Repository<StaffUser>,
+    private readonly delivery: CommunicationDeliveryService,
   ) {}
 
   private toRecord(row: OutreachActivity, staffByUser: Map<string, StaffUser>): OutreachActivityRecord {
@@ -66,6 +88,15 @@ export class OutreachService {
       createdByName,
       createdAt: row.createdAt.toISOString(),
       updatedAt: (row.updatedAt ?? row.createdAt).toISOString(),
+      delivery: {
+        mode: normalizeDeliveryMode(row.deliveryMode),
+        state: normalizeDeliveryState(row.deliveryState),
+        provider: row.deliveryProvider ?? null,
+        providerMessageId: row.deliveryProviderMessageId ?? null,
+        detail: row.deliveryDetail ?? null,
+        attemptedAt: row.deliveryAttemptedAt?.toISOString() ?? null,
+        completedAt: row.deliveryCompletedAt?.toISOString() ?? null,
+      },
     };
   }
 
@@ -106,7 +137,69 @@ export class OutreachService {
       audienceSnapshot: snapshot,
       note: payload.note ?? null,
       createdByStaffUserId: staffUserId,
+      // New rows always start in the honest "we prepared something"
+      // state.  Direct send / fallback transitions happen via the
+      // dedicated `attemptDelivery()` flow.
+      deliveryMode: 'assisted',
+      deliveryState: 'prepared',
+      deliveryProvider: null,
+      deliveryProviderMessageId: null,
+      deliveryDetail: null,
+      deliveryAttemptedAt: null,
+      deliveryCompletedAt: null,
     });
+    const saved = await this.activities.save(row);
+    const staffByUser = await this.hydrateStaff([saved]);
+    return this.toRecord(saved, staffByUser);
+  }
+
+  /**
+   * Run a delivery attempt for an existing follow-up row.  The row's
+   * delivery columns are overwritten with the orchestrator's outcome
+   * — including the honest `fallback` state when direct send failed
+   * but assisted preparation succeeded.
+   */
+  async attemptDelivery(
+    tenantId: string,
+    id: string,
+    payload: DeliverOutreachDto,
+  ): Promise<OutreachActivityRecord> {
+    const row = await this.activities.findOne({ where: { tenantId, id } });
+    if (!row) throw new NotFoundException('Follow-up not found');
+
+    const requestedMode: DeliveryMode = payload.mode === 'direct' ? 'direct' : 'assisted';
+    const channel = (row.channel as DeliveryRequest['channel']) ?? 'whatsapp';
+    const result: DeliveryResult = await this.delivery.deliver(requestedMode, {
+      tenantId,
+      channel,
+      topic: row.topic,
+      recipients: payload.recipients.map((recipient) => ({
+        athleteId: recipient.athleteId,
+        athleteName: recipient.athleteName,
+        guardianId: recipient.guardianId ?? null,
+        guardianName: recipient.guardianName ?? null,
+        phone: recipient.phone ?? null,
+        email: recipient.email ?? null,
+        message: recipient.message,
+        subject: recipient.subject ?? null,
+      })),
+    });
+
+    row.deliveryMode = result.mode;
+    row.deliveryState = result.state;
+    row.deliveryProvider = result.provider;
+    const firstWithId = result.recipients.find((r) => r.providerMessageId);
+    row.deliveryProviderMessageId = firstWithId?.providerMessageId ?? null;
+    row.deliveryDetail = result.detail;
+    row.deliveryAttemptedAt = result.attemptedAt;
+    row.deliveryCompletedAt = result.completedAt ?? null;
+
+    // Direct + sent transitions also bump the lifecycle to `logged`
+    // automatically — the row IS the audit trail of a real send.
+    if (result.state === 'sent' || result.state === 'fallback') {
+      row.status = normalizeStatus('logged');
+    }
+
     const saved = await this.activities.save(row);
     const staffByUser = await this.hydrateStaff([saved]);
     return this.toRecord(saved, staffByUser);

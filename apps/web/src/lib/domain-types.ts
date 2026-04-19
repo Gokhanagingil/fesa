@@ -327,6 +327,19 @@ export type CommunicationTemplatesResponse = {
 
 export type OutreachStatus = 'draft' | 'logged' | 'archived';
 
+export type DeliveryMode = 'assisted' | 'direct';
+export type DeliveryState = 'prepared' | 'sent' | 'failed' | 'fallback';
+
+export type OutreachDelivery = {
+  mode: DeliveryMode;
+  state: DeliveryState;
+  provider: string | null;
+  providerMessageId: string | null;
+  detail: string | null;
+  attemptedAt: string | null;
+  completedAt: string | null;
+};
+
 export type OutreachActivity = {
   id: string;
   channel: CommunicationChannel | string;
@@ -344,6 +357,64 @@ export type OutreachActivity = {
   createdByName: string | null;
   createdAt: string;
   updatedAt?: string;
+  delivery?: OutreachDelivery;
+};
+
+export type WhatsAppReadinessStateValue =
+  | 'not_configured'
+  | 'assisted_only'
+  | 'partial'
+  | 'direct_capable'
+  | 'invalid';
+
+export type WhatsAppReadinessSummary = {
+  state: WhatsAppReadinessStateValue;
+  directSendAvailable: boolean;
+  cloudApiEnabled: boolean;
+  configured: {
+    phoneNumberId: boolean;
+    businessAccountId: boolean;
+    accessTokenRef: boolean;
+  };
+  displayPhoneNumber: string | null;
+  validation: {
+    state: 'ok' | 'pending' | 'invalid' | 'never_validated';
+    message: string | null;
+    validatedAt: string | null;
+  };
+  issues: string[];
+};
+
+export type ProviderCapability = {
+  provider: string;
+  mode: DeliveryMode;
+  channels: CommunicationChannel[];
+  state: 'direct_capable' | 'partial' | 'assisted_only' | 'not_configured' | 'invalid';
+  message: string | null;
+};
+
+export type CommunicationReadinessResponse = {
+  channel: CommunicationChannel;
+  whatsapp: WhatsAppReadinessSummary;
+  plan: {
+    preferredMode: DeliveryMode;
+    fallbackMode: DeliveryMode | null;
+    capabilities: ProviderCapability[];
+  };
+};
+
+export type DeliverOutreachInput = {
+  mode?: DeliveryMode;
+  recipients: Array<{
+    athleteId: string;
+    athleteName: string;
+    guardianId?: string | null;
+    guardianName?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    message: string;
+    subject?: string | null;
+  }>;
 };
 
 export type OutreachActivityListResponse = {

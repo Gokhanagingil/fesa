@@ -20,6 +20,7 @@ import {
   getPrivateLessonReasonLabel,
 } from '../lib/display';
 import {
+  attemptOutreachDelivery,
   buildMailtoLink,
   buildPhoneLink,
   buildTokenContext,
@@ -29,6 +30,7 @@ import {
   countReachable,
   describeActivityAge,
   extractTokens,
+  getCommunicationReadiness,
   getOutreach,
   isOutreachStale,
   isReachableForChannel,
@@ -36,6 +38,7 @@ import {
   logOutreach,
   pickBestGuardian,
   renderTemplate,
+  resolvePreferredDeliveryMode,
   setOutreachStatus,
   updateOutreach,
 } from '../lib/communication';
@@ -47,9 +50,12 @@ import type {
   CommunicationAudienceMember,
   CommunicationAudienceResponse,
   CommunicationChannel,
+  CommunicationReadinessResponse,
   CommunicationTemplate,
   CommunicationTemplatesResponse,
   CommunicationTemplateToken,
+  DeliveryMode,
+  DeliveryState,
   FamilyReadinessStatus,
   OutreachActivity,
   OutreachActivityListResponse,
@@ -174,6 +180,18 @@ const STATUS_TONE: Record<OutreachStatus, string> = {
   archived: 'border-slate-200 bg-slate-50 text-slate-600',
 };
 
+const DELIVERY_MODE_TONE: Record<DeliveryMode, string> = {
+  assisted: 'border-amateur-border bg-amateur-surface text-amateur-muted',
+  direct: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+};
+
+const DELIVERY_STATE_TONE: Record<DeliveryState, string> = {
+  prepared: 'border-amateur-border bg-amateur-surface text-amateur-muted',
+  sent: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  failed: 'border-rose-200 bg-rose-50 text-rose-700',
+  fallback: 'border-amber-200 bg-amber-50 text-amber-800',
+};
+
 export function CommunicationsPage() {
   const { t, i18n } = useTranslation();
   const { tenantId, loading: tenantLoading } = useTenant();
@@ -238,6 +256,11 @@ export function CommunicationsPage() {
   const [revealAllRecipients, setRevealAllRecipients] = useState(false);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [activeDraftStatus, setActiveDraftStatus] = useState<OutreachStatus>('draft');
+  const [readiness, setReadiness] = useState<CommunicationReadinessResponse | null>(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
+  const [deliveryAttemptState, setDeliveryAttemptState] = useState<DeliveryState | null>(null);
+  const [deliveryNotice, setDeliveryNotice] = useState<string | null>(null);
+  const [sendingDirect, setSendingDirect] = useState(false);
 
   useEffect(() => {
     setQuery(searchParams.get('q') ?? '');
@@ -374,6 +397,33 @@ export function CommunicationsPage() {
   useEffect(() => {
     void loadHistory();
   }, [loadHistory]);
+
+  useEffect(() => {
+    if (!tenantId) {
+      setReadiness(null);
+      return;
+    }
+    let cancelled = false;
+    setReadinessLoading(true);
+    void getCommunicationReadiness(channel)
+      .then((res) => {
+        if (!cancelled) setReadiness(res);
+      })
+      .catch(() => {
+        if (!cancelled) setReadiness(null);
+      })
+      .finally(() => {
+        if (!cancelled) setReadinessLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [channel, tenantId]);
+
+  const preferredMode: DeliveryMode = useMemo(
+    () => resolvePreferredDeliveryMode(readiness, channel),
+    [channel, readiness],
+  );
 
   const loadAudience = useCallback(async () => {
     if (!tenantId) return;
@@ -694,8 +744,8 @@ export function CommunicationsPage() {
   );
 
   const persistOutreach = useCallback(
-    async (status: OutreachStatus) => {
-      if (!audience) return;
+    async (status: OutreachStatus): Promise<OutreachActivity | null> => {
+      if (!audience) return null;
       setSavingOutreach(true);
       setSavedNotice(null);
       try {
@@ -737,8 +787,10 @@ export function CommunicationsPage() {
             : t('pages.communications.actions.saved'),
         );
         await loadHistory();
+        return saved;
       } catch (e) {
         setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
+        return null;
       } finally {
         setSavingOutreach(false);
       }
@@ -762,6 +814,78 @@ export function CommunicationsPage() {
 
   const handleLogOutreach = useCallback(() => persistOutreach('logged'), [persistOutreach]);
   const handleSaveDraft = useCallback(() => persistOutreach('draft'), [persistOutreach]);
+
+  const handleSendDirect = useCallback(async () => {
+    if (!audience || audience.items.length === 0) return;
+    setSendingDirect(true);
+    setDeliveryNotice(null);
+    setDeliveryAttemptState(null);
+    try {
+      // Make sure we have a persisted row to attach delivery state to.
+      let targetId = activeDraftId;
+      if (!targetId) {
+        const saved = await persistOutreach('logged');
+        targetId = saved?.id ?? null;
+      }
+      if (!targetId) {
+        setDeliveryAttemptState('fallback');
+        setDeliveryNotice(t('pages.communications.delivery.actions.directFallback'));
+        return;
+      }
+
+      const recipients = recipientPlan
+        .filter((row) => row.guardian)
+        .map((row) => ({
+          athleteId: row.member.athleteId,
+          athleteName: row.member.athleteName,
+          guardianId: row.guardian?.guardianId ?? null,
+          guardianName: row.guardian?.name ?? null,
+          phone: row.guardian?.phone ?? null,
+          email: row.guardian?.email ?? null,
+          message: row.personalizedMessage,
+          subject: draftSubject || draftTopic || null,
+        }));
+
+      if (recipients.length === 0) {
+        setDeliveryAttemptState('fallback');
+        setDeliveryNotice(t('pages.communications.delivery.actions.directFallback'));
+        return;
+      }
+
+      const result = await attemptOutreachDelivery(targetId, {
+        mode: 'direct',
+        recipients,
+      });
+      const next = result.delivery?.state ?? 'prepared';
+      setDeliveryAttemptState(next);
+      if (next === 'sent') {
+        setDeliveryNotice(
+          t('pages.communications.delivery.actions.directSent', { count: recipients.length }),
+        );
+      } else if (next === 'fallback') {
+        setDeliveryNotice(t('pages.communications.delivery.actions.directFallback'));
+      } else if (next === 'failed') {
+        setDeliveryNotice(t('pages.communications.delivery.actions.directFailed'));
+      }
+      await loadHistory();
+    } catch (e) {
+      setDeliveryAttemptState('failed');
+      setDeliveryNotice(
+        e instanceof Error ? e.message : t('pages.communications.delivery.actions.directFailed'),
+      );
+    } finally {
+      setSendingDirect(false);
+    }
+  }, [
+    activeDraftId,
+    audience,
+    draftSubject,
+    draftTopic,
+    loadHistory,
+    persistOutreach,
+    recipientPlan,
+    t,
+  ]);
 
   const handleStartNewDraft = useCallback(() => {
     setActiveDraftId(null);
@@ -1370,7 +1494,43 @@ export function CommunicationsPage() {
                         />
                       </label>
                     </div>
+                    {channel === 'whatsapp' ? (
+                      <DeliveryModeBanner
+                        readiness={readiness}
+                        loading={readinessLoading}
+                        preferredMode={preferredMode}
+                      />
+                    ) : null}
+                    {deliveryNotice ? (
+                      <InlineAlert
+                        tone={
+                          deliveryAttemptState === 'sent'
+                            ? 'info'
+                            : deliveryAttemptState === 'failed'
+                              ? 'error'
+                              : 'warning'
+                        }
+                        className="mt-3"
+                      >
+                        {deliveryNotice}
+                      </InlineAlert>
+                    ) : null}
                     <div className="mt-4 flex flex-wrap gap-2">
+                      {channel === 'whatsapp' && preferredMode === 'direct' ? (
+                        <Button
+                          type="button"
+                          onClick={() => void handleSendDirect()}
+                          disabled={
+                            sendingDirect ||
+                            audience.items.length === 0 ||
+                            reachableRecipients.length === 0
+                          }
+                        >
+                          {sendingDirect
+                            ? t('pages.communications.delivery.actions.sending')
+                            : t('pages.communications.delivery.actions.sendDirect')}
+                        </Button>
+                      ) : null}
                       {channel === 'whatsapp' && reachableRecipients[0]?.link ? (
                         <a
                           href={reachableRecipients[0].link}
@@ -1378,7 +1538,9 @@ export function CommunicationsPage() {
                           rel="noreferrer"
                           className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
                         >
-                          {t('pages.communications.actions.openWhatsAppFirst')}
+                          {preferredMode === 'direct'
+                            ? t('pages.communications.delivery.actions.openWhatsAppInstead')
+                            : t('pages.communications.actions.openWhatsAppFirst')}
                         </a>
                       ) : null}
                       {channel === 'whatsapp' ? (
@@ -1841,6 +2003,45 @@ function RecipientCard({
   );
 }
 
+function DeliveryModeBanner({
+  readiness,
+  loading,
+  preferredMode,
+}: {
+  readiness: CommunicationReadinessResponse | null;
+  loading: boolean;
+  preferredMode: DeliveryMode;
+}) {
+  const { t } = useTranslation();
+  const stateKey = readiness?.whatsapp.state ?? 'not_configured';
+  const stateLabel = t(`pages.communications.delivery.readiness.states.${stateKey}`, {
+    defaultValue: stateKey,
+  });
+  const modeLabel = loading
+    ? t('pages.communications.delivery.modeBadge.loading')
+    : t(`pages.communications.delivery.modeBadge.${preferredMode}`);
+  const modeHint = loading
+    ? t('pages.communications.delivery.modeHint.loading')
+    : preferredMode === 'direct'
+      ? t('pages.communications.delivery.modeHint.direct')
+      : readiness?.whatsapp.cloudApiEnabled && readiness.whatsapp.state !== 'direct_capable'
+        ? t('pages.communications.delivery.modeHint.fallback')
+        : t('pages.communications.delivery.modeHint.assisted');
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2">
+      <span
+        className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${DELIVERY_MODE_TONE[preferredMode]}`}
+      >
+        {modeLabel}
+      </span>
+      <span className="rounded-full border border-amateur-border bg-amateur-canvas px-2 py-0.5 text-[11px] font-medium text-amateur-muted">
+        {stateLabel}
+      </span>
+      <p className="text-xs text-amateur-muted">{modeHint}</p>
+    </div>
+  );
+}
+
 function FollowUpHistory({
   history,
   filteredItems,
@@ -2056,6 +2257,10 @@ function FollowUpHistoryRow({
   const status = (activity.status ?? 'logged') as OutreachStatus;
   const isStale = isOutreachStale(activity, staleAfterDays);
   const ageLabel = describeActivityAge(t, activity);
+  const deliveryState = (activity.delivery?.state ?? 'prepared') as DeliveryState;
+  const deliveryLabel = t(`pages.communications.delivery.history.${deliveryState}`, {
+    defaultValue: t('pages.communications.delivery.history.prepared'),
+  });
   return (
     <li className="rounded-2xl border border-amateur-border bg-amateur-surface px-4 py-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2084,6 +2289,12 @@ function FollowUpHistoryRow({
                 {t('pages.communications.lifecycle.stillRelevant')}
               </span>
             ) : null}
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${DELIVERY_STATE_TONE[deliveryState]}`}
+              title={activity.delivery?.detail ?? undefined}
+            >
+              {deliveryLabel}
+            </span>
           </div>
           <p className="mt-2 font-medium text-amateur-ink">{activity.topic}</p>
           <p className="mt-1 text-xs text-amateur-muted">

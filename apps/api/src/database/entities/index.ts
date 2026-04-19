@@ -24,6 +24,7 @@ import { FamilyActionRequest } from './family-action-request.entity';
 import { FamilyActionEvent } from './family-action-event.entity';
 import { ActionCenterItemState } from './action-center-item-state.entity';
 import { OutreachActivity } from './outreach-activity.entity';
+import { TenantCommunicationConfig } from './tenant-communication-config.entity';
 import { StaffUser } from './staff-user.entity';
 import { TenantMembership } from './tenant-membership.entity';
 import { StaffSession } from './staff-session.entity';
@@ -59,6 +60,7 @@ export const domainEntities = [
   FamilyActionEvent,
   ActionCenterItemState,
   OutreachActivity,
+  TenantCommunicationConfig,
   StaffUser,
   TenantMembership,
   StaffSession,
@@ -95,6 +97,7 @@ export {
   FamilyActionEvent,
   ActionCenterItemState,
   OutreachActivity,
+  TenantCommunicationConfig,
   StaffUser,
   TenantMembership,
   StaffSession,

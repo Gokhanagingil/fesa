@@ -318,7 +318,86 @@
         "draft": "Taslak",
         "history": "Son takipler"
       },
-      "channelSwitchHint": "WhatsApp burada birincil kanaldır. Anlık ihtiyaca göre telefon veya e-postaya geçebilirsiniz."
+      "channelSwitchHint": "WhatsApp burada birincil kanaldır. Anlık ihtiyaca göre telefon veya e-postaya geçebilirsiniz.",
+      "delivery": {
+        "modeBadge": {
+          "assisted": "Yardımlı",
+          "direct": "Doğrudan gönderim",
+          "loading": "Kontrol ediliyor…"
+        },
+        "modeHint": {
+          "assisted": "Mesajı hazırlayıp WhatsApp'ı sizin için açarız.",
+          "direct": "Doğrudan gönderim bu kulüp için ayarlı. Mesajı WhatsApp Cloud API üzerinden göndereceğiz; bir aksilik olursa yardımlı moda geçeriz.",
+          "fallback": "Doğrudan gönderim şu an hazır değil — sizin için WhatsApp'ı açarak devam ederiz.",
+          "loading": "Bu takibin ailelere nasıl ulaşacağı kontrol ediliyor…"
+        },
+        "actions": {
+          "sendDirect": "WhatsApp ile gönder",
+          "sendDirectShort": "Gönder",
+          "sending": "Gönderiliyor…",
+          "openWhatsAppInstead": "Yerine WhatsApp'ı aç",
+          "preparingDirect": "Doğrudan gönderim hazırlanıyor…",
+          "directSent": "Doğrudan gönderim {{count}} aile için tamamlandı.",
+          "directSent_other": "Doğrudan gönderim {{count}} aile için tamamlandı.",
+          "directFallback": "Doğrudan gönderim tamamlanamadı — yardımlı yedek hazır.",
+          "directFailed": "Doğrudan gönderim tamamlanamadı. Yardımlı yol hâlâ kullanılabilir."
+        },
+        "history": {
+          "prepared": "Hazırlandı",
+          "sent": "Doğrudan gönderildi",
+          "failed": "Doğrudan gönderim başarısız",
+          "fallback": "Yardımlı yedek kullanıldı"
+        },
+        "readiness": {
+          "title": "WhatsApp gönderim hazırlığı",
+          "hint": "Takipler ailelere bugün nasıl ulaşıyor. Yardımlı, sizin için WhatsApp'ın açılması demektir; doğrudan ise bu kulüp için WhatsApp Cloud API üzerinden gönderim demektir.",
+          "states": {
+            "not_configured": "Yalnızca yardımlı",
+            "assisted_only": "Yalnızca yardımlı",
+            "partial": "Kurulum eksik",
+            "direct_capable": "Doğrudan gönderim hazır",
+            "invalid": "Kurulum gözden geçirilmeli"
+          },
+          "stateHints": {
+            "not_configured": "Doğrudan entegrasyon ayarlı değil. Takipler operatöre WhatsApp'ı açar.",
+            "assisted_only": "Bu kulüp yalnızca yardımlı takiple devam etmeyi seçti. Operatörler WhatsApp'ı kendileri açar.",
+            "partial": "Bazı entegrasyon detayları eksik veya çözümlenemiyor. Kurulum tamamlanana kadar doğrudan gönderim duraklatıldı.",
+            "direct_capable": "Doğrudan gönderim ayarlı ve doğrulandı. Yardımlı yol hâlâ yedek olarak mevcut.",
+            "invalid": "Mevcut yapılandırma doğrulanamadı. Düzeltilene kadar doğrudan gönderim duraklatıldı."
+          },
+          "fallbackNote": "Yardımlı WhatsApp her zaman sakin bir yedek olarak kullanılabilir.",
+          "issues": {
+            "missing_phone_number_id": "WhatsApp telefon numarası kimliği eksik.",
+            "missing_business_account_id": "WhatsApp işletme hesabı kimliği eksik.",
+            "missing_access_token_ref": "Erişim belirteci referansı eksik.",
+            "access_token_ref_unresolved": "Erişim belirteci referansı bu ortamda çözümlenemiyor.",
+            "no_config_row": "Bu kulüp için doğrudan gönderim henüz kurulmadı."
+          }
+        },
+        "config": {
+          "title": "Doğrudan WhatsApp gönderimi (Cloud API)",
+          "hint": "İsteğe bağlı. Yapılandırıldığında takipler WhatsApp'ı manuel açmak yerine WhatsApp Cloud API üzerinden gönderilebilir. Yardımlı mod her zaman kullanılabilir kalır.",
+          "enabledLabel": "Bu kulüp için doğrudan gönderimi etkinleştir",
+          "enabledHint": "Entegrasyon hazır olduğunda açın. O zamana kadar takipleri yardımlı modda tutarız.",
+          "phoneNumberIdLabel": "Telefon numarası kimliği",
+          "phoneNumberIdPlaceholder": "Cloud API telefon numarası kimliği",
+          "businessAccountIdLabel": "İşletme hesabı kimliği",
+          "businessAccountIdPlaceholder": "Cloud API işletme hesabı kimliği",
+          "accessTokenRefLabel": "Erişim belirteci referansı",
+          "accessTokenRefPlaceholder": "env:WHATSAPP_CLOUD_API_TOKEN",
+          "accessTokenRefHint": "Belirtecin kendisini saklamayız. env:AD gibi bir referans kullanın; gerçek değer host ortamından gelir.",
+          "displayPhoneNumberLabel": "Görüntülenen telefon numarası",
+          "displayPhoneNumberPlaceholder": "+90 555 …",
+          "displayPhoneNumberHint": "Hangi numaranın doğrudan mesajları göndereceğini kulüp ekibinin doğrulayabilmesi için gösterilir.",
+          "saveAction": "Gönderim kurulumunu kaydet",
+          "saving": "Kaydediliyor…",
+          "saved": "Gönderim kurulumu kaydedildi.",
+          "validateAction": "Hazırlık kontrolü çalıştır",
+          "validating": "Kontrol ediliyor…",
+          "validatedAt": "Son kontrol: {{when}}",
+          "neverValidated": "Henüz kontrol edilmedi."
+        }
+      }
     }
   }
 }

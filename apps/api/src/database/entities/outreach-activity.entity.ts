@@ -94,6 +94,68 @@ export class OutreachActivity {
   @Column({ type: 'varchar', length: 500, nullable: true })
   note!: string | null;
 
+  /**
+   * Delivery mode — *how* this follow-up reached (or will reach) the
+   * recipients.  Two honest options:
+   *
+   *  - `assisted` — the platform prepared a deep-link / copy block and
+   *    a human opened WhatsApp (the v1.x default).
+   *  - `direct`   — the platform itself attempted to send via a real
+   *    provider (eg. WhatsApp Cloud API).
+   *
+   * Stored as varchar (not enum) so the model can grow without a
+   * destructive migration.  Defaults to `assisted` to preserve the
+   * existing meaning of every historical row.
+   */
+  @Column({ type: 'varchar', length: 16, default: 'assisted' })
+  deliveryMode!: string;
+
+  /**
+   * Delivery state — the *outcome* of the most recent attempt.  Tiny
+   * vocabulary on purpose:
+   *
+   *  - `prepared`   — assisted draft is ready (no real send happened).
+   *  - `sent`       — direct send succeeded.
+   *  - `failed`     — direct send was attempted and failed.
+   *  - `fallback`   — direct send was attempted, failed, and the
+   *    operator (or auto-fallback) used the assisted path instead.
+   *
+   * `prepared` is the default so historical rows continue to read as
+   * "we prepared a follow-up", which is what they always meant.
+   */
+  @Column({ type: 'varchar', length: 16, default: 'prepared' })
+  deliveryState!: string;
+
+  /**
+   * Provider key for direct-mode rows (eg. `whatsapp_cloud_api`).
+   * Always null for assisted-mode rows so we never imply a provider
+   * touched the message.
+   */
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  deliveryProvider!: string | null;
+
+  /**
+   * Provider-specific message reference (eg. WhatsApp message id).
+   * Useful for later troubleshooting; never surfaced verbatim in the
+   * main operator UX.
+   */
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  deliveryProviderMessageId!: string | null;
+
+  /**
+   * Operator-friendly summary of the most recent delivery attempt.
+   * Short, calm, free-form ("All recipients delivered.", "Token
+   * rejected — assisted fallback used.").  Never raw provider JSON.
+   */
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  deliveryDetail!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  deliveryAttemptedAt!: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  deliveryCompletedAt!: Date | null;
+
   @Column({ type: 'uuid', nullable: true })
   createdByStaffUserId!: string | null;
 

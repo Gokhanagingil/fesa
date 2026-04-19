@@ -13,12 +13,17 @@ import { SavedFilterPreset } from '../../database/entities/saved-filter-preset.e
 import { StaffUser } from '../../database/entities/staff-user.entity';
 import { Team } from '../../database/entities/team.entity';
 import { Tenant } from '../../database/entities/tenant.entity';
+import { TenantCommunicationConfig } from '../../database/entities/tenant-communication-config.entity';
 import { TrainingSession } from '../../database/entities/training-session.entity';
 import { FinanceModule } from '../finance/finance.module';
 import { FamilyActionModule } from '../family-action/family-action.module';
 import { CommunicationController } from './communication.controller';
 import { CommunicationService } from './communication.service';
 import { OutreachService } from './outreach.service';
+import { AssistedDeliveryProvider } from './delivery/assisted-provider';
+import { CommunicationDeliveryService } from './delivery/communication-delivery.service';
+import { WhatsAppCloudApiProvider } from './delivery/whatsapp-cloud-api-provider';
+import { WhatsAppReadinessService } from './delivery/whatsapp-readiness.service';
 
 @Module({
   imports: [
@@ -39,10 +44,23 @@ import { OutreachService } from './outreach.service';
       OutreachActivity,
       StaffUser,
       Tenant,
+      TenantCommunicationConfig,
     ]),
   ],
   controllers: [CommunicationController],
-  providers: [CommunicationService, OutreachService],
-  exports: [CommunicationService, OutreachService],
+  providers: [
+    CommunicationService,
+    OutreachService,
+    AssistedDeliveryProvider,
+    WhatsAppCloudApiProvider,
+    WhatsAppReadinessService,
+    CommunicationDeliveryService,
+  ],
+  exports: [
+    CommunicationService,
+    OutreachService,
+    CommunicationDeliveryService,
+    WhatsAppReadinessService,
+  ],
 })
 export class CommunicationModule {}
