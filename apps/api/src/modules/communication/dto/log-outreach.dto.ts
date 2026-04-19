@@ -1,15 +1,18 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsInt,
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
+import { TrainingSessionStatus } from '../../../database/enums';
 
 export class OutreachAudienceSummaryDto {
   @IsOptional()
@@ -41,6 +44,73 @@ export class OutreachAudienceSummaryDto {
   @IsString()
   @MaxLength(200)
   contextLabel?: string;
+}
+
+export class OutreachAudienceFiltersDto {
+  @IsOptional()
+  @IsEnum(TrainingSessionStatus)
+  privateLessonStatus?: TrainingSessionStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  q?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  financialState?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  familyReadiness?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  athleteStatus?: string;
+
+  @IsOptional()
+  @IsUUID()
+  groupId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  teamId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  trainingSessionId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  coachId?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  athleteIds?: string[];
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  needsFollowUp?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  primaryContactsOnly?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  portalEnabledOnly?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  portalPendingOnly?: boolean;
 }
 
 export type OutreachStatus = 'draft' | 'logged' | 'archived';
@@ -94,6 +164,12 @@ export class LogOutreachDto {
   @IsArray()
   @IsString({ each: true })
   guardianIds?: string[];
+
+  @IsOptional()
+  @IsObject()
+  @Type(() => OutreachAudienceFiltersDto)
+  @ValidateNested()
+  audienceFilters?: OutreachAudienceFiltersDto;
 
   @IsOptional()
   @IsObject()

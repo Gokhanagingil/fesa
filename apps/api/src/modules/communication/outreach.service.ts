@@ -88,6 +88,7 @@ export class OutreachService {
     const snapshot: Record<string, unknown> = {
       athleteIds: payload.athleteIds ?? [],
       guardianIds: payload.guardianIds ?? [],
+      audienceFilters: payload.audienceFilters ?? null,
       audienceSummary: payload.audienceSummary ?? null,
     };
 
@@ -139,6 +140,7 @@ export class OutreachService {
     row.audienceSnapshot = {
       athleteIds: payload.athleteIds ?? [],
       guardianIds: payload.guardianIds ?? [],
+      audienceFilters: payload.audienceFilters ?? null,
       audienceSummary: payload.audienceSummary ?? null,
     };
     row.note = payload.note ?? null;

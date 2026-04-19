@@ -284,9 +284,11 @@ export function ReportBuilderPage() {
                     onClick={() => {
                       setActive(entity.key);
                       setInitialState(undefined);
+                      setPendingMessage(null);
                       const params = new URLSearchParams(location.search);
                       params.set('entity', entity.key);
                       params.delete('starter');
+                      params.delete('savedView');
                       params.delete('preset');
                       navigate({ search: `?${params.toString()}` }, { replace: true });
                     }}

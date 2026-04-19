@@ -355,6 +355,7 @@ export type LogOutreachInput = {
   messagePreview?: string;
   athleteIds?: string[];
   guardianIds?: string[];
+  audienceFilters?: Record<string, unknown>;
   recipientCount?: number;
   reachableGuardianCount?: number;
   audienceSummary?: {

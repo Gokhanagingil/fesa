@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommunicationsPage } from './CommunicationsPage';
@@ -139,7 +139,13 @@ function makeHistoryResponse(): OutreachActivityListResponse {
         messagePreview: 'Hello, gentle reminder for May.',
         recipientCount: 4,
         reachableGuardianCount: 4,
-        audienceSnapshot: { audienceSummary: { contextLabel: 'Finance · Overdue balance' } },
+        audienceSnapshot: {
+          audienceFilters: {
+            financialState: 'overdue',
+            primaryContactsOnly: true,
+          },
+          audienceSummary: { contextLabel: 'Finance · Overdue balance' },
+        },
         note: null,
         createdByStaffUserId: null,
         createdByName: 'Coach Demo',
@@ -157,7 +163,14 @@ function makeHistoryResponse(): OutreachActivityListResponse {
         messagePreview: 'Hello {{athleteName}} — quick check-in draft',
         recipientCount: 0,
         reachableGuardianCount: 0,
-        audienceSnapshot: { audienceSummary: { contextLabel: 'Follow-up surface' } },
+        audienceSnapshot: {
+          audienceFilters: {
+            needsFollowUp: true,
+            primaryContactsOnly: true,
+            athleteIds: ['athlete-2'],
+          },
+          audienceSummary: { contextLabel: 'Follow-up surface' },
+        },
         note: null,
         createdByStaffUserId: null,
         createdByName: 'Coach Demo',
@@ -261,6 +274,9 @@ describe('communications follow-up smoke coverage', () => {
           channel: 'whatsapp',
           sourceSurface: 'finance_overdue',
           templateKey: 'overdue_payment_reminder',
+          audienceFilters: expect.objectContaining({
+            primaryContactsOnly: true,
+          }),
         }),
       );
     });
@@ -301,6 +317,9 @@ describe('communications follow-up smoke coverage', () => {
           status: 'draft',
           channel: 'whatsapp',
           sourceSurface: 'finance_overdue',
+          audienceFilters: expect.objectContaining({
+            primaryContactsOnly: true,
+          }),
         }),
       );
     });
@@ -327,5 +346,53 @@ describe('communications follow-up smoke coverage', () => {
     });
 
     expect(await screen.findByText(/Draft re-opened/i)).toBeInTheDocument();
+  });
+
+  it('reopens a saved draft with the same audience filters', async () => {
+    renderWithRoute(<CommunicationsPage />, {
+      path: '/app/communications',
+      initialEntry: '/app/communications',
+    });
+
+    const user = userEvent.setup();
+    const historyTab = await screen.findByRole('button', { name: 'Recent follow-ups' });
+    await user.click(historyTab);
+
+    const continueButton = await screen.findByRole('button', { name: /Continue this draft/i });
+    await user.click(continueButton);
+
+    await waitFor(() => {
+      const calls = mockApiGet.mock.calls.map((args) => String(args[0]));
+      expect(
+        calls.some(
+          (path) =>
+            path.includes('/api/communications/audiences?') &&
+            path.includes('needsFollowUp=true') &&
+            path.includes('primaryContactsOnly=true') &&
+            path.includes('athleteIds=athlete-2'),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it('opens the original audience list with preserved filters from history', async () => {
+    renderWithRoute(<CommunicationsPage />, {
+      path: '/app/communications',
+      initialEntry: '/app/communications',
+    });
+
+    const user = userEvent.setup();
+    const historyTab = await screen.findByRole('button', { name: 'Recent follow-ups' });
+    await user.click(historyTab);
+
+    const financeActivity = await screen.findByText('Overdue payment — May dues');
+    const financeRow = financeActivity.closest('li');
+    expect(financeRow).toBeTruthy();
+    const sourceLink = within(financeRow as HTMLElement).getByRole('link', {
+      name: /Re-open the original list/i,
+    });
+    expect(sourceLink.getAttribute('href')).toContain('financialState=overdue');
+    expect(sourceLink.getAttribute('href')).toContain('primaryContactsOnly=true');
+    expect(sourceLink.getAttribute('href')).toContain('source=finance_overdue');
   });
 });

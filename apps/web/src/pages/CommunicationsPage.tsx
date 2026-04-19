@@ -61,6 +61,23 @@ type AudienceSourceContext = {
   hint?: string | null;
 };
 
+type AudienceFilterSnapshot = {
+  q?: string;
+  groupId?: string;
+  teamId?: string;
+  coachId?: string;
+  athleteStatus?: AthleteStatus;
+  financialState?: string;
+  privateLessonStatus?: string;
+  trainingSessionId?: string;
+  portalEnabledOnly?: boolean;
+  portalPendingOnly?: boolean;
+  familyReadiness?: FamilyReadinessStatus;
+  needsFollowUp?: boolean;
+  primaryContactsOnly?: boolean;
+  athleteIds?: string[];
+};
+
 type QuickScenario = {
   id: string;
   labelKey: string;
@@ -566,6 +583,41 @@ export function CommunicationsPage() {
     setAudienceSource({ surface: 'manual' });
   }, []);
 
+  const audienceFilters = useMemo<AudienceFilterSnapshot>(
+    () => ({
+      ...(query.trim() ? { q: query.trim() } : {}),
+      ...(groupId ? { groupId } : {}),
+      ...(teamId ? { teamId } : {}),
+      ...(coachId ? { coachId } : {}),
+      ...(athleteStatus ? { athleteStatus } : {}),
+      ...(financialState ? { financialState } : {}),
+      ...(privateLessonStatus ? { privateLessonStatus } : {}),
+      ...(trainingSessionId ? { trainingSessionId } : {}),
+      ...(portalEnabledOnly ? { portalEnabledOnly: true } : {}),
+      ...(portalPendingOnly ? { portalPendingOnly: true } : {}),
+      ...(familyReadiness ? { familyReadiness } : {}),
+      ...(needsFollowUp ? { needsFollowUp: true } : {}),
+      ...(primaryContactsOnly ? { primaryContactsOnly: true } : {}),
+      ...(athleteIds.length > 0 ? { athleteIds } : {}),
+    }),
+    [
+      athleteIds,
+      athleteStatus,
+      coachId,
+      familyReadiness,
+      financialState,
+      groupId,
+      needsFollowUp,
+      portalEnabledOnly,
+      portalPendingOnly,
+      primaryContactsOnly,
+      privateLessonStatus,
+      query,
+      teamId,
+      trainingSessionId,
+    ],
+  );
+
   const persistOutreach = useCallback(
     async (status: OutreachStatus) => {
       if (!audience) return;
@@ -593,6 +645,7 @@ export function CommunicationsPage() {
           messagePreview: draftBody.trim().slice(0, 4000) || undefined,
           athleteIds: audience.items.map((item) => item.athleteId),
           guardianIds,
+          audienceFilters,
           recipientCount: audience.counts.athletes,
           reachableGuardianCount: reachable.guardians,
           audienceSummary,
@@ -618,6 +671,7 @@ export function CommunicationsPage() {
     [
       activeDraftId,
       audience,
+      audienceFilters,
       audienceSource.key,
       audienceSource.surface,
       channel,
@@ -638,7 +692,10 @@ export function CommunicationsPage() {
     setActiveDraftId(null);
     setActiveDraftStatus('draft');
     setSavedNotice(null);
-  }, []);
+    setDraftNote('');
+    setAudienceSource({ surface: 'manual' });
+    handleClearAudience();
+  }, [handleClearAudience]);
 
   const handleArchiveDraft = useCallback(async () => {
     if (!activeDraftId) return;
@@ -666,8 +723,29 @@ export function CommunicationsPage() {
         setDraftHydrated(true);
         const snapshot = (fresh.audienceSnapshot ?? {}) as {
           athleteIds?: string[];
+          audienceFilters?: AudienceFilterSnapshot | null;
         };
-        setAthleteIds(Array.isArray(snapshot.athleteIds) ? snapshot.athleteIds : []);
+        const savedFilters = snapshot.audienceFilters ?? null;
+        setQuery(savedFilters?.q ?? '');
+        setGroupId(savedFilters?.groupId ?? '');
+        setTeamId(savedFilters?.teamId ?? '');
+        setCoachId(savedFilters?.coachId ?? '');
+        setAthleteStatus(savedFilters?.athleteStatus ?? '');
+        setFinancialState(savedFilters?.financialState ?? '');
+        setPrivateLessonStatus(savedFilters?.privateLessonStatus ?? '');
+        setTrainingSessionId(savedFilters?.trainingSessionId ?? '');
+        setPortalEnabledOnly(savedFilters?.portalEnabledOnly === true);
+        setPortalPendingOnly(savedFilters?.portalPendingOnly === true);
+        setFamilyReadiness(savedFilters?.familyReadiness ?? '');
+        setNeedsFollowUp(savedFilters?.needsFollowUp === true);
+        setPrimaryContactsOnly(savedFilters?.primaryContactsOnly === true);
+        setAthleteIds(
+          Array.isArray(savedFilters?.athleteIds)
+            ? savedFilters.athleteIds
+            : Array.isArray(snapshot.athleteIds)
+              ? snapshot.athleteIds
+              : [],
+        );
         setAudienceSource({ surface: fresh.sourceSurface, key: fresh.sourceKey });
         setTab('draft');
         setSavedNotice(
@@ -1815,6 +1893,34 @@ function FollowUpHistoryRow({
 
 function buildSourceLink(activity: OutreachActivity): string {
   const params = new URLSearchParams();
+  const snapshot = (activity.audienceSnapshot ?? {}) as {
+    audienceFilters?: Record<string, unknown>;
+  };
+  const filters = snapshot.audienceFilters ?? null;
+
+  if (filters && typeof filters === 'object') {
+    for (const [key, value] of Object.entries(filters)) {
+      if (Array.isArray(value)) {
+        value.forEach((item) => {
+          if (typeof item === 'string' && item) {
+            params.append(key, item);
+          }
+        });
+        continue;
+      }
+
+      if (typeof value === 'boolean') {
+        if (value) {
+          params.set(key, 'true');
+        }
+        continue;
+      }
+
+      if (typeof value === 'string' && value) {
+        params.set(key, value);
+      }
+    }
+  }
   params.set('source', activity.sourceSurface);
   if (activity.sourceKey) params.set('sourceKey', activity.sourceKey);
   if (activity.templateKey) params.set('template', activity.templateKey);
