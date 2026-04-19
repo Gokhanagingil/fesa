@@ -8,6 +8,7 @@ import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatCard } from '../components/ui/StatCard';
 import { apiGet, apiPatch, apiPost } from '../lib/api';
+import { downloadCsv, renderCsvFromRows } from '../lib/imports';
 import {
   formatDate,
   getChargeCurrencyAmount,
@@ -215,6 +216,43 @@ export function AthleteChargesPage() {
   );
   const selectedAthletePreview = selectedAthletes.slice(0, 6);
   const hasSelection = selectedAthleteIds.length > 0;
+
+  const athleteNameMap = useMemo(
+    () => new Map(athletes.map((athlete) => [athlete.id, getPersonName(athlete)])),
+    [athletes],
+  );
+
+  const exportCharges = useCallback(() => {
+    if (items.length === 0) {
+      setError(t('app.exportCsv.emptyHint'));
+      return;
+    }
+    const headers = [
+      t('pages.athleteCharges.athlete'),
+      t('pages.athleteCharges.chargeItem'),
+      t('pages.athleteCharges.amount'),
+      t('pages.athleteCharges.due'),
+      t('pages.athleteCharges.status'),
+      t('pages.athleteCharges.outstanding'),
+    ];
+    const rows = items.map((charge) => {
+      const remaining = charge.remainingAmount ?? charge.amount;
+      const currency = charge.chargeItem?.currency ?? 'TRY';
+      return {
+        [headers[0]]:
+          athleteNameMap.get(charge.athleteId) ??
+          (charge.athlete ? getPersonName(charge.athlete) : charge.athleteId),
+        [headers[1]]: charge.chargeItem?.name ?? '',
+        [headers[2]]: `${charge.amount} ${currency}`,
+        [headers[3]]: charge.dueDate ? formatDate(charge.dueDate, i18n.language) : '',
+        [headers[4]]: getChargeStatusLabel(t, charge.derivedStatus ?? charge.status),
+        [headers[5]]: `${remaining} ${currency}`,
+      };
+    });
+    const csv = renderCsvFromRows(headers, rows);
+    downloadCsv(`amateur-charges-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    setMessage(t('app.exportCsv.successHint', { count: items.length }));
+  }, [athleteNameMap, i18n.language, items, t]);
 
   function toggleSelection(athlete: Athlete) {
     setSelectedAthleteIds((current) =>
@@ -460,6 +498,9 @@ export function AthleteChargesPage() {
                 ))}
               </select>
             </label>
+            <Button type="button" variant="ghost" onClick={exportCharges}>
+              {t('app.exportCsv.label')}
+            </Button>
           </>
         }
       >

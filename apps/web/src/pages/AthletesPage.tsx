@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { BulkActionBar, type BulkActionDescriptor } from '../components/ui/BulkActionBar';
@@ -34,6 +34,7 @@ const readinessOptions: FamilyReadinessStatus[] = [
 export function AthletesPage() {
   const { t } = useTranslation();
   const { tenantId, loading: tenantLoading } = useTenant();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [status, setStatus] = useState(searchParams.get('status') ?? '');
@@ -237,6 +238,16 @@ export function AthletesPage() {
     [groupMap, items, selectedAthletes, t],
   );
 
+  const handlePrepareMessage = useCallback(() => {
+    if (selectedAthleteIds.length === 0) return;
+    const params = new URLSearchParams();
+    selectedAthleteIds.forEach((id) => params.append('athleteIds', id));
+    params.set('source', 'athletes_selection');
+    params.set('sourceKey', `athletes-bulk-${selectedAthleteIds.length}`);
+    params.set('primaryContactsOnly', 'true');
+    navigate(`/app/communications?${params.toString()}`);
+  }, [navigate, selectedAthleteIds]);
+
   const bulkActions: BulkActionDescriptor[] = useMemo(() => {
     const runApply = () => {
       void applyBulkActions();
@@ -249,6 +260,12 @@ export function AthletesPage() {
         onClick: runApply,
       },
       {
+        id: 'prepare-message',
+        ghost: true,
+        label: t('pages.athletes.bulkPrepareMessage'),
+        onClick: handlePrepareMessage,
+      },
+      {
         id: 'export-selection',
         ghost: true,
         label: t('app.bulk.exportSelection'),
@@ -258,7 +275,7 @@ export function AthletesPage() {
     // applyBulkActions is recreated on every render via closure; we only need
     // to refresh button bindings when the bulk form / selection signals change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bulkGroupId, bulkStatus, exportSelection, t]);
+  }, [bulkGroupId, bulkStatus, exportSelection, handlePrepareMessage, t]);
 
   return (
     <div>
