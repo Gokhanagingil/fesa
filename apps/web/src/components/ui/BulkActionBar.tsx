@@ -31,6 +31,12 @@ export interface BulkActionBarProps {
   title?: ReactNode;
   /** Optional subtitle override. */
   subtitle?: ReactNode;
+  /**
+   * When true, the bar also renders a compact, sticky reach-friendly
+   * footer on small screens once a selection exists. Hidden on desktop
+   * where the inline bar is already easy to reach.
+   */
+  stickyOnMobile?: boolean;
 }
 
 /**
@@ -49,11 +55,14 @@ export function BulkActionBar({
   busy = false,
   title,
   subtitle,
+  stickyOnMobile = true,
 }: BulkActionBarProps) {
   const { t } = useTranslation();
   const hasSelection = selectedCount > 0;
+  const primaryAction = actions.find((action) => !action.ghost) ?? actions[0];
 
   return (
+    <>
     <section
       className={`rounded-2xl border bg-amateur-canvas p-4 transition-colors ${
         hasSelection ? 'border-amateur-accent shadow-sm' : 'border-amateur-border'
@@ -112,5 +121,39 @@ export function BulkActionBar({
         <div className="mt-3">{extra}</div>
       ) : null}
     </section>
+    {stickyOnMobile && hasSelection ? (
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:hidden"
+        aria-hidden={false}
+      >
+        <div className="pointer-events-auto mx-auto flex max-w-md items-center gap-2 rounded-2xl border border-amateur-accent bg-amateur-surface px-3 py-2 shadow-lg">
+          <span className="flex-1 text-xs font-semibold text-amateur-ink">
+            {t('app.bulk.selectedCount', { count: selectedCount })}
+          </span>
+          <button
+            type="button"
+            onClick={onClearSelection}
+            disabled={busy}
+            className="rounded-lg border border-amateur-border bg-amateur-canvas px-2.5 py-1.5 text-xs font-medium text-amateur-ink disabled:opacity-50"
+          >
+            {t('app.bulk.clearSelection')}
+          </button>
+          {primaryAction ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (primaryAction.confirm && !window.confirm(primaryAction.confirm)) return;
+                void primaryAction.onClick();
+              }}
+              disabled={busy || primaryAction.disabled}
+              className="rounded-lg bg-amateur-accent px-3 py-1.5 text-xs font-semibold text-white shadow-sm disabled:opacity-50"
+            >
+              {primaryAction.label}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 }

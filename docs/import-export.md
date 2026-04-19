@@ -1,4 +1,4 @@
-# Import / Export & Bulk Operations Foundation v1
+# Import / Export & Bulk Operations Foundation
 
 This page describes the first release of the import / export and bulk
 operations capability. The intent is operational: help clubs move existing
@@ -8,15 +8,16 @@ on many records at once without repeated clicking.
 This is **not** an enterprise ETL or admin console. The goal is to feel
 significantly easier than spreadsheet chaos while staying warm and guided.
 
-## What ships in v1
+## What ships today
 
 | Area | Shape |
 |------|-------|
-| **Import wizard** | Guided CSV import for athletes, guardians, and athlete↔guardian links with paste-or-upload, auto column mapping, preview, validation, and explicit commit. |
-| **Bulk selection** | One reusable `BulkActionBar` component shared across the athletes, guardians, and inventory surfaces. Patterns: select one, select visible, deselect visible, clear selection, visible selected count. |
-| **Bulk actions** | Athletes — bulk lifecycle update + export selection. Guardians — bulk delete (linked guardians are protected) + export selection. Inventory — bulk return all active assignments on an item. |
-| **Practical exports** | "Export visible (CSV)" on athletes, guardians, and inventory list pages. The reporting engine still owns deep export from Report Builder. |
+| **Import wizard** | Guided CSV import for **athletes, guardians, athlete↔guardian links and groups** with paste-or-upload, auto column mapping, preview, validation, and explicit commit. |
+| **Bulk selection** | One reusable `BulkActionBar` component shared across the athletes, guardians, inventory and **training sessions** surfaces. Patterns: select one, select visible, deselect visible, clear selection, visible selected count. On phones the bar also shows a calm sticky reach-friendly footer once a selection exists. |
+| **Bulk actions** | Athletes — bulk lifecycle update, export selection, **prepare message (deep-link into the communications hub)**. Guardians — bulk delete (linked guardians are protected) + export selection. Inventory — bulk return all active assignments on an item. Training sessions — bulk cancel / shift + export selection through the shared bar. |
+| **Practical exports** | "Export visible (CSV)" on athletes, guardians, inventory, **training sessions** and **athlete charges** list pages. The reporting engine still owns deep export from Report Builder. |
 | **Import templates** | `GET /api/imports/template?entity=…` returns a CSV with the supported column headers and two filled sample rows. |
+| **Import history (on-device)** | Successful commits are recorded per tenant in browser storage so staff can see "what we last brought in" without us having to operate a server-side audit log. Capped to the most recent ten entries. |
 
 The capability is wired into the existing sidebar as **Import / Export**
 (`/app/imports`).
@@ -71,6 +72,17 @@ place. Unmatched guardians are created.
 
 Existing links are updated in place; new links are created.
 
+### Groups (`groups`)
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `name` | yes | Group label as staff use it (e.g. `U10 Basketball`). |
+| `sportBranch` | yes | Branch name or short code; must already exist. |
+| `headCoachName` | no | Matches an existing coach by full name (or preferred name). Unknown names produce a warning, not an error, and the group is created without a head coach. |
+
+Existing groups in the same sport branch (case-insensitive name match) are
+**skipped** so re-running the import is safe.
+
 ## Wizard flow
 
 1. **Pick entity** — three calm cards.
@@ -100,16 +112,20 @@ The bar stays compact when nothing is selected and expands once the staff
 member starts a selection. Confirmations live on the action button itself
 through the `confirm` field of `BulkActionDescriptor`.
 
-## Bulk actions in v1
+## Bulk actions
 
 | Surface | Action | Safety |
 |---------|--------|--------|
 | Athletes | Apply lifecycle status / primary group move (existing endpoint, now driven by the shared bar) | Existing rules: team memberships outside the new primary group are ended; inactive / archived athletes have active team memberships ended. |
+| Athletes | Prepare message | Hands the current selection to the communications hub via `?athleteIds=…&source=athletes_selection&primaryContactsOnly=true`. No server mutation. |
 | Athletes | Export selection (CSV) | Local export of visible columns. |
 | Guardians | Delete selection | Linked guardians are protected: with `skipLinked=true` they are silently skipped; otherwise the whole batch fails fast. |
 | Guardians | Export selection (CSV) | Local export. |
 | Inventory | Return all active assignments on an item | Re-uses the existing `returnAssignment` flow per row; idempotent on already-closed assignments. |
 | Inventory | Export visible items (CSV) | Local export. |
+| Training sessions | Bulk cancel / shift planned sessions | Existing `/api/training-sessions/bulk` endpoint; only planned sessions are eligible. The shift action moves `scheduledStart` / `scheduledEnd` by the chosen number of days. |
+| Training sessions | Export selection / Export visible (CSV) | Local export of visible columns. |
+| Athlete charges | Export visible (CSV) | Local export of the currently filtered charges (athlete, charge item, amount, due date, status, outstanding). |
 
 ## Export behaviour
 
@@ -152,10 +168,13 @@ per batch on purpose — clubs that need more split the file.
 
 ## Intentionally still deferred
 
-- Importing groups, teams, training schedules, finance items.
-- Import history (re-run / undo) and per-staff import audit trail.
-- Bulk WhatsApp / email send from the bulk bar (the existing communication
-  hub still owns audience assembly).
+- Importing teams, training schedules, finance items.
+- **Server-side** import history (re-run / undo) and per-staff import audit
+  trail. The current history is on-device (per browser, per tenant) and capped
+  to ten entries.
+- Bulk WhatsApp / email send from the bulk bar — the existing communication
+  hub still owns audience assembly. The new "Prepare message" action on
+  Athletes deep-links the selection into that hub.
 - PDF exports.
 - Server-side scheduled exports.
 - Spreadsheet round-trip ("export → edit → re-import").

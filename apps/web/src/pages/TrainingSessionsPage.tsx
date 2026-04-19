@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
+import { BulkActionBar, type BulkActionDescriptor } from '../components/ui/BulkActionBar';
 import { EmptyState } from '../components/ui/EmptyState';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { apiGet, apiPost } from '../lib/api';
+import { downloadCsv, renderCsvFromRows } from '../lib/imports';
 import { formatDate, formatDateTime, getTrainingStatusLabel } from '../lib/display';
 import { useTenant } from '../lib/tenant-hooks';
 import type { ClubGroup, Coach, Team, TrainingSession, TrainingSessionStatus } from '../lib/domain-types';
@@ -198,13 +200,77 @@ export function TrainingSessionsPage() {
     setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
 
-  function selectVisible() {
-    setSelectedIds(items.map((item) => item.id));
+  function toggleVisibleSelection() {
+    if (items.length === 0) return;
+    const visibleIds = items.map((item) => item.id);
+    const allVisibleSelected = visibleIds.every((id) => selectedIds.includes(id));
+    if (allVisibleSelected) {
+      setSelectedIds((current) => current.filter((id) => !visibleIds.includes(id)));
+      return;
+    }
+    setSelectedIds((current) => Array.from(new Set([...current, ...visibleIds])));
   }
 
   function clearSelected() {
     setSelectedIds([]);
   }
+
+  const exportSessions = useCallback(
+    (target: 'visible' | 'selected') => {
+      const targetItems =
+        target === 'selected' ? items.filter((item) => selectedIds.includes(item.id)) : items;
+      if (targetItems.length === 0) {
+        setError(t('app.exportCsv.emptyHint'));
+        return;
+      }
+      const headers = [
+        t('pages.training.sessionTitle'),
+        t('pages.training.scheduled'),
+        t('pages.athletes.primaryGroup'),
+        t('pages.training.status'),
+        t('pages.training.location'),
+      ];
+      const rows = targetItems.map((session) => ({
+        [headers[0]]: session.title,
+        [headers[1]]: rangeLabel(session.scheduledStart, session.scheduledEnd, i18n.language),
+        [headers[2]]:
+          (groupMap.get(session.groupId) ?? t('pages.training.unknownGroup')) +
+          (session.teamId
+            ? ` · ${teamMap.get(session.teamId) ?? t('pages.training.unknownTeam')}`
+            : ''),
+        [headers[3]]: getTrainingStatusLabel(t, session.status),
+        [headers[4]]: session.location ?? '',
+      }));
+      const csv = renderCsvFromRows(headers, rows);
+      const filename = `amateur-training-${target}-${new Date().toISOString().slice(0, 10)}.csv`;
+      downloadCsv(filename, csv);
+      setMessage(t('app.exportCsv.successHint', { count: targetItems.length }));
+    },
+    [groupMap, i18n.language, items, selectedIds, t, teamMap],
+  );
+
+  const trainingBulkActions: BulkActionDescriptor[] = useMemo(() => {
+    const runApply = () => {
+      void runBulkAction();
+    };
+    return [
+      {
+        id: 'apply',
+        label: t('pages.training.runBulkAction', { count: selectedIds.length }),
+        disabled: selectedIds.length === 0,
+        onClick: runApply,
+      },
+      {
+        id: 'export-selection',
+        ghost: true,
+        label: t('app.bulk.exportSelection'),
+        onClick: () => exportSessions('selected'),
+      },
+    ];
+    // runBulkAction reads latest state via closure; refresh bindings when
+    // selection / labels / export helpers change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exportSessions, selectedIds.length, t]);
 
   async function runBulkAction() {
     if (selectedIds.length === 0) return;
@@ -312,6 +378,9 @@ export function TrainingSessionsPage() {
         subtitle={t('pages.training.subtitle')}
         actions={
           <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="ghost" onClick={() => exportSessions('visible')}>
+              {t('app.exportCsv.label')}
+            </Button>
             <Button type="button" variant="ghost" onClick={() => setSeriesOpen((current) => !current)}>
               {t('pages.training.recurringAction')}
             </Button>
@@ -634,65 +703,55 @@ export function TrainingSessionsPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="font-display text-base font-semibold text-amateur-ink">
-                    {t('pages.training.bulkTitle')}
-                  </h2>
-                  <p className="mt-1 text-sm text-amateur-muted">{t('pages.training.bulkHint')}</p>
+            <BulkActionBar
+              title={t('pages.training.bulkTitle')}
+              subtitle={t('pages.training.bulkHint')}
+              selectedCount={selectedIds.length}
+              visibleTotal={items.length}
+              allVisibleSelected={
+                items.length > 0 && items.every((item) => selectedIds.includes(item.id))
+              }
+              onToggleVisible={toggleVisibleSelection}
+              onClearSelection={clearSelected}
+              actions={trainingBulkActions}
+              busy={bulkSaving}
+            />
+            {selectedIds.length > 0 ? (
+              <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+                <div className="grid gap-3 lg:grid-cols-[repeat(3,minmax(0,1fr))]">
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span>{t('pages.training.bulkAction')}</span>
+                    <select
+                      value={bulkMode}
+                      onChange={(e) => setBulkMode(e.target.value as 'cancel' | 'shift')}
+                      className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                    >
+                      <option value="cancel">{t('pages.training.bulkCancel')}</option>
+                      <option value="shift">{t('pages.training.bulkShift')}</option>
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span>{t('pages.training.bulkShiftDays')}</span>
+                    <input
+                      type="number"
+                      value={bulkShiftDays}
+                      onChange={(e) => setBulkShiftDays(e.target.value)}
+                      disabled={bulkMode !== 'shift'}
+                      className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 disabled:opacity-60"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span>{t('pages.training.bulkNote')}</span>
+                    <input
+                      value={bulkNote}
+                      onChange={(e) => setBulkNote(e.target.value)}
+                      placeholder={t('pages.training.bulkNotePlaceholder')}
+                      className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                    />
+                  </label>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="ghost" onClick={selectVisible}>
-                    {t('pages.training.selectVisible')}
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={clearSelected}>
-                    {t('pages.training.clearSelection')}
-                  </Button>
-                </div>
-              </div>
-              <div className="mt-4 grid gap-3 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
-                <label className="flex flex-col gap-1 text-sm">
-                  <span>{t('pages.training.bulkAction')}</span>
-                  <select
-                    value={bulkMode}
-                    onChange={(e) => setBulkMode(e.target.value as 'cancel' | 'shift')}
-                    className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                  >
-                    <option value="cancel">{t('pages.training.bulkCancel')}</option>
-                    <option value="shift">{t('pages.training.bulkShift')}</option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span>{t('pages.training.bulkShiftDays')}</span>
-                  <input
-                    type="number"
-                    value={bulkShiftDays}
-                    onChange={(e) => setBulkShiftDays(e.target.value)}
-                    disabled={bulkMode !== 'shift'}
-                    className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 disabled:opacity-60"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-sm lg:col-span-2">
-                  <span>{t('pages.training.bulkNote')}</span>
-                  <input
-                    value={bulkNote}
-                    onChange={(e) => setBulkNote(e.target.value)}
-                    placeholder={t('pages.training.bulkNotePlaceholder')}
-                    className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                  />
-                </label>
-                <div className="flex items-end">
-                  <Button
-                    type="button"
-                    onClick={() => void runBulkAction()}
-                    disabled={selectedIds.length === 0 || bulkSaving}
-                  >
-                    {t('pages.training.runBulkAction', { count: selectedIds.length })}
-                  </Button>
-                </div>
-              </div>
-            </section>
+              </section>
+            ) : null}
 
             <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
               <div className="flex items-center justify-between gap-3">

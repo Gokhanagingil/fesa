@@ -12,7 +12,12 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-export const IMPORT_ENTITY_KEYS = ['athletes', 'guardians', 'athlete_guardians'] as const;
+export const IMPORT_ENTITY_KEYS = [
+  'athletes',
+  'guardians',
+  'athlete_guardians',
+  'groups',
+] as const;
 export type ImportEntityKey = (typeof IMPORT_ENTITY_KEYS)[number];
 
 export const MAX_IMPORT_ROWS = 500;

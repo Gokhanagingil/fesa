@@ -6,6 +6,7 @@ import { Guardian } from '../../database/entities/guardian.entity';
 import { AthleteGuardian } from '../../database/entities/athlete-guardian.entity';
 import { ClubGroup } from '../../database/entities/club-group.entity';
 import { SportBranch } from '../../database/entities/sport-branch.entity';
+import { Coach } from '../../database/entities/coach.entity';
 import { AthleteStatus } from '../../database/enums';
 import {
   IMPORT_DEFINITIONS,
@@ -84,6 +85,7 @@ export class ImportsService {
     private readonly athleteGuardians: Repository<AthleteGuardian>,
     @InjectRepository(ClubGroup) private readonly groups: Repository<ClubGroup>,
     @InjectRepository(SportBranch) private readonly branches: Repository<SportBranch>,
+    @InjectRepository(Coach) private readonly coaches: Repository<Coach>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -140,6 +142,13 @@ export class ImportsService {
         }
         case 'athlete_guardians': {
           const result = await this.commitAthleteGuardians(manager, tenantId, validation.rows);
+          created = result.created;
+          updated = result.updated;
+          skipped = result.skipped;
+          break;
+        }
+        case 'groups': {
+          const result = await this.commitGroups(manager, tenantId, validation.rows);
           created = result.created;
           updated = result.updated;
           skipped = result.skipped;
@@ -394,6 +403,8 @@ export class ImportsService {
         return this.enrichGuardian(tenantId, ctx);
       case 'athlete_guardians':
         return this.enrichRelationship(tenantId, ctx);
+      case 'groups':
+        return this.enrichGroup(tenantId, ctx);
     }
   }
 
@@ -582,6 +593,114 @@ export class ImportsService {
     }
 
     return { outcome: 'create', displayLabel };
+  }
+
+  private async enrichGroup(
+    tenantId: string,
+    ctx: RowContext,
+  ): Promise<{ outcome: ImportRowOutcome; displayLabel: string }> {
+    const branches = await this.branches.find({ where: { tenantId } });
+    const branchValue = (ctx.resolved.sportBranch as string | null) ?? null;
+    let branchId: string | null = null;
+    if (branchValue) {
+      const branch = branches.find(
+        (entry) =>
+          entry.name.toLowerCase() === branchValue.toLowerCase() ||
+          entry.code.toLowerCase() === branchValue.toLowerCase(),
+      );
+      if (!branch) {
+        ctx.issues.push({
+          field: 'sportBranch',
+          severity: 'error',
+          message: `Sport branch "${branchValue}" was not found in this club.`,
+        });
+      } else {
+        branchId = branch.id;
+      }
+    }
+    ctx.resolved.sportBranchId = branchId;
+
+    const coachValue = (ctx.resolved.headCoachName as string | null) ?? null;
+    let coachId: string | null = null;
+    if (coachValue) {
+      const coaches = await this.coaches.find({ where: { tenantId } });
+      const coach = coaches.find((entry) => {
+        const full = `${entry.firstName} ${entry.lastName}`.trim().toLowerCase();
+        const preferred = (entry.preferredName ?? '').trim().toLowerCase();
+        const value = coachValue.trim().toLowerCase();
+        return full === value || (preferred && preferred === value);
+      });
+      if (!coach) {
+        ctx.issues.push({
+          field: 'headCoachName',
+          severity: 'warning',
+          message: `Coach "${coachValue}" was not found — the group will be created without a head coach.`,
+        });
+      } else {
+        coachId = coach.id;
+      }
+    }
+    ctx.resolved.headCoachId = coachId;
+
+    const name = (ctx.resolved.name as string | null) ?? '';
+    const displayLabel = name.trim();
+
+    let outcome: ImportRowOutcome = 'create';
+    if (name && branchId) {
+      const existing = await this.groups
+        .createQueryBuilder('g')
+        .where('g.tenantId = :tenantId', { tenantId })
+        .andWhere('g.sportBranchId = :branchId', { branchId })
+        .andWhere('LOWER(g.name) = LOWER(:name)', { name })
+        .getOne();
+      if (existing) {
+        outcome = 'skip';
+        ctx.issues.push({
+          severity: 'info',
+          message: `Group "${displayLabel}" already exists in this sport branch and will be skipped.`,
+        });
+        ctx.resolved.existingId = existing.id;
+      }
+    }
+
+    if (ctx.issues.some((issue) => issue.severity === 'error')) {
+      return { outcome: 'reject', displayLabel };
+    }
+    return { outcome, displayLabel };
+  }
+
+  private async commitGroups(
+    manager: import('typeorm').EntityManager,
+    tenantId: string,
+    rows: ImportRowReport[],
+  ): Promise<{ created: number; updated: number; skipped: number }> {
+    const repo = manager.getRepository(ClubGroup);
+    let created = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      if (row.outcome === 'reject') continue;
+      if (row.outcome === 'skip') {
+        skipped += 1;
+        continue;
+      }
+      const branchId = row.resolved.sportBranchId as string | null;
+      const name = (row.resolved.name as string | null) ?? '';
+      if (!branchId || !name) {
+        skipped += 1;
+        continue;
+      }
+      await repo.save(
+        repo.create({
+          tenantId,
+          sportBranchId: branchId,
+          name,
+          headCoachId: (row.resolved.headCoachId as string | null) ?? null,
+          ageGroupId: null,
+        }),
+      );
+      created += 1;
+    }
+    return { created, updated: 0, skipped };
   }
 
   private async commitAthletes(
@@ -817,6 +936,8 @@ function inferDisplayLabel(
       return `${resolved.firstName ?? ''} ${resolved.lastName ?? ''}`.trim();
     case 'athlete_guardians':
       return `${resolved.athleteFirstName ?? ''} ${resolved.athleteLastName ?? ''} ↔ ${resolved.guardianFirstName ?? ''} ${resolved.guardianLastName ?? ''}`.trim();
+    case 'groups':
+      return ((resolved.name as string | null) ?? '').trim();
     default:
       return '';
   }

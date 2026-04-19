@@ -12,15 +12,19 @@ import {
   ImportEntityDefinition,
   ImportEntityKey,
   ImportFieldDefinition,
+  ImportHistoryEntry,
   ImportPreviewReport,
   ImportRowOutcome,
   ImportRowReport,
   autoMapColumns,
   buildTemplateUrl,
+  clearImportHistory,
   commitImport,
   fetchImportDefinitions,
+  loadImportHistory,
   parseCsv,
   previewImport,
+  recordImportHistory,
 } from '../lib/imports';
 import type { SportBranch } from '../lib/domain-types';
 
@@ -60,6 +64,7 @@ export function ImportsPage() {
   const [committing, setCommitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<ImportHistoryEntry[]>([]);
 
   const definition = useMemo(
     () => definitions.find((entry) => entry.entity === activeEntity),
@@ -92,6 +97,10 @@ export function ImportsPage() {
         setBranches([]);
       }
     })();
+  }, [tenantId]);
+
+  useEffect(() => {
+    setHistory(loadImportHistory(tenantId));
   }, [tenantId]);
 
   const resetParseState = useCallback(() => {
@@ -201,6 +210,19 @@ export function ImportsPage() {
           skipped: result.counts.skipped,
         }),
       );
+      const updatedHistory = recordImportHistory(tenantId, {
+        entity: definition.entity,
+        filename: pickedFileName ?? undefined,
+        source: pickedFileName ?? t('pages.imports.historyPasted'),
+        counts: {
+          total: result.counts.total,
+          created: result.counts.created,
+          updated: result.counts.updated,
+          skipped: result.counts.skipped,
+          rejected: result.counts.rejected,
+        },
+      });
+      setHistory(updatedHistory);
       setPreview({ ...preview, rows: result.rows });
       setRawCsv('');
       setRows([]);
@@ -392,6 +414,17 @@ export function ImportsPage() {
         </section>
       ) : null}
 
+      {history.length > 0 ? (
+        <HistoryPanel
+          history={history}
+          definitions={definitions}
+          onClear={() => {
+            clearImportHistory(tenantId);
+            setHistory([]);
+          }}
+        />
+      ) : null}
+
       {error ? (
         <InlineAlert tone="error" className="mb-4">
           {error}
@@ -557,6 +590,66 @@ function PreviewPanel({ preview, definition, committing, onCommit }: PreviewPane
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+interface HistoryPanelProps {
+  history: ImportHistoryEntry[];
+  definitions: ImportEntityDefinition[];
+  onClear: () => void;
+}
+
+function HistoryPanel({ history, definitions, onClear }: HistoryPanelProps) {
+  const { t, i18n } = useTranslation();
+  const labelFor = (entity: ImportEntityKey) => {
+    const def = definitions.find((entry) => entry.entity === entity);
+    return def ? t(def.labelKey) : entity;
+  };
+  const fmt = useMemo(
+    () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' }),
+    [i18n.language],
+  );
+  return (
+    <section className="mb-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-display text-base font-semibold text-amateur-ink">
+            {t('pages.imports.historyTitle')}
+          </p>
+          <p className="mt-1 text-sm text-amateur-muted">{t('pages.imports.historyHint')}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm(t('pages.imports.historyClearConfirm'))) onClear();
+          }}
+          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-xs font-medium text-amateur-muted hover:text-amateur-ink"
+        >
+          {t('pages.imports.historyClear')}
+        </button>
+      </div>
+      <ul className="mt-3 space-y-2">
+        {history.map((entry) => (
+          <li
+            key={entry.id}
+            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-3 text-sm"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-medium text-amateur-ink">{labelFor(entry.entity)}</p>
+              <p className="text-xs text-amateur-muted">{fmt.format(new Date(entry.committedAt))}</p>
+            </div>
+            <p className="mt-1 text-xs text-amateur-muted">
+              {t('pages.imports.historyLine', {
+                source: entry.source,
+                created: entry.counts.created,
+                updated: entry.counts.updated,
+                skipped: entry.counts.skipped,
+              })}
+            </p>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
