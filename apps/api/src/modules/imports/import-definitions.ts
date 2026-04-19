@@ -1,6 +1,6 @@
 import { AthleteStatus } from '../../database/enums';
 
-export type ImportEntityKey = 'athletes' | 'guardians' | 'athlete_guardians';
+export type ImportEntityKey = 'athletes' | 'guardians' | 'athlete_guardians' | 'groups';
 
 export type ImportFieldType = 'string' | 'enum' | 'date' | 'email' | 'phone' | 'boolean';
 
@@ -304,6 +304,59 @@ export const IMPORT_DEFINITIONS: ImportEntityDefinition[] = [
         type: 'string',
         maxLength: 500,
         aliases: ['notes', 'not', 'açıklama', 'aciklama'],
+      },
+    ],
+  },
+  {
+    entity: 'groups',
+    labelKey: 'pages.imports.entities.groups.title',
+    descriptionKey: 'pages.imports.entities.groups.description',
+    sample: [
+      {
+        name: 'U10 Basketball',
+        sportBranch: 'Basketball',
+        headCoachName: 'Selin Demir',
+      },
+      {
+        name: 'U12 Basketball',
+        sportBranch: 'Basketball',
+        headCoachName: '',
+      },
+    ],
+    fields: [
+      {
+        key: 'name',
+        labelKey: 'pages.imports.fields.groups.name',
+        required: true,
+        type: 'string',
+        maxLength: 200,
+        aliases: ['name', 'group', 'group name', 'grup', 'grup adı', 'grup adi'],
+      },
+      {
+        key: 'sportBranch',
+        labelKey: 'pages.imports.fields.groups.sportBranch',
+        required: true,
+        type: 'string',
+        maxLength: 160,
+        aliases: ['sport branch', 'sportbranch', 'branch', 'spor branşı', 'spor brans', 'discipline'],
+        hintKey: 'pages.imports.hints.sportBranch',
+      },
+      {
+        key: 'headCoachName',
+        labelKey: 'pages.imports.fields.groups.headCoachName',
+        required: false,
+        type: 'string',
+        maxLength: 200,
+        aliases: [
+          'headcoach',
+          'head coach',
+          'coach',
+          'baş antrenör',
+          'bas antrenor',
+          'antrenör',
+          'antrenor',
+        ],
+        hintKey: 'pages.imports.hints.headCoach',
       },
     ],
   },

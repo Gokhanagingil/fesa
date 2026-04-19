@@ -1,6 +1,6 @@
 import { apiGet, apiPost } from './api';
 
-export type ImportEntityKey = 'athletes' | 'guardians' | 'athlete_guardians';
+export type ImportEntityKey = 'athletes' | 'guardians' | 'athlete_guardians' | 'groups';
 
 export type ImportFieldType = 'string' | 'enum' | 'date' | 'email' | 'phone' | 'boolean';
 
@@ -208,6 +208,90 @@ export function renderCsvFromRows(
     lines.push(csvRow(headers.map((header) => formatCell(row[header]))));
   }
   return `\uFEFF${lines.join('\r\n')}\r\n`;
+}
+
+/**
+ * Lightweight, per-tenant import history. Stored in localStorage so staff can
+ * see "what we last brought in" without us having to operate a server-side
+ * audit log just yet. Capped to the most recent entries to keep storage
+ * tiny and predictable.
+ */
+export interface ImportHistoryEntry {
+  id: string;
+  entity: ImportEntityKey;
+  /** ISO timestamp of the commit. */
+  committedAt: string;
+  filename?: string;
+  counts: {
+    total: number;
+    created: number;
+    updated: number;
+    skipped: number;
+    rejected: number;
+  };
+  /** Human-readable label, typically the source filename or "Pasted CSV". */
+  source: string;
+}
+
+const HISTORY_LIMIT = 10;
+const HISTORY_PREFIX = 'amateur.imports.history';
+
+function historyKey(tenantId: string): string {
+  return `${HISTORY_PREFIX}.${tenantId}`;
+}
+
+export function loadImportHistory(tenantId: string | null | undefined): ImportHistoryEntry[] {
+  if (!tenantId || typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(historyKey(tenantId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((entry): entry is ImportHistoryEntry => {
+      return (
+        !!entry &&
+        typeof entry === 'object' &&
+        typeof (entry as ImportHistoryEntry).id === 'string' &&
+        typeof (entry as ImportHistoryEntry).entity === 'string' &&
+        typeof (entry as ImportHistoryEntry).committedAt === 'string' &&
+        typeof (entry as ImportHistoryEntry).counts === 'object'
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+export function recordImportHistory(
+  tenantId: string | null | undefined,
+  entry: Omit<ImportHistoryEntry, 'id' | 'committedAt'> & { committedAt?: string },
+): ImportHistoryEntry[] {
+  if (!tenantId || typeof window === 'undefined') return [];
+  const next: ImportHistoryEntry = {
+    ...entry,
+    id:
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    committedAt: entry.committedAt ?? new Date().toISOString(),
+  };
+  const existing = loadImportHistory(tenantId);
+  const combined = [next, ...existing].slice(0, HISTORY_LIMIT);
+  try {
+    window.localStorage.setItem(historyKey(tenantId), JSON.stringify(combined));
+  } catch {
+    // localStorage may be unavailable / full — silently drop.
+  }
+  return combined;
+}
+
+export function clearImportHistory(tenantId: string | null | undefined): void {
+  if (!tenantId || typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(historyKey(tenantId));
+  } catch {
+    // ignore
+  }
 }
 
 export function downloadCsv(filename: string, csv: string): void {
