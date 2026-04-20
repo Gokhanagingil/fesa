@@ -1,8 +1,25 @@
-import { AthleteStatus } from '../../database/enums';
+import { AthleteStatus, InventoryCategory } from '../../database/enums';
 
-export type ImportEntityKey = 'athletes' | 'guardians' | 'athlete_guardians' | 'groups';
+export type ImportEntityKey =
+  | 'sport_branches'
+  | 'coaches'
+  | 'groups'
+  | 'teams'
+  | 'athletes'
+  | 'guardians'
+  | 'athlete_guardians'
+  | 'charge_items'
+  | 'inventory_items';
 
-export type ImportFieldType = 'string' | 'enum' | 'date' | 'email' | 'phone' | 'boolean';
+export type ImportFieldType =
+  | 'string'
+  | 'enum'
+  | 'date'
+  | 'email'
+  | 'phone'
+  | 'boolean'
+  | 'integer'
+  | 'decimal';
 
 export interface ImportFieldDefinition {
   /** Stable target key used by the API. */
@@ -31,6 +48,12 @@ export interface ImportEntityDefinition {
   /** Sample row used for the downloadable CSV template. */
   sample: Array<Record<string, string>>;
   fields: ImportFieldDefinition[];
+  /**
+   * i18n key under `pages.imports.entities.<entity>.dependencies` describing
+   * upstream entities this template assumes already exist (e.g. groups need
+   * sport branches). Surfaced calmly in the wizard above the template button.
+   */
+  dependencyKey?: string;
 }
 
 /**
@@ -40,9 +63,200 @@ export interface ImportEntityDefinition {
  */
 export const IMPORT_DEFINITIONS: ImportEntityDefinition[] = [
   {
+    entity: 'sport_branches',
+    labelKey: 'pages.imports.entities.sportBranches.title',
+    descriptionKey: 'pages.imports.entities.sportBranches.description',
+    sample: [
+      { name: 'Basketball', code: 'BASKETBALL' },
+      { name: 'Volleyball', code: 'VOLLEYBALL' },
+    ],
+    fields: [
+      {
+        key: 'name',
+        labelKey: 'pages.imports.fields.sportBranches.name',
+        required: true,
+        type: 'string',
+        maxLength: 160,
+        aliases: ['name', 'branch', 'spor branşı', 'spor brans', 'discipline', 'spor dalı', 'spor dali'],
+      },
+      {
+        key: 'code',
+        labelKey: 'pages.imports.fields.sportBranches.code',
+        required: true,
+        type: 'string',
+        maxLength: 48,
+        aliases: ['code', 'branch code', 'kod'],
+        hintKey: 'pages.imports.hints.sportBranchCode',
+      },
+    ],
+  },
+  {
+    entity: 'coaches',
+    labelKey: 'pages.imports.entities.coaches.title',
+    descriptionKey: 'pages.imports.entities.coaches.description',
+    dependencyKey: 'pages.imports.entities.coaches.dependencies',
+    sample: [
+      {
+        firstName: 'Selin',
+        lastName: 'Demir',
+        preferredName: '',
+        sportBranch: 'Basketball',
+        phone: '+905551112233',
+        email: 'selin.demir@example.com',
+        specialties: 'Skill development',
+        notes: '',
+      },
+      {
+        firstName: 'Mert',
+        lastName: 'Kara',
+        preferredName: '',
+        sportBranch: 'Volleyball',
+        phone: '',
+        email: '',
+        specialties: '',
+        notes: '',
+      },
+    ],
+    fields: [
+      {
+        key: 'firstName',
+        labelKey: 'pages.imports.fields.coaches.firstName',
+        required: true,
+        type: 'string',
+        maxLength: 120,
+        aliases: ['firstname', 'first name', 'ad', 'isim'],
+      },
+      {
+        key: 'lastName',
+        labelKey: 'pages.imports.fields.coaches.lastName',
+        required: true,
+        type: 'string',
+        maxLength: 120,
+        aliases: ['lastname', 'last name', 'soyad'],
+      },
+      {
+        key: 'preferredName',
+        labelKey: 'pages.imports.fields.coaches.preferredName',
+        required: false,
+        type: 'string',
+        maxLength: 160,
+        aliases: ['preferred name', 'preferredname', 'çağrılan ad', 'lakap'],
+      },
+      {
+        key: 'sportBranch',
+        labelKey: 'pages.imports.fields.coaches.sportBranch',
+        required: true,
+        type: 'string',
+        maxLength: 160,
+        aliases: ['sport branch', 'sportbranch', 'branch', 'spor branşı', 'spor brans', 'discipline'],
+        hintKey: 'pages.imports.hints.sportBranch',
+      },
+      {
+        key: 'phone',
+        labelKey: 'pages.imports.fields.coaches.phone',
+        required: false,
+        type: 'phone',
+        maxLength: 32,
+        aliases: ['phone', 'telefon', 'mobile', 'cep', 'gsm'],
+      },
+      {
+        key: 'email',
+        labelKey: 'pages.imports.fields.coaches.email',
+        required: false,
+        type: 'email',
+        maxLength: 320,
+        aliases: ['email', 'e-mail', 'mail', 'eposta', 'e-posta'],
+      },
+      {
+        key: 'specialties',
+        labelKey: 'pages.imports.fields.coaches.specialties',
+        required: false,
+        type: 'string',
+        maxLength: 200,
+        aliases: ['specialties', 'specialty', 'uzmanlık', 'uzmanlik'],
+      },
+      {
+        key: 'notes',
+        labelKey: 'pages.imports.fields.coaches.notes',
+        required: false,
+        type: 'string',
+        maxLength: 500,
+        aliases: ['notes', 'not', 'açıklama', 'aciklama'],
+      },
+    ],
+  },
+  {
+    entity: 'teams',
+    labelKey: 'pages.imports.entities.teams.title',
+    descriptionKey: 'pages.imports.entities.teams.description',
+    dependencyKey: 'pages.imports.entities.teams.dependencies',
+    sample: [
+      {
+        name: 'U10 Basketball A',
+        sportBranch: 'Basketball',
+        groupName: 'U10 Basketball',
+        code: 'U10-A',
+        headCoachName: 'Selin Demir',
+      },
+      {
+        name: 'U12 Basketball B',
+        sportBranch: 'Basketball',
+        groupName: 'U12 Basketball',
+        code: '',
+        headCoachName: '',
+      },
+    ],
+    fields: [
+      {
+        key: 'name',
+        labelKey: 'pages.imports.fields.teams.name',
+        required: true,
+        type: 'string',
+        maxLength: 200,
+        aliases: ['name', 'team', 'team name', 'takım', 'takim', 'takım adı', 'takim adi'],
+      },
+      {
+        key: 'sportBranch',
+        labelKey: 'pages.imports.fields.teams.sportBranch',
+        required: true,
+        type: 'string',
+        maxLength: 160,
+        aliases: ['sport branch', 'sportbranch', 'branch', 'spor branşı', 'spor brans', 'discipline'],
+        hintKey: 'pages.imports.hints.sportBranch',
+      },
+      {
+        key: 'groupName',
+        labelKey: 'pages.imports.fields.teams.groupName',
+        required: false,
+        type: 'string',
+        maxLength: 200,
+        aliases: ['group', 'group name', 'cohort', 'grup', 'grup adı', 'grup adi'],
+        hintKey: 'pages.imports.hints.teamGroup',
+      },
+      {
+        key: 'code',
+        labelKey: 'pages.imports.fields.teams.code',
+        required: false,
+        type: 'string',
+        maxLength: 32,
+        aliases: ['code', 'kod', 'short code'],
+      },
+      {
+        key: 'headCoachName',
+        labelKey: 'pages.imports.fields.teams.headCoachName',
+        required: false,
+        type: 'string',
+        maxLength: 200,
+        aliases: ['headcoach', 'head coach', 'coach', 'baş antrenör', 'bas antrenor', 'antrenör', 'antrenor'],
+        hintKey: 'pages.imports.hints.headCoach',
+      },
+    ],
+  },
+  {
     entity: 'athletes',
     labelKey: 'pages.imports.entities.athletes.title',
     descriptionKey: 'pages.imports.entities.athletes.description',
+    dependencyKey: 'pages.imports.entities.athletes.dependencies',
     sample: [
       {
         firstName: 'Defne',
@@ -222,6 +436,7 @@ export const IMPORT_DEFINITIONS: ImportEntityDefinition[] = [
     entity: 'athlete_guardians',
     labelKey: 'pages.imports.entities.athleteGuardians.title',
     descriptionKey: 'pages.imports.entities.athleteGuardians.description',
+    dependencyKey: 'pages.imports.entities.athleteGuardians.dependencies',
     sample: [
       {
         athleteFirstName: 'Defne',
@@ -311,6 +526,7 @@ export const IMPORT_DEFINITIONS: ImportEntityDefinition[] = [
     entity: 'groups',
     labelKey: 'pages.imports.entities.groups.title',
     descriptionKey: 'pages.imports.entities.groups.description',
+    dependencyKey: 'pages.imports.entities.groups.dependencies',
     sample: [
       {
         name: 'U10 Basketball',
@@ -361,6 +577,157 @@ export const IMPORT_DEFINITIONS: ImportEntityDefinition[] = [
     ],
   },
 ];
+
+IMPORT_DEFINITIONS.push(
+  {
+    entity: 'charge_items',
+    labelKey: 'pages.imports.entities.chargeItems.title',
+    descriptionKey: 'pages.imports.entities.chargeItems.description',
+    dependencyKey: 'pages.imports.entities.chargeItems.dependencies',
+    sample: [
+      {
+        name: 'Monthly dues',
+        category: 'dues',
+        defaultAmount: '750.00',
+        currency: 'TRY',
+      },
+      {
+        name: 'Summer camp',
+        category: 'camp',
+        defaultAmount: '2500.00',
+        currency: 'TRY',
+      },
+    ],
+    fields: [
+      {
+        key: 'name',
+        labelKey: 'pages.imports.fields.chargeItems.name',
+        required: true,
+        type: 'string',
+        maxLength: 200,
+        aliases: ['name', 'kalem', 'item', 'ad', 'isim'],
+      },
+      {
+        key: 'category',
+        labelKey: 'pages.imports.fields.chargeItems.category',
+        required: true,
+        type: 'string',
+        maxLength: 64,
+        aliases: ['category', 'kategori', 'tür', 'tur'],
+        hintKey: 'pages.imports.hints.chargeCategory',
+      },
+      {
+        key: 'defaultAmount',
+        labelKey: 'pages.imports.fields.chargeItems.defaultAmount',
+        required: true,
+        type: 'decimal',
+        aliases: ['defaultamount', 'default amount', 'amount', 'tutar', 'fiyat', 'price'],
+        hintKey: 'pages.imports.hints.amount',
+      },
+      {
+        key: 'currency',
+        labelKey: 'pages.imports.fields.chargeItems.currency',
+        required: true,
+        type: 'enum',
+        enumValues: ['try', 'eur', 'usd', 'gbp'],
+        aliases: ['currency', 'para birimi', 'para', 'döviz', 'doviz'],
+        hintKey: 'pages.imports.hints.currency',
+      },
+    ],
+  },
+  {
+    entity: 'inventory_items',
+    labelKey: 'pages.imports.entities.inventoryItems.title',
+    descriptionKey: 'pages.imports.entities.inventoryItems.description',
+    dependencyKey: 'pages.imports.entities.inventoryItems.dependencies',
+    sample: [
+      {
+        name: 'Training jersey',
+        category: 'apparel',
+        sportBranch: 'Basketball',
+        trackAssignment: 'true',
+        initialStock: '20',
+        lowStockThreshold: '4',
+        description: 'Reversible practice jersey',
+      },
+      {
+        name: 'Match ball',
+        category: 'balls',
+        sportBranch: 'Basketball',
+        trackAssignment: 'false',
+        initialStock: '12',
+        lowStockThreshold: '2',
+        description: '',
+      },
+    ],
+    fields: [
+      {
+        key: 'name',
+        labelKey: 'pages.imports.fields.inventoryItems.name',
+        required: true,
+        type: 'string',
+        maxLength: 200,
+        aliases: ['name', 'item', 'ürün', 'urun', 'malzeme', 'ad'],
+      },
+      {
+        key: 'category',
+        labelKey: 'pages.imports.fields.inventoryItems.category',
+        required: true,
+        type: 'enum',
+        enumValues: Object.values(InventoryCategory),
+        aliases: ['category', 'kategori', 'tür', 'tur'],
+        hintKey: 'pages.imports.hints.inventoryCategory',
+      },
+      {
+        key: 'sportBranch',
+        labelKey: 'pages.imports.fields.inventoryItems.sportBranch',
+        required: false,
+        type: 'string',
+        maxLength: 160,
+        aliases: ['sport branch', 'sportbranch', 'branch', 'spor branşı', 'spor brans', 'discipline'],
+        hintKey: 'pages.imports.hints.sportBranchOptional',
+      },
+      {
+        key: 'trackAssignment',
+        labelKey: 'pages.imports.fields.inventoryItems.trackAssignment',
+        required: false,
+        type: 'boolean',
+        aliases: ['trackassignment', 'track assignment', 'assignable', 'kişisel', 'kisisel'],
+        hintKey: 'pages.imports.hints.trackAssignment',
+      },
+      {
+        key: 'initialStock',
+        labelKey: 'pages.imports.fields.inventoryItems.initialStock',
+        required: false,
+        type: 'integer',
+        aliases: ['initialstock', 'initial stock', 'stock', 'stok', 'başlangıç stoğu', 'baslangic stogu'],
+        hintKey: 'pages.imports.hints.initialStock',
+      },
+      {
+        key: 'lowStockThreshold',
+        labelKey: 'pages.imports.fields.inventoryItems.lowStockThreshold',
+        required: false,
+        type: 'integer',
+        aliases: [
+          'lowstockthreshold',
+          'low stock threshold',
+          'low stock',
+          'düşük stok',
+          'dusuk stok',
+        ],
+        hintKey: 'pages.imports.hints.lowStockThreshold',
+      },
+      {
+        key: 'description',
+        labelKey: 'pages.imports.fields.inventoryItems.description',
+        required: false,
+        type: 'string',
+        maxLength: 500,
+        aliases: ['description', 'açıklama', 'aciklama', 'notes', 'not'],
+      },
+    ],
+  },
+);
 
 export function getImportDefinition(entity: string): ImportEntityDefinition | undefined {
   return IMPORT_DEFINITIONS.find((definition) => definition.entity === entity);

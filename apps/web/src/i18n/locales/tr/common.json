@@ -13,6 +13,7 @@
     },
     "nav": {
       "dashboard": "Panel",
+      "onboarding": "Kuruluş rehberi",
       "actionCenter": "Aksiyon merkezi",
       "athletes": "Sporcular",
       "guardians": "Veliler",
@@ -1960,6 +1961,27 @@
       "defaultBranchHint": "Bir satırda spor branşı boş kaldığında kullanılır.",
       "anyBranch": "— bir branş seçin —",
       "fields": {
+        "sportBranches": {
+          "name": "Spor branşı adı",
+          "code": "Kısa kod"
+        },
+        "coaches": {
+          "firstName": "Ad",
+          "lastName": "Soyad",
+          "preferredName": "Çağrılan ad",
+          "sportBranch": "Spor branşı",
+          "phone": "Telefon",
+          "email": "E-posta",
+          "specialties": "Uzmanlık",
+          "notes": "Not"
+        },
+        "teams": {
+          "name": "Takım adı",
+          "sportBranch": "Spor branşı",
+          "groupName": "Bağlı grup",
+          "code": "Kısa kod",
+          "headCoachName": "Baş antrenör"
+        },
         "athletes": {
           "firstName": "Ad",
           "lastName": "Soyad",
@@ -1992,12 +2014,42 @@
           "name": "Grup adı",
           "sportBranch": "Spor branşı",
           "headCoachName": "Baş antrenör"
+        },
+        "chargeItems": {
+          "name": "Kalem adı",
+          "category": "Kategori",
+          "defaultAmount": "Varsayılan tutar",
+          "currency": "Para birimi"
+        },
+        "inventoryItems": {
+          "name": "Ürün adı",
+          "category": "Kategori",
+          "sportBranch": "Spor branşı",
+          "trackAssignment": "Sporcuya zimmetlenir mi",
+          "initialStock": "Başlangıç stoğu",
+          "lowStockThreshold": "Düşük stok eşiği",
+          "description": "Açıklama"
         }
       },
       "entities": {
+        "sportBranches": {
+          "title": "Spor branşları",
+          "description": "Kulübünüzdeki sporları tanımlayın. Sonraki tüm adımlar (antrenörler, gruplar, takımlar, sporcular) bunlara bağlanır."
+        },
+        "coaches": {
+          "title": "Antrenörler",
+          "description": "Antrenmanları yürüten kişileri ekleyin. Her antrenör tek bir spor branşına bağlıdır.",
+          "dependencies": "Önce spor branşlarınızı eklediğinizden emin olun."
+        },
+        "teams": {
+          "title": "Takımlar",
+          "description": "İsteğe bağlı yarışma kadroları. Lig oynayan kulüpler için yararlı; sadece antrenman yapan kulüpler atlayabilir.",
+          "dependencies": "Spor branşları gerekli. Bağlı grup ve baş antrenör isteğe bağlıdır."
+        },
         "athletes": {
           "title": "Sporcular",
-          "description": "Sporcu listenizi spor branşı ve grup bağlamıyla birlikte platforma taşıyın."
+          "description": "Sporcu listenizi spor branşı ve grup bağlamıyla birlikte platforma taşıyın.",
+          "dependencies": "Önce spor branşlarını ekleyin. Gruplar zorunlu değil ama sporcuları doğru kohorta yerleştirir."
         },
         "guardians": {
           "title": "Veliler",
@@ -2005,20 +2057,42 @@
         },
         "athleteGuardians": {
           "title": "Sporcu ↔ veli bağları",
-          "description": "Mevcut sporcu ve velileri yakınlık bilgisiyle birbirine bağlayın."
+          "description": "Mevcut sporcu ve velileri yakınlık bilgisiyle birbirine bağlayın.",
+          "dependencies": "Bağlamadan önce sporcular ve veliler sistemde bulunmalı."
         },
         "groups": {
           "title": "Gruplar",
-          "description": "Antrenman gruplarını toplu oluşturun, sporcuları hemen bu gruplara eşleyin."
+          "description": "Antrenman gruplarını toplu oluşturun, sporcuları hemen bu gruplara eşleyin.",
+          "dependencies": "Önce spor branşları gerekli; baş antrenör isteğe bağlıdır."
+        },
+        "chargeItems": {
+          "title": "Finans başlangıç kalemleri",
+          "description": "Aidat, kamp ve mağaza kalemleri gibi ailelere kesilecek tahsilat türlerini tanımlayın.",
+          "dependencies": "Bağımlılığı yok — tahsilat oluşturmadan önce her zaman kullanılabilir."
+        },
+        "inventoryItems": {
+          "title": "Envanter ve stok",
+          "description": "Forma, top ve diğer kulüp malzemelerini başlangıç stoklarıyla birlikte sisteme ekleyin.",
+          "dependencies": "Spor branşı isteğe bağlıdır ama branş bazlı raporlamayı kolaylaştırır."
         }
       },
       "hints": {
         "dateFormat": "YYYY-AA-GG veya GG/AA/YYYY kabul edilir.",
         "sportBranch": "Branş adı veya kısa kodu kullanılabilir.",
+        "sportBranchOptional": "İsteğe bağlı. Ürün branşa özelse adını veya kısa kodunu yazın.",
+        "sportBranchCode": "Entegrasyonlar için kısa büyük harfli kod, ör. BASKETBALL.",
         "primaryGroup": "Grup, seçili spor branşında zaten bulunmalı.",
         "athleteStatus": "trial · active · paused · inactive · archived.",
         "relationshipType": "mother · father · guardian · other.",
-        "headCoach": "Mevcut bir antrenörü tam adıyla eşleyin. Bilinmeyen ad girilirse grup baş antrenörsüz oluşturulur."
+        "headCoach": "Mevcut bir antrenörü tam adıyla eşleyin. Bilinmeyen ad girilirse satır baş antrenörsüz oluşturulur.",
+        "teamGroup": "İsteğe bağlı. Aynı branştaki mevcut bir grupla bağlayın.",
+        "chargeCategory": "Kısa bir etiket, ör. aidat, kamp, turnuva, mağaza.",
+        "amount": "Ondalık sayı kullanın, ör. 750 veya 1250,50.",
+        "currency": "Üç harfli ISO para birimi kodu, ör. TRY, EUR, USD.",
+        "inventoryCategory": "apparel · balls · equipment · gear · other.",
+        "trackAssignment": "Belirli bir sporcuya verilen ürünler için evet (forma); ortak kullanılan stok için hayır (top, koni).",
+        "initialStock": "Şu an elinizdeki adet. Boş bırakılırsa 0 sayılır.",
+        "lowStockThreshold": "Mevcut stok bu sayıya düştüğünde sessizce uyarırız."
       },
       "historyTitle": "Son içe aktarımlar",
       "historyHint": "Bu tarayıcıdan onayladığınız içe aktarımların kısa, cihazda tutulan kaydı.",
@@ -2033,6 +2107,100 @@
         "guardians": "Mevcut velileri dışa aktar (CSV)",
         "training": "Yaklaşan antrenmanları dışa aktar (CSV)",
         "finance": "Vadesi geçen tahsilatları dışa aktar (CSV)"
+      }
+    },
+    "onboarding": {
+      "title": "Kulüp kuruluşu",
+      "subtitle": "Kulübünüzü platforma sakince taşımak için rehberli bir akış — kendi temponuzda, sürpriz olmadan.",
+      "openClassicImports": "Klasik içe aktarma görünümünü aç",
+      "loading": "Kulübünüzün şu anki durumu okunuyor…",
+      "loadFailed": "Kuruluş özeti yüklenemedi.",
+      "stepsTitle": "Adımlar",
+      "stepNumber": "Adım {{index}}",
+      "optional": "İsteğe bağlı",
+      "alreadyHave_one": "Bu bölümde zaten {{count}} kayıt var.",
+      "alreadyHave_other": "Bu bölümde zaten {{count}} kayıt var.",
+      "blocked": "Önce {{steps}} adımını bitirin; bu adımın referans alabileceği bir şey kalmaz.",
+      "greeting": "Hoş geldiniz, {{name}}.",
+      "progressLabel": "Kuruluş ilerlemesi",
+      "progressLine": "{{total}} zorunlu adımın {{done}} tanesi tamam.",
+      "progress": {
+        "fresh": "Yeni başlıyor",
+        "in_progress": "Devam ediyor",
+        "ready": "Yayına hazır"
+      },
+      "status": {
+        "not_started": "Başlamadı",
+        "in_progress": "Devam ediyor",
+        "completed": "Tamam",
+        "needs_attention": "İlgi bekliyor"
+      },
+      "steps": {
+        "club_basics": {
+          "title": "Kulüp temelleri",
+          "hint": "Kulübünüzün adı ve aile portalının görünümünü doğrulayın. Bunu istediğiniz zaman güncelleyebilirsiniz."
+        },
+        "sport_branches": {
+          "title": "Spor branşları",
+          "hint": "Kulübünüzün ilgilendiği spor dallarını yazın. Diğer her şey (antrenörler, gruplar, sporcular) bunlara bağlanır."
+        },
+        "coaches": {
+          "title": "Antrenörler",
+          "hint": "Antrenmanları yürüten kişileri ekleyin. Her antrenör tek bir spor branşına bağlıdır."
+        },
+        "groups": {
+          "title": "Gruplar",
+          "hint": "Antrenman kohortları (örn. U10 Basketbol). Sporcular bunlardan birine yerleşir."
+        },
+        "teams": {
+          "title": "Takımlar",
+          "hint": "İsteğe bağlı yarışma kadroları. Sadece antrenman yapan kulüpler atlayabilir."
+        },
+        "athletes": {
+          "title": "Sporcular",
+          "hint": "Sporcu listenizi taşıyın. Spor branşı zorunlu, grup tavsiye edilir."
+        },
+        "guardians": {
+          "title": "Veliler",
+          "hint": "Velilere ulaşabilmek için iletişim bilgilerini ekleyin."
+        },
+        "athlete_guardians": {
+          "title": "Sporcu ↔ veli bağları",
+          "hint": "Her sporcuyu bir veya daha fazla veliyle bağlayıp birincil iletişimi işaretleyin."
+        },
+        "charge_items": {
+          "title": "Finans başlangıcı",
+          "hint": "Ailelere kesilecek aidat, kamp ve mağaza kalemlerini tanımlayın."
+        },
+        "inventory_items": {
+          "title": "Envanter ve stok",
+          "hint": "Forma, top ve diğer kulüp malzemelerini başlangıç stoklarıyla birlikte sisteme ekleyin."
+        },
+        "go_live": {
+          "title": "Gözden geçir ve yayına al",
+          "hint": "Ailelere hazır olduğunuzu söylemeden önce kısa bir kontrol listesi."
+        }
+      },
+      "clubBasics": {
+        "title": "Kulüp kimliğinizi doğrulayın",
+        "hint": "Kulübünüzün adını ve aile portalının görünümünü ayarlayın. Her zaman güncelleyebilirsiniz.",
+        "bulletAccount": "Kulüp hesabınız aktif.",
+        "bulletBranding": "Aile portalı için kulüp adı, ana renk ve logo ekleyin.",
+        "openSettings": "Ayarları aç"
+      },
+      "goLive": {
+        "title": "Neredeyse hazırsınız",
+        "hint": "Bu kısa yollar, kulübünüzün gündelik kullanacağı sayfaları açar.",
+        "bulletReview": "Her bölümü bir kez gözden geçirip içe alınanın beklediğiniz gibi olduğunu doğrulayın.",
+        "bulletInvite": "Diğer ekip üyelerini davet edin; iş tek kişiye kalmasın.",
+        "bulletCommunicate": "Hazır olduğunuzda aile portalı bağlantısını topluluğunuzla paylaşın.",
+        "links": {
+          "dashboard": "Paneli aç",
+          "athletes": "Sporcuları aç",
+          "groups": "Grupları aç",
+          "finance": "Finansı aç",
+          "settings": "Ayarları aç"
+        }
       }
     }
   },

@@ -7,7 +7,12 @@ import { AthleteGuardian } from '../../database/entities/athlete-guardian.entity
 import { ClubGroup } from '../../database/entities/club-group.entity';
 import { SportBranch } from '../../database/entities/sport-branch.entity';
 import { Coach } from '../../database/entities/coach.entity';
-import { AthleteStatus } from '../../database/enums';
+import { Team } from '../../database/entities/team.entity';
+import { ChargeItem } from '../../database/entities/charge-item.entity';
+import { InventoryItem } from '../../database/entities/inventory-item.entity';
+import { InventoryVariant } from '../../database/entities/inventory-variant.entity';
+import { InventoryMovement } from '../../database/entities/inventory-movement.entity';
+import { AthleteStatus, InventoryCategory, InventoryMovementType } from '../../database/enums';
 import {
   IMPORT_DEFINITIONS,
   ImportEntityDefinition,
@@ -28,11 +33,13 @@ export interface ImportRowIssue {
 
 export type ImportRowOutcome = 'create' | 'update' | 'skip' | 'reject';
 
+export type ImportResolvedValue = string | boolean | number | null;
+
 export interface ImportRowReport {
   rowNumber: number;
   outcome: ImportRowOutcome;
   /** Resolved field values after mapping/parsing — never returned for `reject`. */
-  resolved: Record<string, string | boolean | null>;
+  resolved: Record<string, ImportResolvedValue>;
   /** Display label staff will recognise, e.g. "Defne Yıldız". */
   displayLabel: string;
   issues: ImportRowIssue[];
@@ -72,7 +79,7 @@ export interface ImportCommitReport {
 
 interface RowContext {
   rowNumber: number;
-  resolved: Record<string, string | boolean | null>;
+  resolved: Record<string, ImportResolvedValue>;
   issues: ImportRowIssue[];
 }
 
@@ -86,6 +93,10 @@ export class ImportsService {
     @InjectRepository(ClubGroup) private readonly groups: Repository<ClubGroup>,
     @InjectRepository(SportBranch) private readonly branches: Repository<SportBranch>,
     @InjectRepository(Coach) private readonly coaches: Repository<Coach>,
+    @InjectRepository(Team) private readonly teams: Repository<Team>,
+    @InjectRepository(ChargeItem) private readonly chargeItems: Repository<ChargeItem>,
+    @InjectRepository(InventoryItem)
+    private readonly inventoryItems: Repository<InventoryItem>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -125,36 +136,43 @@ export class ImportsService {
     let skipped = 0;
 
     await this.dataSource.transaction(async (manager) => {
+      let result: { created: number; updated: number; skipped: number };
       switch (dto.entity) {
-        case 'athletes': {
-          const result = await this.commitAthletes(manager, tenantId, dto, validation.rows);
-          created = result.created;
-          updated = result.updated;
-          skipped = result.skipped;
+        case 'sport_branches':
+          result = await this.commitSportBranches(manager, tenantId, validation.rows);
           break;
-        }
-        case 'guardians': {
-          const result = await this.commitGuardians(manager, tenantId, validation.rows);
-          created = result.created;
-          updated = result.updated;
-          skipped = result.skipped;
+        case 'coaches':
+          result = await this.commitCoaches(manager, tenantId, validation.rows);
           break;
-        }
-        case 'athlete_guardians': {
-          const result = await this.commitAthleteGuardians(manager, tenantId, validation.rows);
-          created = result.created;
-          updated = result.updated;
-          skipped = result.skipped;
+        case 'groups':
+          result = await this.commitGroups(manager, tenantId, validation.rows);
           break;
-        }
-        case 'groups': {
-          const result = await this.commitGroups(manager, tenantId, validation.rows);
-          created = result.created;
-          updated = result.updated;
-          skipped = result.skipped;
+        case 'teams':
+          result = await this.commitTeams(manager, tenantId, validation.rows);
           break;
+        case 'athletes':
+          result = await this.commitAthletes(manager, tenantId, dto, validation.rows);
+          break;
+        case 'guardians':
+          result = await this.commitGuardians(manager, tenantId, validation.rows);
+          break;
+        case 'athlete_guardians':
+          result = await this.commitAthleteGuardians(manager, tenantId, validation.rows);
+          break;
+        case 'charge_items':
+          result = await this.commitChargeItems(manager, tenantId, validation.rows);
+          break;
+        case 'inventory_items':
+          result = await this.commitInventoryItems(manager, tenantId, validation.rows);
+          break;
+        default: {
+          const _exhaustive: never = dto.entity;
+          throw new BadRequestException(`Unsupported import entity ${_exhaustive as string}.`);
         }
       }
+      created = result.created;
+      updated = result.updated;
+      skipped = result.skipped;
     });
 
     return {
@@ -297,7 +315,7 @@ export class ImportsService {
     field: ImportFieldDefinition,
     raw: string,
     ctx: RowContext,
-  ): string | boolean | null {
+  ): ImportResolvedValue {
     switch (field.type) {
       case 'string': {
         if (field.maxLength && raw.length > field.maxLength) {
@@ -384,6 +402,48 @@ export class ImportsService {
         });
         return false;
       }
+      case 'integer': {
+        const cleaned = raw.replace(/[\s_]/g, '');
+        const parsed = Number.parseInt(cleaned, 10);
+        if (!Number.isFinite(parsed) || String(parsed) !== cleaned.replace(/^\+/, '')) {
+          ctx.issues.push({
+            field: field.key,
+            severity: 'error',
+            message: `Value "${raw}" for "${field.key}" is not a whole number.`,
+          });
+          return null;
+        }
+        if (parsed < 0) {
+          ctx.issues.push({
+            field: field.key,
+            severity: 'error',
+            message: `Value for "${field.key}" must be zero or greater.`,
+          });
+          return null;
+        }
+        return parsed;
+      }
+      case 'decimal': {
+        const cleaned = raw.replace(/\s/g, '').replace(/,/g, '.');
+        const parsed = Number.parseFloat(cleaned);
+        if (!Number.isFinite(parsed)) {
+          ctx.issues.push({
+            field: field.key,
+            severity: 'error',
+            message: `Value "${raw}" for "${field.key}" is not a number.`,
+          });
+          return null;
+        }
+        if (parsed < 0) {
+          ctx.issues.push({
+            field: field.key,
+            severity: 'error',
+            message: `Amount for "${field.key}" must be zero or greater.`,
+          });
+          return null;
+        }
+        return Math.round(parsed * 100) / 100;
+      }
       default:
         return raw;
     }
@@ -397,15 +457,313 @@ export class ImportsService {
     ctx: RowContext,
   ): Promise<{ outcome: ImportRowOutcome; displayLabel: string }> {
     switch (dto.entity) {
+      case 'sport_branches':
+        return this.enrichSportBranch(tenantId, ctx);
+      case 'coaches':
+        return this.enrichCoach(tenantId, ctx);
+      case 'groups':
+        return this.enrichGroup(tenantId, ctx);
+      case 'teams':
+        return this.enrichTeam(tenantId, ctx);
       case 'athletes':
         return this.enrichAthlete(tenantId, dto, ctx);
       case 'guardians':
         return this.enrichGuardian(tenantId, ctx);
       case 'athlete_guardians':
         return this.enrichRelationship(tenantId, ctx);
-      case 'groups':
-        return this.enrichGroup(tenantId, ctx);
+      case 'charge_items':
+        return this.enrichChargeItem(tenantId, ctx);
+      case 'inventory_items':
+        return this.enrichInventoryItem(tenantId, ctx);
+      default: {
+        const _exhaustive: never = dto.entity;
+        throw new BadRequestException(`Unsupported import entity ${_exhaustive as string}.`);
+      }
     }
+  }
+
+  private async enrichSportBranch(
+    tenantId: string,
+    ctx: RowContext,
+  ): Promise<{ outcome: ImportRowOutcome; displayLabel: string }> {
+    const name = ((ctx.resolved.name as string | null) ?? '').trim();
+    const codeRaw = ((ctx.resolved.code as string | null) ?? '').trim();
+    const code = codeRaw.toUpperCase().replace(/\s+/g, '_');
+    ctx.resolved.code = code;
+    const displayLabel = name || code;
+
+    if (code && !/^[A-Z0-9_-]{2,48}$/.test(code)) {
+      ctx.issues.push({
+        field: 'code',
+        severity: 'error',
+        message: `Branch code "${codeRaw}" should be 2–48 characters, letters/numbers/underscores only.`,
+      });
+    }
+
+    if (name && code) {
+      const existing = await this.branches
+        .createQueryBuilder('b')
+        .where('b.tenantId = :tenantId', { tenantId })
+        .andWhere('(LOWER(b.name) = LOWER(:name) OR LOWER(b.code) = LOWER(:code))', { name, code })
+        .getOne();
+      if (existing) {
+        ctx.issues.push({
+          severity: 'info',
+          message: `Sport branch "${displayLabel}" already exists and will be skipped.`,
+        });
+        ctx.resolved.existingId = existing.id;
+        if (ctx.issues.some((issue) => issue.severity === 'error')) {
+          return { outcome: 'reject', displayLabel };
+        }
+        return { outcome: 'skip', displayLabel };
+      }
+    }
+
+    if (ctx.issues.some((issue) => issue.severity === 'error')) {
+      return { outcome: 'reject', displayLabel };
+    }
+    return { outcome: 'create', displayLabel };
+  }
+
+  private async enrichCoach(
+    tenantId: string,
+    ctx: RowContext,
+  ): Promise<{ outcome: ImportRowOutcome; displayLabel: string }> {
+    const firstName = ((ctx.resolved.firstName as string | null) ?? '').trim();
+    const lastName = ((ctx.resolved.lastName as string | null) ?? '').trim();
+    const branchValue = ((ctx.resolved.sportBranch as string | null) ?? '').trim();
+    const displayLabel = `${firstName} ${lastName}`.trim();
+
+    let branchId: string | null = null;
+    if (branchValue) {
+      const branches = await this.branches.find({ where: { tenantId } });
+      const branch = branches.find(
+        (entry) =>
+          entry.name.toLowerCase() === branchValue.toLowerCase() ||
+          entry.code.toLowerCase() === branchValue.toLowerCase(),
+      );
+      if (!branch) {
+        ctx.issues.push({
+          field: 'sportBranch',
+          severity: 'error',
+          message: `Sport branch "${branchValue}" was not found in this club. Import sport branches first.`,
+        });
+      } else {
+        branchId = branch.id;
+      }
+    }
+    ctx.resolved.sportBranchId = branchId;
+
+    if (firstName && lastName && branchId) {
+      const existing = await this.coaches
+        .createQueryBuilder('c')
+        .where('c.tenantId = :tenantId', { tenantId })
+        .andWhere('LOWER(c.firstName) = LOWER(:firstName)', { firstName })
+        .andWhere('LOWER(c.lastName) = LOWER(:lastName)', { lastName })
+        .getOne();
+      if (existing) {
+        ctx.issues.push({
+          severity: 'info',
+          message: `Coach "${displayLabel}" already exists and will be skipped.`,
+        });
+        ctx.resolved.existingId = existing.id;
+        if (ctx.issues.some((issue) => issue.severity === 'error')) {
+          return { outcome: 'reject', displayLabel };
+        }
+        return { outcome: 'skip', displayLabel };
+      }
+    }
+
+    if (ctx.issues.some((issue) => issue.severity === 'error')) {
+      return { outcome: 'reject', displayLabel };
+    }
+    return { outcome: 'create', displayLabel };
+  }
+
+  private async enrichTeam(
+    tenantId: string,
+    ctx: RowContext,
+  ): Promise<{ outcome: ImportRowOutcome; displayLabel: string }> {
+    const branchValue = ((ctx.resolved.sportBranch as string | null) ?? '').trim();
+    const branches = await this.branches.find({ where: { tenantId } });
+    let branchId: string | null = null;
+    if (branchValue) {
+      const branch = branches.find(
+        (entry) =>
+          entry.name.toLowerCase() === branchValue.toLowerCase() ||
+          entry.code.toLowerCase() === branchValue.toLowerCase(),
+      );
+      if (!branch) {
+        ctx.issues.push({
+          field: 'sportBranch',
+          severity: 'error',
+          message: `Sport branch "${branchValue}" was not found. Import sport branches first.`,
+        });
+      } else {
+        branchId = branch.id;
+      }
+    }
+    ctx.resolved.sportBranchId = branchId;
+
+    let groupId: string | null = null;
+    const groupValue = ((ctx.resolved.groupName as string | null) ?? '').trim();
+    if (groupValue && branchId) {
+      const group = await this.groups
+        .createQueryBuilder('g')
+        .where('g.tenantId = :tenantId', { tenantId })
+        .andWhere('g.sportBranchId = :branchId', { branchId })
+        .andWhere('LOWER(g.name) = LOWER(:name)', { name: groupValue })
+        .getOne();
+      if (!group) {
+        ctx.issues.push({
+          field: 'groupName',
+          severity: 'warning',
+          message: `Group "${groupValue}" was not found in the chosen sport branch — the team will be created without a group link.`,
+        });
+      } else {
+        groupId = group.id;
+      }
+    }
+    ctx.resolved.groupId = groupId;
+
+    let coachId: string | null = null;
+    const coachValue = ((ctx.resolved.headCoachName as string | null) ?? '').trim();
+    if (coachValue && branchId) {
+      const coachList = await this.coaches.find({ where: { tenantId } });
+      const coach = coachList.find((entry) => {
+        if (entry.sportBranchId !== branchId) return false;
+        const full = `${entry.firstName} ${entry.lastName}`.trim().toLowerCase();
+        const preferred = (entry.preferredName ?? '').trim().toLowerCase();
+        const value = coachValue.toLowerCase();
+        return full === value || (preferred && preferred === value);
+      });
+      if (!coach) {
+        ctx.issues.push({
+          field: 'headCoachName',
+          severity: 'warning',
+          message: `Coach "${coachValue}" was not found in this branch — the team will be created without a head coach.`,
+        });
+      } else {
+        coachId = coach.id;
+      }
+    }
+    ctx.resolved.headCoachId = coachId;
+
+    const name = ((ctx.resolved.name as string | null) ?? '').trim();
+    const displayLabel = name;
+
+    if (name && branchId) {
+      const existing = await this.teams
+        .createQueryBuilder('t')
+        .where('t.tenantId = :tenantId', { tenantId })
+        .andWhere('t.sportBranchId = :branchId', { branchId })
+        .andWhere('LOWER(t.name) = LOWER(:name)', { name })
+        .getOne();
+      if (existing) {
+        ctx.issues.push({
+          severity: 'info',
+          message: `Team "${displayLabel}" already exists in this branch and will be skipped.`,
+        });
+        ctx.resolved.existingId = existing.id;
+        if (ctx.issues.some((issue) => issue.severity === 'error')) {
+          return { outcome: 'reject', displayLabel };
+        }
+        return { outcome: 'skip', displayLabel };
+      }
+    }
+
+    if (ctx.issues.some((issue) => issue.severity === 'error')) {
+      return { outcome: 'reject', displayLabel };
+    }
+    return { outcome: 'create', displayLabel };
+  }
+
+  private async enrichChargeItem(
+    tenantId: string,
+    ctx: RowContext,
+  ): Promise<{ outcome: ImportRowOutcome; displayLabel: string }> {
+    const name = ((ctx.resolved.name as string | null) ?? '').trim();
+    const currencyValue = ((ctx.resolved.currency as string | null) ?? '').trim().toUpperCase();
+    ctx.resolved.currency = currencyValue;
+    const displayLabel = name;
+
+    if (name && currencyValue) {
+      const existing = await this.chargeItems
+        .createQueryBuilder('c')
+        .where('c.tenantId = :tenantId', { tenantId })
+        .andWhere('LOWER(c.name) = LOWER(:name)', { name })
+        .andWhere('UPPER(c.currency) = :currency', { currency: currencyValue })
+        .getOne();
+      if (existing) {
+        ctx.issues.push({
+          severity: 'info',
+          message: `Charge item "${displayLabel}" already exists and will be skipped.`,
+        });
+        ctx.resolved.existingId = existing.id;
+        if (ctx.issues.some((issue) => issue.severity === 'error')) {
+          return { outcome: 'reject', displayLabel };
+        }
+        return { outcome: 'skip', displayLabel };
+      }
+    }
+
+    if (ctx.issues.some((issue) => issue.severity === 'error')) {
+      return { outcome: 'reject', displayLabel };
+    }
+    return { outcome: 'create', displayLabel };
+  }
+
+  private async enrichInventoryItem(
+    tenantId: string,
+    ctx: RowContext,
+  ): Promise<{ outcome: ImportRowOutcome; displayLabel: string }> {
+    const name = ((ctx.resolved.name as string | null) ?? '').trim();
+    const branchValue = ((ctx.resolved.sportBranch as string | null) ?? '').trim();
+    const displayLabel = name;
+
+    let branchId: string | null = null;
+    if (branchValue) {
+      const branches = await this.branches.find({ where: { tenantId } });
+      const branch = branches.find(
+        (entry) =>
+          entry.name.toLowerCase() === branchValue.toLowerCase() ||
+          entry.code.toLowerCase() === branchValue.toLowerCase(),
+      );
+      if (!branch) {
+        ctx.issues.push({
+          field: 'sportBranch',
+          severity: 'warning',
+          message: `Sport branch "${branchValue}" was not found — the item will be created without a branch link.`,
+        });
+      } else {
+        branchId = branch.id;
+      }
+    }
+    ctx.resolved.sportBranchId = branchId;
+
+    if (name) {
+      const existing = await this.inventoryItems
+        .createQueryBuilder('i')
+        .where('i.tenantId = :tenantId', { tenantId })
+        .andWhere('LOWER(i.name) = LOWER(:name)', { name })
+        .getOne();
+      if (existing) {
+        ctx.issues.push({
+          severity: 'info',
+          message: `Inventory item "${displayLabel}" already exists and will be skipped.`,
+        });
+        ctx.resolved.existingId = existing.id;
+        if (ctx.issues.some((issue) => issue.severity === 'error')) {
+          return { outcome: 'reject', displayLabel };
+        }
+        return { outcome: 'skip', displayLabel };
+      }
+    }
+
+    if (ctx.issues.some((issue) => issue.severity === 'error')) {
+      return { outcome: 'reject', displayLabel };
+    }
+    return { outcome: 'create', displayLabel };
   }
 
   private async enrichAthlete(
@@ -788,6 +1146,215 @@ export class ImportsService {
     return { created, updated, skipped };
   }
 
+  private async commitSportBranches(
+    manager: import('typeorm').EntityManager,
+    tenantId: string,
+    rows: ImportRowReport[],
+  ): Promise<{ created: number; updated: number; skipped: number }> {
+    const repo = manager.getRepository(SportBranch);
+    let created = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      if (row.outcome === 'reject') continue;
+      if (row.outcome === 'skip') {
+        skipped += 1;
+        continue;
+      }
+      const name = ((row.resolved.name as string | null) ?? '').trim();
+      const code = ((row.resolved.code as string | null) ?? '').trim().toUpperCase();
+      if (!name || !code) {
+        skipped += 1;
+        continue;
+      }
+      await repo.save(repo.create({ tenantId, name, code }));
+      created += 1;
+    }
+    return { created, updated: 0, skipped };
+  }
+
+  private async commitCoaches(
+    manager: import('typeorm').EntityManager,
+    tenantId: string,
+    rows: ImportRowReport[],
+  ): Promise<{ created: number; updated: number; skipped: number }> {
+    const repo = manager.getRepository(Coach);
+    let created = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      if (row.outcome === 'reject') continue;
+      if (row.outcome === 'skip') {
+        skipped += 1;
+        continue;
+      }
+      const branchId = row.resolved.sportBranchId as string | null;
+      if (!branchId) {
+        skipped += 1;
+        continue;
+      }
+      await repo.save(
+        repo.create({
+          tenantId,
+          sportBranchId: branchId,
+          firstName: (row.resolved.firstName as string) ?? '',
+          lastName: (row.resolved.lastName as string) ?? '',
+          preferredName: (row.resolved.preferredName as string | null) ?? null,
+          phone: (row.resolved.phone as string | null) ?? null,
+          email: (row.resolved.email as string | null) ?? null,
+          specialties: (row.resolved.specialties as string | null) ?? null,
+          notes: (row.resolved.notes as string | null) ?? null,
+          isActive: true,
+        }),
+      );
+      created += 1;
+    }
+    return { created, updated: 0, skipped };
+  }
+
+  private async commitTeams(
+    manager: import('typeorm').EntityManager,
+    tenantId: string,
+    rows: ImportRowReport[],
+  ): Promise<{ created: number; updated: number; skipped: number }> {
+    const repo = manager.getRepository(Team);
+    let created = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      if (row.outcome === 'reject') continue;
+      if (row.outcome === 'skip') {
+        skipped += 1;
+        continue;
+      }
+      const branchId = row.resolved.sportBranchId as string | null;
+      const name = ((row.resolved.name as string | null) ?? '').trim();
+      if (!branchId || !name) {
+        skipped += 1;
+        continue;
+      }
+      await repo.save(
+        repo.create({
+          tenantId,
+          sportBranchId: branchId,
+          groupId: (row.resolved.groupId as string | null) ?? null,
+          name,
+          code: (row.resolved.code as string | null) ?? null,
+          headCoachId: (row.resolved.headCoachId as string | null) ?? null,
+        }),
+      );
+      created += 1;
+    }
+    return { created, updated: 0, skipped };
+  }
+
+  private async commitChargeItems(
+    manager: import('typeorm').EntityManager,
+    tenantId: string,
+    rows: ImportRowReport[],
+  ): Promise<{ created: number; updated: number; skipped: number }> {
+    const repo = manager.getRepository(ChargeItem);
+    let created = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      if (row.outcome === 'reject') continue;
+      if (row.outcome === 'skip') {
+        skipped += 1;
+        continue;
+      }
+      const name = ((row.resolved.name as string | null) ?? '').trim();
+      const category = ((row.resolved.category as string | null) ?? '').trim();
+      const amount = row.resolved.defaultAmount;
+      const currency = ((row.resolved.currency as string | null) ?? '').trim().toUpperCase();
+      if (!name || !category || amount === null || amount === undefined || !currency) {
+        skipped += 1;
+        continue;
+      }
+      await repo.save(
+        repo.create({
+          tenantId,
+          name,
+          category,
+          defaultAmount: Number(amount).toFixed(2),
+          currency,
+          isActive: true,
+        }),
+      );
+      created += 1;
+    }
+    return { created, updated: 0, skipped };
+  }
+
+  private async commitInventoryItems(
+    manager: import('typeorm').EntityManager,
+    tenantId: string,
+    rows: ImportRowReport[],
+  ): Promise<{ created: number; updated: number; skipped: number }> {
+    const itemRepo = manager.getRepository(InventoryItem);
+    const variantRepo = manager.getRepository(InventoryVariant);
+    const movementRepo = manager.getRepository(InventoryMovement);
+    let created = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      if (row.outcome === 'reject') continue;
+      if (row.outcome === 'skip') {
+        skipped += 1;
+        continue;
+      }
+      const name = ((row.resolved.name as string | null) ?? '').trim();
+      const categoryRaw = ((row.resolved.category as string | null) ?? '').toLowerCase();
+      if (!name || !categoryRaw) {
+        skipped += 1;
+        continue;
+      }
+      const category = (Object.values(InventoryCategory) as string[]).includes(categoryRaw)
+        ? (categoryRaw as InventoryCategory)
+        : InventoryCategory.OTHER;
+      const trackAssignment = Boolean(row.resolved.trackAssignment);
+      const initialStock = Math.max(Number(row.resolved.initialStock ?? 0) || 0, 0);
+      const lowStock = Math.max(Number(row.resolved.lowStockThreshold ?? 0) || 0, 0);
+      const item = await itemRepo.save(
+        itemRepo.create({
+          tenantId,
+          name,
+          category,
+          sportBranchId: (row.resolved.sportBranchId as string | null) ?? null,
+          hasVariants: false,
+          trackAssignment,
+          lowStockThreshold: lowStock,
+          description: (row.resolved.description as string | null) ?? null,
+          isActive: true,
+        }),
+      );
+      const variant = await variantRepo.save(
+        variantRepo.create({
+          tenantId,
+          inventoryItemId: item.id,
+          size: null,
+          number: null,
+          color: null,
+          isDefault: true,
+          stockOnHand: initialStock,
+          assignedCount: 0,
+          lowStockThreshold: null,
+          isActive: true,
+        }),
+      );
+      if (initialStock > 0) {
+        await movementRepo.save(
+          movementRepo.create({
+            tenantId,
+            inventoryItemId: item.id,
+            inventoryVariantId: variant.id,
+            type: InventoryMovementType.STOCK_ADDED,
+            quantity: initialStock,
+            athleteId: null,
+            note: 'Initial stock (onboarding import)',
+          }),
+        );
+      }
+      created += 1;
+    }
+    return { created, updated: 0, skipped };
+  }
+
   private async commitAthleteGuardians(
     manager: import('typeorm').EntityManager,
     tenantId: string,
@@ -896,6 +1463,10 @@ function invertMapping(
 function normaliseCell(raw: string | number | boolean | null | undefined): string | null {
   if (raw === null || raw === undefined) return null;
   if (typeof raw === 'boolean') return raw ? 'true' : 'false';
+  if (typeof raw === 'number') {
+    if (!Number.isFinite(raw)) return null;
+    return String(raw);
+  }
   const text = String(raw).trim();
   return text === '' ? null : text;
 }
@@ -928,15 +1499,20 @@ function parseDateLike(raw: string): string | null {
 
 function inferDisplayLabel(
   entity: ImportEntityKey,
-  resolved: Record<string, string | boolean | null>,
+  resolved: Record<string, ImportResolvedValue>,
 ): string {
   switch (entity) {
     case 'athletes':
     case 'guardians':
+    case 'coaches':
       return `${resolved.firstName ?? ''} ${resolved.lastName ?? ''}`.trim();
     case 'athlete_guardians':
       return `${resolved.athleteFirstName ?? ''} ${resolved.athleteLastName ?? ''} ↔ ${resolved.guardianFirstName ?? ''} ${resolved.guardianLastName ?? ''}`.trim();
+    case 'sport_branches':
     case 'groups':
+    case 'teams':
+    case 'charge_items':
+    case 'inventory_items':
       return ((resolved.name as string | null) ?? '').trim();
     default:
       return '';

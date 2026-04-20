@@ -1,18 +1,23 @@
 # Import / Export & Bulk Operations Foundation
 
-This page describes the first release of the import / export and bulk
-operations capability. The intent is operational: help clubs move existing
-data into the platform with confidence, pull practical lists back out, and act
-on many records at once without repeated clicking.
+This page describes the import / export and bulk operations capability.
+The intent is operational: help clubs move existing data into the platform
+with confidence, pull practical lists back out, and act on many records at
+once without repeated clicking.
 
 This is **not** an enterprise ETL or admin console. The goal is to feel
 significantly easier than spreadsheet chaos while staying warm and guided.
+
+> The classic per-entity surface lives at `/app/imports`. The newer
+> [Club Onboarding Wizard](./onboarding.md) at `/app/onboarding` wraps
+> the same column contracts in a guided, dependency-aware flow for clubs
+> that are bringing all of their data in for the first time.
 
 ## What ships today
 
 | Area | Shape |
 |------|-------|
-| **Import wizard** | Guided CSV import for **athletes, guardians, athlete↔guardian links and groups** with paste-or-upload, auto column mapping, preview, validation, and explicit commit. |
+| **Import wizard** | Guided CSV import for **sport branches, coaches, groups, teams, athletes, guardians, athlete↔guardian links, finance starter (charge items) and inventory & stock** with paste-or-upload, auto column mapping, preview, validation, and explicit commit. |
 | **Bulk selection** | One reusable `BulkActionBar` component shared across the athletes, guardians, inventory and **training sessions** surfaces. Patterns: select one, select visible, deselect visible, clear selection, visible selected count. On phones the bar also shows a calm sticky reach-friendly footer once a selection exists. |
 | **Bulk actions** | Athletes — bulk lifecycle update, export selection, **prepare message (deep-link into the communications hub)**. Guardians — bulk delete (linked guardians are protected) + export selection. Inventory — bulk return all active assignments on an item. Training sessions — bulk cancel / shift + export selection through the shared bar. |
 | **Practical exports** | "Export visible (CSV)" on athletes, guardians, inventory, **training sessions** and **athlete charges** list pages. The reporting engine still owns deep export from Report Builder. |
@@ -83,6 +88,73 @@ Existing links are updated in place; new links are created.
 Existing groups in the same sport branch (case-insensitive name match) are
 **skipped** so re-running the import is safe.
 
+### Sport branches (`sport_branches`)
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `name` | yes | Branch label as staff use it (e.g. `Basketball`). |
+| `code` | yes | Short uppercase code (`A-Z0-9_-`, 2–48 chars). Used by integrations and reporting. |
+
+Branches matched by name **or** code (case-insensitive) are **skipped**;
+this makes re-running the template safe.
+
+### Coaches (`coaches`)
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `firstName` / `lastName` | yes | |
+| `sportBranch` | yes | Branch name or short code; must already exist. |
+| `preferredName` | no | |
+| `phone` | no | Cleaned to digits + `+`. |
+| `email` | no | Lightly validated. |
+| `specialties` | no | Free-form, e.g. "Skill development". |
+| `notes` | no | |
+
+Existing coaches matched by full name are **skipped** to keep the import
+create-only.
+
+### Teams (`teams`)
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `name` | yes | |
+| `sportBranch` | yes | Branch name or short code; must already exist. |
+| `groupName` | no | If supplied, must already exist in the chosen branch — otherwise a warning is emitted and the team is created without a group link. |
+| `code` | no | Short club-specific identifier. |
+| `headCoachName` | no | Matched by full / preferred name within the same branch. Unknown names produce a warning. |
+
+Existing teams in the same branch (case-insensitive name match) are
+**skipped**.
+
+### Finance starter — charge items (`charge_items`)
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `name` | yes | |
+| `category` | yes | Free-form short label (`dues`, `camp`, `tournament`, `merchandise`, …). |
+| `defaultAmount` | yes | Decimal. Accepts `1250.50` or `1250,50`. |
+| `currency` | yes | One of `TRY`, `EUR`, `USD`, `GBP`. |
+
+Charge items matched by `name + currency` are **skipped**. The wizard does
+not auto-issue any charges from this template — it only seeds the catalogue
+clubs choose from when issuing charges later.
+
+### Inventory & stock (`inventory_items`)
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `name` | yes | |
+| `category` | yes | One of `apparel`, `balls`, `equipment`, `gear`, `other`. |
+| `sportBranch` | no | Optional branch link; unknown values produce a warning, not an error. |
+| `trackAssignment` | no | Boolean. `true` for items handed to a specific athlete (jerseys), `false` for pooled stock. |
+| `initialStock` | no | Whole number ≥ 0. |
+| `lowStockThreshold` | no | Whole number ≥ 0. |
+| `description` | no | |
+
+Inventory items matched by `name` are **skipped**. New rows create the
+catalogue entry, a single default variant (`isDefault=true`), and one
+`STOCK_ADDED` movement record when starting stock > 0.
+
 ## Wizard flow
 
 1. **Pick entity** — three calm cards.
@@ -149,6 +221,7 @@ for the current scope.
 | `GET` | `/api/imports/template?entity=<key>` | Returns the entity template as a CSV (UTF-8 BOM). |
 | `POST` | `/api/imports/preview` | Validates a payload and returns a per-row report. Does **not** mutate any data. |
 | `POST` | `/api/imports/commit` | Re-validates and, if safe, performs the import inside a single transaction. |
+| `GET` | `/api/onboarding/state` | Read-only view of per-step counts / statuses powering the [Club Onboarding Wizard](./onboarding.md). |
 | `POST` | `/api/guardians/bulk-delete` | Deletes guardians by id; linked guardians are protected. |
 | `POST` | `/api/inventory/assignments/bulk-return` | Returns the supplied active assignments to stock. |
 
@@ -168,7 +241,7 @@ per batch on purpose — clubs that need more split the file.
 
 ## Intentionally still deferred
 
-- Importing teams, training schedules, finance items.
+- Importing training schedules.
 - **Server-side** import history (re-run / undo) and per-staff import audit
   trail. The current history is on-device (per browser, per tenant) and capped
   to ten entries.
