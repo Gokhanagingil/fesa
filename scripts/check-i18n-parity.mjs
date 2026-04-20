@@ -176,6 +176,14 @@ const scopedPrefixes = [
   'portal.home.paymentStatusOpen',
   'portal.home.paymentOpenFooter',
   'portal.home.paymentAttentionFooter',
+  // FESA Stabilization & Productization Gate — calmer past-requests
+  // archive replaces the old "All requests" duplicate, plus explicit
+  // recovery / sign-in escapes from a dead activation card. Protect
+  // every parent-facing key set across both locales.
+  'portal.home.pastRequestsTitle',
+  'portal.home.pastRequestsHint',
+  'portal.activate.invalidRecoverLink',
+  'portal.activate.invalidLoginLink',
 ];
 
 function flattenKeys(input, prefix = '') {

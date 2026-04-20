@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { StatusBadge } from '../components/ui/StatusBadge';
@@ -16,7 +16,6 @@ import type { FamilyActionRequest, GuardianPortalActionSubmissionInput } from '.
 export function GuardianPortalActionPage() {
   const { t, i18n } = useTranslation();
   const { id } = useParams();
-  const navigate = useNavigate();
   const [action, setAction] = useState<FamilyActionRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -68,7 +67,24 @@ export function GuardianPortalActionPage() {
       };
       await apiPost(`/api/guardian-portal/actions/${id}/submit`, payload);
       setMessage(t('pages.guardianPortal.action.submitSuccess'));
-      setTimeout(() => navigate('/portal'), 700);
+      // After a successful submit we re-fetch the action so the visible
+      // status, history and read-only state all reflect what the parent
+      // just sent. Previously the page auto-redirected after 700ms which
+      // was both abrupt (success state was barely readable) and left
+      // the parent landing on a stale /portal home that had not refetched.
+      // Now the parent stays on the request, sees the confirmation, the
+      // updated status badge, and the new history row — and can use the
+      // explicit "Back to home" link when ready.
+      try {
+        const refreshed = await apiGet<FamilyActionRequest>(
+          `/api/guardian-portal/actions/${id}`,
+        );
+        setAction(refreshed);
+      } catch {
+        // Non-fatal: the submit succeeded; the local UI will catch up on
+        // the next visit. We deliberately do not surface this as an error
+        // because that would contradict the visible success message.
+      }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : t('app.errors.saveFailed'));
     } finally {

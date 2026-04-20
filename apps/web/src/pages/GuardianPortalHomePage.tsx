@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { apiGet } from '../lib/api';
 import type {
@@ -41,20 +41,32 @@ import { PortalBrandMark } from '../components/ui/PortalBrandMark';
 export function GuardianPortalHomePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { setBranding } = usePortalBranding();
   const [data, setData] = useState<GuardianPortalHome | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Counter that bumps whenever something external should cause a fresh
+  // load (e.g. window regains focus). Previously the home loaded once per
+  // mount, so a parent who returned from /portal/actions/:id after
+  // submitting could see a stale "1 pending" count and a stale
+  // continuity strip until they hard-refreshed. We keep the data source
+  // calm — no polling — but refetch on focus so the screen reflects the
+  // truth a parent actually expects.
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
       try {
         const next = await apiGet<GuardianPortalHome>('/api/guardian-portal/me');
+        if (cancelled) return;
         setData(next);
         if (next.branding) {
           setBranding(next.branding);
         }
       } catch (err) {
+        if (cancelled) return;
         const message = err instanceof Error ? err.message : t('app.errors.loadFailed');
         if (/session|credential|unauthorized/i.test(message)) {
           navigate('/portal/login', { replace: true });
@@ -62,10 +74,41 @@ export function GuardianPortalHomePage() {
         }
         setError(message);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [navigate, setBranding, t]);
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, setBranding, t, refreshTick]);
+
+  // Refresh the dashboard when the parent returns to the tab. We use
+  // visibilitychange (broadly supported on mobile browsers) and gate on
+  // having loaded once already so the first render is unaffected.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') {
+        setRefreshTick((tick) => tick + 1);
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+  // Honor a #family / #updates / #payment / #continuity / #this-week
+  // hash on landing (e.g. from the mobile bottom-nav shortcut on a
+  // non-home route). We wait for data so the section actually exists.
+  useEffect(() => {
+    if (loading || !data) return;
+    const hash = location.hash.replace(/^#/, '');
+    if (!hash) return;
+    const target = document.getElementById(hash);
+    if (!target) return;
+    const id = window.setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => window.clearTimeout(id);
+  }, [loading, data, location.hash]);
 
   const pendingActions = useMemo(
     () =>
@@ -415,39 +458,49 @@ export function GuardianPortalHomePage() {
         )}
       </section>
 
-      {data.actions.length > 0 ? (
-        <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
-          <h2 className="font-display text-base font-semibold text-amateur-ink">
-            {t('portal.home.allRequestsTitle')}
-          </h2>
-          <p className="mt-1 text-sm text-amateur-muted">{t('portal.home.allRequestsHint')}</p>
-          <ul className="mt-3 space-y-2">
-            {data.actions.map((action) => (
-              <li key={action.id}>
-                <Link
-                  to={`/portal/actions/${action.id}`}
-                  className="flex items-start justify-between gap-3 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 transition-colors hover:bg-amateur-surface"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-amateur-ink">{action.title}</p>
-                    <p className="mt-1 text-xs text-amateur-muted">
-                      {[action.athleteName, getFamilyActionStatusLabel(t, action.status)]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      {/* Past requests archive.
+          Previously this section listed every action including the same
+          pending items already shown in "What needs your attention",
+          which made the page feel like the same CTA had been repeated.
+          We now show only resolved / closed / submitted history so the
+          attention surface stays the single source of "do this now"
+          and the archive becomes calm context. */}
+      {(() => {
+        const archive = data.actions.filter(
+          (action) =>
+            !['open', 'pending_family_action', 'rejected'].includes(action.status),
+        );
+        if (archive.length === 0) return null;
+        return (
+          <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+            <h2 className="font-display text-base font-semibold text-amateur-ink">
+              {t('portal.home.pastRequestsTitle')}
+            </h2>
+            <p className="mt-1 text-sm text-amateur-muted">{t('portal.home.pastRequestsHint')}</p>
+            <ul className="mt-3 space-y-2">
+              {archive.map((action) => (
+                <li key={action.id}>
+                  <Link
+                    to={`/portal/actions/${action.id}`}
+                    className="flex items-start justify-between gap-3 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3 transition-colors hover:bg-amateur-surface"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-amateur-ink">{action.title}</p>
+                      <p className="mt-1 text-xs text-amateur-muted">
+                        {[action.athleteName, getFamilyActionStatusLabel(t, action.status)]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })()}
 
-      <ClubUpdatesStrip
-        updates={data.clubUpdates ?? []}
-        fallbackTitle={branding?.welcomeTitle ?? null}
-        fallbackBody={branding?.welcomeMessage ?? null}
-      />
+      <ClubUpdatesStrip updates={data.clubUpdates ?? []} />
     </div>
   );
 }
@@ -620,25 +673,24 @@ function pickEssentialsForRender(
  */
 function ClubUpdatesStrip({
   updates,
-  fallbackTitle,
-  fallbackBody,
 }: {
   updates: ClubUpdateParentSummary[];
-  fallbackTitle: string | null;
-  fallbackBody: string | null;
 }) {
   const { t, i18n } = useTranslation();
 
+  // When the club has not published any updates we render a single calm
+  // placeholder line. We deliberately do NOT echo the branding welcome
+  // here: the hero at the top of the page already shows that copy and
+  // repeating it inside an "Updates from the club" surface made the
+  // page feel like the same message had been pasted twice.
   if (updates.length === 0) {
     return (
       <section
         id="updates"
         className="rounded-3xl border border-dashed border-amateur-border bg-amateur-surface/60 p-5 text-sm text-amateur-muted scroll-mt-24"
       >
-        <p className="font-medium text-amateur-ink">
-          {fallbackTitle ?? t('portal.home.updatesTitle')}
-        </p>
-        <p className="mt-1">{fallbackBody ?? t('portal.home.updatesPlaceholder')}</p>
+        <p className="font-medium text-amateur-ink">{t('portal.home.updatesTitle')}</p>
+        <p className="mt-1">{t('portal.home.updatesPlaceholder')}</p>
       </section>
     );
   }

@@ -380,9 +380,19 @@ function ActionCenterRow({ item, selected, onToggleSelected, onRefresh }: Action
   const { t, i18n } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
+  // Per-row error surfacing. Previously row-level mutations swallowed
+  // failures inside `try { ... } finally { setSaving(false); }`, so when
+  // an action like Resolve / Snooze / Dismiss / Mark read failed against
+  // the API (network, validation, lost session), the row reverted to the
+  // idle state and silently looked successful until the next manual
+  // refresh. That eroded trust in the work queue. We now keep the
+  // failure visible at the row until the user retries or the next
+  // refresh succeeds.
+  const [rowError, setRowError] = useState<string | null>(null);
 
   async function mutate(action: ActionCenterItemMutation, snoozedUntil?: string) {
     setSaving(true);
+    setRowError(null);
     try {
       await apiPatch('/api/action-center/items', {
         itemKeys: [item.itemKey],
@@ -390,6 +400,8 @@ function ActionCenterRow({ item, selected, onToggleSelected, onRefresh }: Action
         snoozedUntil,
       });
       await onRefresh();
+    } catch (err) {
+      setRowError(err instanceof Error ? err.message : t('app.errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -479,6 +491,11 @@ function ActionCenterRow({ item, selected, onToggleSelected, onRefresh }: Action
                 {getActionCenterMutationLabel(t, 'dismiss')}
               </Button>
             </div>
+          ) : null}
+          {rowError ? (
+            <InlineAlert tone="error" className="mt-3">
+              {rowError}
+            </InlineAlert>
           ) : null}
         </div>
       </div>
