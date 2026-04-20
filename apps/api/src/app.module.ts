@@ -26,6 +26,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { ImportsModule } from './modules/imports/imports.module';
 import { MediaModule } from './modules/media/media.module';
+import { ClubUpdateModule } from './modules/club-update/club-update.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { MediaModule } from './modules/media/media.module';
     GuardianPortalModule,
     InventoryModule,
     ImportsModule,
+    ClubUpdateModule,
   ],
 })
 export class AppModule {}

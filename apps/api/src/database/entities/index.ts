@@ -32,6 +32,7 @@ import { InventoryItem } from './inventory-item.entity';
 import { InventoryVariant } from './inventory-variant.entity';
 import { InventoryAssignment } from './inventory-assignment.entity';
 import { InventoryMovement } from './inventory-movement.entity';
+import { ClubUpdate } from './club-update.entity';
 
 export const domainEntities = [
   Tenant,
@@ -68,6 +69,7 @@ export const domainEntities = [
   InventoryVariant,
   InventoryAssignment,
   InventoryMovement,
+  ClubUpdate,
 ];
 
 export {
@@ -105,4 +107,5 @@ export {
   InventoryVariant,
   InventoryAssignment,
   InventoryMovement,
+  ClubUpdate,
 };

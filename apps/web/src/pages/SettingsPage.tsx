@@ -6,6 +6,7 @@ import { StatCard } from '../components/ui/StatCard';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { Button } from '../components/ui/Button';
 import { CommunicationDeliveryReadinessPanel } from '../components/communication/CommunicationDeliveryReadinessPanel';
+import { BrandAdminPanel } from '../components/branding/BrandAdminPanel';
 import { useAuth } from '../lib/auth-context';
 import { apiGet } from '../lib/api';
 import { useTenant } from '../lib/tenant-hooks';
@@ -364,6 +365,8 @@ export function SettingsPage() {
             </div>
           </section>
         ) : null}
+
+        <BrandAdminPanel tenantId={tenantId} />
 
         <CommunicationDeliveryReadinessPanel tenantId={tenantId} languageTag={i18n.language} />
 

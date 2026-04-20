@@ -18,6 +18,7 @@
       "reports": "Reports",
       "reportBuilder": "Report builder",
       "imports": "Import / Export",
+      "clubUpdates": "Club updates",
       "settings": "Settings"
     },
     "actions": {
@@ -1735,6 +1736,99 @@
       "openPlatformHome": "Open platform dashboard",
       "openClubHome": "Open club dashboard"
     },
+    "brandAdmin": {
+      "title": "Club branding",
+      "subtitle": "Tune how your club appears in the family portal. We keep layout, fonts, and accessibility shared across the product so families always feel at home.",
+      "noTenant": "Pick a club from the header to manage its branding.",
+      "savedJustNow": "Saved",
+      "saving": "Saving…",
+      "save": "Save branding",
+      "guardrailNote": "Layout, fonts, and accessibility stay shared across all clubs.",
+      "identityTitle": "Club identity",
+      "identityHint": "How your club is named in the portal header and welcome card.",
+      "displayName": "Display name",
+      "displayNameHint": "Shown next to your logo. Falls back to your club name.",
+      "tagline": "Short tagline",
+      "taglinePlaceholder": "A few warm words about your club",
+      "taglineHint": "Optional. One line. Keep it calm — this sits under your club name.",
+      "colorsTitle": "Colour pair",
+      "colorsHint": "Two brand colours drive the brand mark, soft washes, and the welcome card. Pick colours that already feel like your club.",
+      "primary": "Primary colour",
+      "accent": "Accent colour",
+      "contrastWarning": "May be hard to read",
+      "contrastHelp": "We pick the readable text colour automatically — but a warmer or darker shade often feels more confident in the portal.",
+      "logoTitle": "Logo",
+      "logoHint": "Upload a small square or wordmark, or point at one you already host. Both options stay safely served behind your club.",
+      "logoUpload": "Upload logo",
+      "logoReplace": "Replace logo",
+      "logoRemove": "Remove uploaded logo",
+      "logoUploading": "Uploading…",
+      "logoConstraints": "PNG, JPG, or WEBP up to 1 MB. Square or near-square images render best.",
+      "externalLogo": "Or use a hosted logo URL",
+      "externalLogoHint": "Use https:// or a path beginning with /. The uploaded logo (if any) takes precedence.",
+      "welcomeTitle": "Welcome message",
+      "welcomeHint": "A short, warm note for parents. Optional — leave blank for the calm default.",
+      "welcomeHeadline": "Headline",
+      "welcomeHeadlinePlaceholder": "Welcome, ___ family",
+      "welcomeMessage": "Message",
+      "welcomeMessagePlaceholder": "What you'd like every family to feel when they open the portal.",
+      "previewTitle": "What parents will see",
+      "previewHint": "Updates as you type. Layout and accessibility stay the same across all clubs.",
+      "previewBadge": "Family portal",
+      "previewWelcomeFallback": "Welcome to your family space",
+      "previewMessageFallback": "Here is what your club is sharing with your family today.",
+      "previewPill": "Calm",
+      "previewPillSecondary": "Branded"
+    },
+    "clubUpdates": {
+      "title": "Club updates",
+      "subtitle": "Short, calm notes that appear in the family portal. Use this for the small handful of things that really help families this week.",
+      "newCta": "New update",
+      "empty": "No updates yet. The first one you publish will appear quietly on the family portal home.",
+      "savedJustNow": "Saved",
+      "publishedOn": "Published {{when}}",
+      "expiresOn": "expires {{when}}",
+      "notPublished": "Not published yet",
+      "pinned": "Pinned",
+      "expired": "Expired",
+      "confirmDelete": "Delete this update? Families will no longer see it.",
+      "formNewTitle": "New club update",
+      "formEditTitle": "Edit club update",
+      "formGuardrail": "Plain text only. Keep it short — families will see the first card on their phone.",
+      "fields": {
+        "category": "Type",
+        "status": "Visibility",
+        "title": "Title",
+        "titlePlaceholder": "Short, scannable title",
+        "body": "Body",
+        "bodyPlaceholder": "One short paragraph. What does the family need to know?",
+        "linkLabel": "Link label",
+        "linkLabelPlaceholder": "Optional · what the link is",
+        "linkUrl": "Link URL",
+        "pinnedUntil": "Pin to top until",
+        "expiresAt": "Hide after"
+      },
+      "category": {
+        "announcement": "Announcement",
+        "event": "Event",
+        "reminder": "Reminder"
+      },
+      "status": {
+        "draft": "Draft",
+        "published": "Published",
+        "archived": "Archived"
+      },
+      "actions": {
+        "edit": "Edit",
+        "publish": "Publish",
+        "archive": "Archive",
+        "delete": "Delete",
+        "save": "Save",
+        "create": "Create update",
+        "cancel": "Cancel",
+        "saving": "Saving…"
+      }
+    },
     "staffLogin": {
       "badge": "Staff access",
       "title": "Sign in to Amateur",
@@ -2005,7 +2099,16 @@
       "allRequestsTitle": "All requests",
       "allRequestsHint": "Everything the club has shared with your family, in one place.",
       "updatesTitle": "From the club",
-      "updatesPlaceholder": "When your club posts a new announcement, it will appear quietly right here."
+      "updatesPlaceholder": "When your club posts a new announcement, it will appear quietly right here.",
+      "clubUpdatesTitle": "From the club",
+      "clubUpdatesHint": "Short, calm notes from your club",
+      "clubUpdatePinned": "Pinned",
+      "clubUpdateOpenLink": "Open link",
+      "clubUpdateCategory": {
+        "announcement": "Note",
+        "event": "Event",
+        "reminder": "Reminder"
+      }
     }
   }
 }

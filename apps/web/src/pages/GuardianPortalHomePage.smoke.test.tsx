@@ -77,6 +77,7 @@ function makeHome(overrides: Partial<GuardianPortalHome> = {}): GuardianPortalHo
       training: [],
       privateLessons: [],
     },
+    clubUpdates: [],
     ...overrides,
   };
 }
@@ -154,5 +155,32 @@ describe('GuardianPortalHomePage', () => {
     );
     expect(screen.getAllByText('Confirm your phone number').length).toBeGreaterThan(0);
     expect(screen.getByText(/has an open balance/)).toBeInTheDocument();
+  });
+
+  it('renders the calm club updates strip when the club has published updates', async () => {
+    mockApiGet.mockResolvedValueOnce(
+      makeHome({
+        clubUpdates: [
+          {
+            id: 'cu-1',
+            category: 'event',
+            title: 'Spring camp registration is open',
+            body: 'A short, calm note from the club.',
+            linkUrl: 'https://club.example/spring',
+            linkLabel: 'See the program',
+            publishedAt: '2026-04-12T08:00:00.000Z',
+            pinned: true,
+          },
+        ],
+      }),
+    );
+
+    renderWithRoute(<GuardianPortalHomePage />, { path: '/portal' });
+
+    await waitFor(() =>
+      expect(screen.getByText('Spring camp registration is open')).toBeInTheDocument(),
+    );
+    expect(screen.getByText('A short, calm note from the club.')).toBeInTheDocument();
+    expect(screen.getByText('See the program')).toBeInTheDocument();
   });
 });

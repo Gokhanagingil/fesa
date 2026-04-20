@@ -22,6 +22,7 @@ import { FamilyActionService } from '../family-action/family-action.service';
 import { FinanceService } from '../finance/finance.service';
 import { TenantService } from '../tenant/tenant.service';
 import { TenantBrandingService } from '../tenant/tenant-branding.service';
+import { ClubUpdateService } from '../club-update/club-update.service';
 import { GUARDIAN_PORTAL_SESSION_COOKIE } from './guardian-portal.constants';
 
 type AccessStatus = GuardianPortalAccess['status'];
@@ -77,6 +78,7 @@ export class GuardianPortalService {
     private readonly finance: FinanceService,
     private readonly tenants: TenantService,
     private readonly branding: TenantBrandingService,
+    private readonly clubUpdates: ClubUpdateService,
     private readonly config: ConfigService,
   ) {}
 
@@ -552,7 +554,10 @@ export class GuardianPortalService {
         }))[0] ?? null,
     }));
 
-    const brand = await this.branding.getForTenant(tenantId);
+    const [brand, clubUpdates] = await Promise.all([
+      this.branding.getForTenant(tenantId),
+      this.clubUpdates.listForParents(tenantId),
+    ]);
 
     const todayBoundary = new Date();
     todayBoundary.setHours(23, 59, 59, 999);
@@ -607,6 +612,7 @@ export class GuardianPortalService {
         training: todayTraining,
         privateLessons: todayLessons,
       },
+      clubUpdates,
     };
   }
 
