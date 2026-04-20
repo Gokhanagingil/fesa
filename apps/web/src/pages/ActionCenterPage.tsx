@@ -416,55 +416,75 @@ function ActionCenterRow({ item, selected, onToggleSelected, onRefresh }: Action
   return (
     <article className="rounded-2xl border border-amateur-border bg-amateur-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-start gap-3">
-        <input type="checkbox" checked={selected} onChange={onToggleSelected} className="mt-1" />
+        <input type="checkbox" checked={selected} onChange={onToggleSelected} className="mt-1 h-5 w-5" aria-label={t('pages.actionCenter.selectItemAria')} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge tone={getActionCenterUrgencyTone(item.urgency)}>
-                  {getActionCenterUrgencyLabel(t, item.urgency)}
-                </StatusBadge>
-                <StatusBadge tone={item.read ? 'default' : 'warning'}>
-                  {item.read ? t('pages.actionCenter.readState') : t('pages.actionCenter.unreadState')}
-                </StatusBadge>
-                <StatusBadge tone="default">{getActionCenterCategoryLabel(t, item.category)}</StatusBadge>
-              </div>
-              <h3 className="mt-3 font-display text-lg font-semibold text-amateur-ink">
-                {getActionCenterItemTitle(t, item)}
-              </h3>
-              <p className="mt-1 text-sm text-amateur-muted">
-                {[getActionCenterTypeLabel(t, item.type), item.relatedName].filter(Boolean).join(' · ')}
-              </p>
-              <p className="mt-2 text-sm text-amateur-ink">
-                {getActionCenterItemSummary(t, item)}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-4 text-xs text-amateur-muted">
-                {item.dueAt ? (
-                  <span>{t('pages.actionCenter.dueAt')}: {formatDateTime(item.dueAt, i18n.language)}</span>
-                ) : null}
-                {item.amount ? (
-                  <span>{t('pages.actionCenter.amount')}: {item.currency ? `${item.currency} ` : ''}{item.amount}</span>
-                ) : null}
-                <span>{t('pages.actionCenter.issueCount')}: {item.count}</span>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Link to={item.deepLink}>
-                <Button variant="ghost">{t('pages.actionCenter.openItem')}</Button>
-              </Link>
-            </div>
+          {/* Header: badges + title block. Previously the "Open item"
+              button hung off the top-right which on mobile collapsed
+              into a separate squashed line. We now keep the entire
+              header content as a single flowing block; the row's main
+              actions (Resolve / Open / More) live in a dedicated
+              action row below where the primary action is full-width
+              on mobile and inline on tablet+. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge tone={getActionCenterUrgencyTone(item.urgency)}>
+              {getActionCenterUrgencyLabel(t, item.urgency)}
+            </StatusBadge>
+            {!item.read ? (
+              <StatusBadge tone="warning">{t('pages.actionCenter.unreadState')}</StatusBadge>
+            ) : null}
+            <StatusBadge tone="default">{getActionCenterCategoryLabel(t, item.category)}</StatusBadge>
+          </div>
+          <h3 className="mt-3 font-display text-lg font-semibold text-amateur-ink">
+            {getActionCenterItemTitle(t, item)}
+          </h3>
+          <p className="mt-1 text-sm text-amateur-muted">
+            {[getActionCenterTypeLabel(t, item.type), item.relatedName].filter(Boolean).join(' · ')}
+          </p>
+          <p className="mt-2 text-sm text-amateur-ink">
+            {getActionCenterItemSummary(t, item)}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-amateur-muted">
+            {item.dueAt ? (
+              <span>{t('pages.actionCenter.dueAt')}: {formatDateTime(item.dueAt, i18n.language)}</span>
+            ) : null}
+            {item.amount ? (
+              <span>{t('pages.actionCenter.amount')}: {item.currency ? `${item.currency} ` : ''}{item.amount}</span>
+            ) : null}
+            <span>{t('pages.actionCenter.issueCount')}: {item.count}</span>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Button type="button" onClick={() => void mutate('complete')} disabled={saving}>
+          {/* Primary action row. On mobile the Resolve button is
+              full-width so it's the obvious thumb target; on sm+
+              everything sits inline. The "Open item" deep-link is
+              kept as a calmer secondary action so the row has one
+              clear primary CTA. */}
+          <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+            <Button
+              type="button"
+              onClick={() => void mutate('complete')}
+              disabled={saving}
+              className="w-full justify-center sm:w-auto"
+            >
               {getActionCenterMutationLabel(t, 'complete')}
             </Button>
+            <Link to={item.deepLink} className="w-full sm:w-auto">
+              <Button variant="ghost" className="w-full justify-center sm:w-auto">
+                {t('pages.actionCenter.openItem')}
+              </Button>
+            </Link>
             {item.communicationLink ? (
-              <Link to={item.communicationLink}>
-                <Button variant="ghost">{t('pages.actionCenter.openCommunication')}</Button>
+              <Link to={item.communicationLink} className="w-full sm:w-auto">
+                <Button variant="ghost" className="w-full justify-center sm:w-auto">
+                  {t('pages.actionCenter.openCommunication')}
+                </Button>
               </Link>
             ) : null}
-            <Button type="button" variant="ghost" onClick={() => setShowMoreActions((value) => !value)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setShowMoreActions((value) => !value)}
+              className="w-full justify-center sm:w-auto"
+            >
               {showMoreActions ? t('app.actions.hide') : t('app.actions.more')}
             </Button>
           </div>

@@ -1590,6 +1590,7 @@
       "issueCount": "Signals",
       "openItem": "Open item",
       "openCommunication": "Open communications",
+      "selectItemAria": "Select this work-queue item",
       "itemTitle": "{{type}} · {{subject}}",
       "categories": {
         "finance": "Finance",

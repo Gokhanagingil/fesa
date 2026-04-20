@@ -991,7 +991,7 @@ function BatchDrawer({ batchId, onClose }: { batchId: string; onClose: () => voi
       })
       .catch((e) => {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : 'Failed to load batch');
+        setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
       })
       .finally(() => {
         if (cancelled) return;
@@ -1000,7 +1000,7 @@ function BatchDrawer({ batchId, onClose }: { batchId: string; onClose: () => voi
     return () => {
       cancelled = true;
     };
-  }, [batchId]);
+  }, [batchId, t]);
 
   return (
     <div
@@ -1135,7 +1135,7 @@ function StepHistoryDrawer({
       })
       .catch((e) => {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : 'Failed to load step history');
+        setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
       })
       .finally(() => {
         if (cancelled) return;
@@ -1144,7 +1144,7 @@ function StepHistoryDrawer({
     return () => {
       cancelled = true;
     };
-  }, [stepKey]);
+  }, [stepKey, t]);
 
   return (
     <div

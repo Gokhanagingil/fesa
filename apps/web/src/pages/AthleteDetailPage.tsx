@@ -1127,7 +1127,9 @@ export function AthleteDetailPage() {
           </Link>
         </div>
         {inventoryAssignments.length === 0 ? (
-          <p className="mt-3 text-sm text-amateur-muted">{t('pages.athletes.inventoryEmpty')}</p>
+          <div className="mt-3 rounded-xl border border-dashed border-amateur-border bg-amateur-canvas/60 px-4 py-4 text-sm text-amateur-muted">
+            {t('pages.athletes.inventoryEmpty')}
+          </div>
         ) : (
           <ul className="mt-3 space-y-2">
             {inventoryAssignments.map((assignment) => (

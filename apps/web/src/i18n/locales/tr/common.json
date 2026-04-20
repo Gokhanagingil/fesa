@@ -1563,6 +1563,7 @@
       "issueCount": "Kayıt sayısı",
       "openItem": "Kaydı aç",
       "openCommunication": "İletişim hazırlığı",
+      "selectItemAria": "Bu iş kuyruğu kaydını seç",
       "itemTitle": "{{type}} · {{subject}}",
       "categories": {
         "finance": "Finans",
