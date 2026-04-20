@@ -88,6 +88,9 @@ jobs:
       - name: Stabilization & productization gate validator smoke
         run: npm run stabilization:gate:test
 
+      - name: Finance clarity pack validator smoke
+        run: npm run finance:clarity:test
+
       - name: Migration readiness (disposable PostgreSQL)
         run: npm run migration:run -w @amateur/api
 
