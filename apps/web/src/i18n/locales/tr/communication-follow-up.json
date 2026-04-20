@@ -72,6 +72,12 @@
           "subject": "Kulüpten kısa bir takip mesajı",
           "body": "Merhaba,\n\n{{athleteName}} ile ilgili kulüp operasyonumuzdan kısa bir bilgilendirme paylaşmak istiyoruz.\n\nYardımcı olabileceğimiz bir konu olursa istediğiniz zaman WhatsApp üzerinden yazabilirsiniz.",
           "hint": "Diğer şablonlar uymadığında kullanılan varsayılan başlangıç noktası."
+        },
+        "activationReminder": {
+          "title": "Aile portalı aktivasyon hatırlatması",
+          "subject": "Aile portalı bağlantınız hazır",
+          "body": "Merhaba,\n\n{{athleteName}} ile ilgili kulüp programını ve duyurularımızı aile portalınızda görebilmeniz için tek seferlik bir aktivasyon bağlantısı gönderdik.\n\nBağlantıyı bulamıyorsanız bu mesaja yanıt verin, size yeni bir bağlantı gönderelim — acelesi yok.",
+          "hint": "Henüz portala adım atmamış ailelere sakin bir hatırlatma."
         }
       },
       "audience": {

@@ -52,6 +52,21 @@ export class GuardianPortalController {
     return this.portal.listAccessSummary(req.tenantId!);
   }
 
+  /**
+   * Family Activation & Landing Pack v1 — calm staff overview.
+   *
+   * Buckets each guardian into "where do they stand right now?" so club
+   * staff have a single, scannable view of the families they should
+   * gently follow up with. The endpoint never lists more than 25 names
+   * per bucket and never exposes any operational data the staff doesn't
+   * already see on the existing access summary surface.
+   */
+  @Get('staff/activation-overview')
+  @UseGuards(TenantGuard)
+  activationOverview(@Req() req: Request) {
+    return this.portal.getActivationOverview(req.tenantId!);
+  }
+
   @Get('staff/guardians/:guardianId/access')
   @UseGuards(TenantGuard)
   guardianAccess(@Req() req: Request, @Param('guardianId') guardianId: string) {

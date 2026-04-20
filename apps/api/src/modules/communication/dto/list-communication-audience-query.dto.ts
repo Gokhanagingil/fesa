@@ -91,4 +91,24 @@ export class ListCommunicationAudienceQueryDto {
   @Type(() => Boolean)
   @IsBoolean()
   portalPendingOnly?: boolean;
+
+  /**
+   * Family Activation & Landing Pack v1 — audience slices for activation
+   * follow-up.  These are intentionally narrow:
+   *   - `portalNotActivatedOnly` keeps the families that have either no
+   *     access row or an open invite (status `invited`) so staff can
+   *     prepare a calm "your activation link is ready" reminder.
+   *   - `portalRecoveryOnly` keeps the families that recently used the
+   *     public "I lost access" form, so staff can prepare a fresh invite
+   *     before contacting them.
+   */
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  portalNotActivatedOnly?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  portalRecoveryOnly?: boolean;
 }

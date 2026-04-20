@@ -37,6 +37,53 @@ type SessionContext = {
   sessionId: string;
 };
 
+type ActivationOverviewItem = {
+  guardianId: string;
+  guardianName: string;
+  email: string | null;
+  linkedAthletes: number;
+  inviteAgeDays: number | null;
+  lastSeenAgeDays: number | null;
+  status: AccessStatus | null;
+  recoveryRequestedAt?: Date | null;
+  recoveryRequestCount?: number;
+};
+
+type ActivationOverviewBucket = {
+  count: number;
+  items: ActivationOverviewItem[];
+};
+
+type ActivationOverview = {
+  tenantId: string;
+  generatedAt: Date;
+  thresholds: {
+    dormantAfterDays: number;
+    staleInviteAfterDays: number;
+  };
+  totals: {
+    guardians: number;
+    guardiansWithAccess: number;
+    notInvited: number;
+    invited: number;
+    active: number;
+    dormant: number;
+    recovery: number;
+    disabled: number;
+    recentlyActivated: number;
+    staleInvites: number;
+    activationRatePercent: number;
+  };
+  buckets: {
+    notInvited: ActivationOverviewBucket;
+    invited: ActivationOverviewBucket;
+    active: ActivationOverviewBucket;
+    dormant: ActivationOverviewBucket;
+    recovery: ActivationOverviewBucket;
+    disabled: ActivationOverviewBucket;
+  };
+};
+
 type GuardianAccessSummary = {
   id: string;
   guardianId: string;
@@ -262,6 +309,208 @@ export class GuardianPortalService {
       }),
     );
     return { items, total: items.length };
+  }
+
+  /**
+   * Family Activation & Landing Pack v1 — calm activation overview for staff.
+   *
+   * The Guardians → portal access surface already exposes a long list of
+   * every guardian and their per-row state. Staff also need a calm, top-of-
+   * page view that answers "where do families stand right now?" and "who
+   * still needs a gentle nudge?". We compute that here from the same
+   * source-of-truth (`guardian_portal_accesses` plus the linked guardian
+   * row) so there is no second model to keep in sync.
+   *
+   * Buckets:
+   *   - `notInvited`   — guardians with no portal access row yet but who
+   *                      have an email on file. These are the "ready to
+   *                      invite" families.
+   *   - `invited`      — invite sent, not activated. Sub-bucketed by
+   *                      `inviteAge` so staff can see who sat for a while.
+   *   - `recovery`     — families who used the public "I lost access" form
+   *                      and have not had a fresh invite sent yet.
+   *   - `dormant`      — activated but not seen in the last 60 days. Calm,
+   *                      not alarming — surfaced as "quiet" not "lapsed".
+   *   - `disabled`     — staff has paused this access on purpose.
+   *   - `active`       — activated and seen recently. Counted, not listed.
+   *
+   * Tenant isolation is preserved via the same `where: { tenantId, ... }`
+   * clauses used everywhere else in this module.
+   */
+  async getActivationOverview(tenantId: string): Promise<ActivationOverview> {
+    const dormantThresholdDays = 60;
+    const now = Date.now();
+    const dormantCutoff = now - dormantThresholdDays * 24 * 60 * 60 * 1000;
+
+    const [accesses, guardians] = await Promise.all([
+      this.accesses.find({
+        where: { tenantId },
+        relations: ['guardian'],
+        order: { updatedAt: 'DESC' },
+      }),
+      this.guardians.find({ where: { tenantId } }),
+    ]);
+
+    const accessByGuardian = new Map(accesses.map((row) => [row.guardianId, row]));
+    const linkCounts = await this.athleteGuardians
+      .createQueryBuilder('link')
+      .select('link.guardianId', 'guardianId')
+      .addSelect('COUNT(link.id)', 'count')
+      .where('link.tenantId = :tenantId', { tenantId })
+      .groupBy('link.guardianId')
+      .getRawMany<{ guardianId: string; count: string }>();
+    const linkedByGuardian = new Map(linkCounts.map((row) => [row.guardianId, Number(row.count)]));
+
+    const buckets: ActivationOverview['buckets'] = {
+      active: { count: 0, items: [] },
+      invited: { count: 0, items: [] },
+      recovery: { count: 0, items: [] },
+      dormant: { count: 0, items: [] },
+      disabled: { count: 0, items: [] },
+      notInvited: { count: 0, items: [] },
+    };
+
+    let recentlyActivated = 0;
+    let staleInvite = 0;
+
+    for (const guardian of guardians) {
+      const access = accessByGuardian.get(guardian.id);
+      const linkedAthletes = linkedByGuardian.get(guardian.id) ?? 0;
+
+      if (!access) {
+        if (linkedAthletes === 0) {
+          continue;
+        }
+        if (!guardian.email) {
+          continue;
+        }
+        buckets.notInvited.count += 1;
+        if (buckets.notInvited.items.length < 25) {
+          buckets.notInvited.items.push({
+            guardianId: guardian.id,
+            guardianName: this.getGuardianName(guardian),
+            email: guardian.email,
+            linkedAthletes,
+            inviteAgeDays: null,
+            lastSeenAgeDays: null,
+            status: null,
+          });
+        }
+        continue;
+      }
+    }
+
+    for (const access of accesses) {
+      const guardianName = access.guardian
+        ? this.getGuardianName(access.guardian)
+        : access.guardianId;
+      const linkedAthletes = linkedByGuardian.get(access.guardianId) ?? 0;
+      const inviteAgeDays = access.invitedAt
+        ? Math.floor((now - access.invitedAt.getTime()) / (24 * 60 * 60 * 1000))
+        : null;
+      const lastSeenAgeDays = access.lastLoginAt
+        ? Math.floor((now - access.lastLoginAt.getTime()) / (24 * 60 * 60 * 1000))
+        : null;
+
+      const baseItem: ActivationOverviewItem = {
+        guardianId: access.guardianId,
+        guardianName,
+        email: access.email,
+        linkedAthletes,
+        inviteAgeDays,
+        lastSeenAgeDays,
+        status: access.status,
+      };
+
+      if (access.recoveryRequestedAt && access.status !== 'disabled') {
+        buckets.recovery.count += 1;
+        if (buckets.recovery.items.length < 25) {
+          buckets.recovery.items.push({
+            ...baseItem,
+            recoveryRequestedAt: access.recoveryRequestedAt,
+            recoveryRequestCount: access.recoveryRequestCount ?? 1,
+          });
+        }
+        continue;
+      }
+
+      if (access.status === 'disabled') {
+        buckets.disabled.count += 1;
+        if (buckets.disabled.items.length < 25) {
+          buckets.disabled.items.push(baseItem);
+        }
+        continue;
+      }
+
+      if (access.status === 'invited') {
+        buckets.invited.count += 1;
+        if ((inviteAgeDays ?? 0) >= 7) {
+          staleInvite += 1;
+        }
+        if (buckets.invited.items.length < 25) {
+          buckets.invited.items.push(baseItem);
+        }
+        continue;
+      }
+
+      if (access.status === 'active') {
+        if (access.activatedAt && access.activatedAt.getTime() >= dormantCutoff) {
+          recentlyActivated += 1;
+        }
+        const lastSignal = access.lastLoginAt ?? access.activatedAt;
+        const isDormant = !lastSignal || lastSignal.getTime() < dormantCutoff;
+        if (isDormant) {
+          buckets.dormant.count += 1;
+          if (buckets.dormant.items.length < 25) {
+            buckets.dormant.items.push(baseItem);
+          }
+        } else {
+          buckets.active.count += 1;
+          if (buckets.active.items.length < 10) {
+            buckets.active.items.push(baseItem);
+          }
+        }
+      }
+    }
+
+    // Sort the staff-facing lists so the "most actionable" entries
+    // float to the top of each bucket.
+    buckets.invited.items.sort((a, b) => (b.inviteAgeDays ?? 0) - (a.inviteAgeDays ?? 0));
+    buckets.dormant.items.sort((a, b) => (b.lastSeenAgeDays ?? 0) - (a.lastSeenAgeDays ?? 0));
+    buckets.recovery.items.sort((a, b) => {
+      const aTime = a.recoveryRequestedAt ? a.recoveryRequestedAt.getTime() : 0;
+      const bTime = b.recoveryRequestedAt ? b.recoveryRequestedAt.getTime() : 0;
+      return bTime - aTime;
+    });
+
+    const totalGuardians = guardians.length;
+    const totalAccessRows = accesses.length;
+    const totalActive = buckets.active.count + buckets.dormant.count;
+    const activationRate =
+      totalAccessRows > 0 ? Math.round((totalActive / totalAccessRows) * 100) : 0;
+
+    return {
+      tenantId,
+      generatedAt: new Date(),
+      thresholds: {
+        dormantAfterDays: dormantThresholdDays,
+        staleInviteAfterDays: 7,
+      },
+      totals: {
+        guardians: totalGuardians,
+        guardiansWithAccess: totalAccessRows,
+        notInvited: buckets.notInvited.count,
+        invited: buckets.invited.count,
+        active: buckets.active.count,
+        dormant: buckets.dormant.count,
+        recovery: buckets.recovery.count,
+        disabled: buckets.disabled.count,
+        recentlyActivated,
+        staleInvites: staleInvite,
+        activationRatePercent: activationRate,
+      },
+      buckets,
+    };
   }
 
   async getAccessSummary(tenantId: string, guardianId: string): Promise<GuardianAccessSummary | null> {
@@ -748,6 +997,62 @@ export class GuardianPortalService {
       .sort((a, b) => a.scheduledStart.getTime() - b.scheduledStart.getTime())
       .slice(0, 5);
 
+    // Family Activation & Landing Pack v1 — first-landing detection.
+    // We treat a session as "first landing" when the access has been
+    // activated within the last 14 days AND lastLoginAt is either null
+    // or equal to activatedAt (which is the case immediately after the
+    // activation flow stamps both columns at once). This is a calm,
+    // honest signal — never marketing, never pressuring — and it's the
+    // hint the parent home uses to render the warm welcome card and the
+    // tiny "next 1–3 things" strip.
+    const firstLandingWindowDays = 14;
+    const firstLandingActive = Boolean(
+      access.activatedAt &&
+        access.activatedAt.getTime() >= Date.now() - firstLandingWindowDays * 24 * 60 * 60 * 1000 &&
+        (!access.lastLoginAt ||
+          Math.abs(access.lastLoginAt.getTime() - access.activatedAt.getTime()) < 60 * 1000),
+    );
+
+    // Family Activation & Landing Pack v1 — calm essentials surface.
+    // We do NOT build a profile-completion gauntlet. Instead we surface
+    // a tiny, honest checklist of the few things that matter most for a
+    // newly-activated family. Each entry includes a stable `key`, a
+    // `severity` ("info" or "attention"), and a `done` flag so the
+    // portal can render a strikethrough or hide it. We do not surface
+    // entries that would require a parent to learn a new flow.
+    type Essential = {
+      key: 'confirm_phone' | 'review_children' | 'open_pending_action' | 'check_balance';
+      severity: 'info' | 'attention';
+      done: boolean;
+    };
+    const pendingActionsForEssentials = readiness.actions.filter((item) =>
+      ['open', 'pending_family_action', 'rejected'].includes(item.status),
+    );
+    const essentials: Essential[] = [
+      {
+        key: 'confirm_phone',
+        severity: guardian.phone ? 'info' : 'attention',
+        done: Boolean(guardian.phone),
+      },
+      {
+        key: 'review_children',
+        severity: linkedAthletes.length === 0 ? 'attention' : 'info',
+        done: linkedAthletes.length > 0,
+      },
+      {
+        key: 'open_pending_action',
+        severity: pendingActionsForEssentials.length > 0 ? 'attention' : 'info',
+        done: pendingActionsForEssentials.length === 0,
+      },
+      {
+        key: 'check_balance',
+        severity:
+          linkedAthletes.some((athlete) => Number(athlete.overdueAmount) > 0) ? 'attention' : 'info',
+        done: linkedAthletes.every((athlete) => Number(athlete.outstandingAmount) <= 0),
+      },
+    ];
+    const essentialsAttention = essentials.filter((entry) => entry.severity === 'attention').length;
+
     return {
       guardian: {
         id: guardian.id,
@@ -776,6 +1081,16 @@ export class GuardianPortalService {
         items: weekItems,
       },
       clubUpdates,
+      // Family Activation & Landing Pack v1 — first-landing welcome and
+      // calm essentials strip. Both surfaces hide themselves on the
+      // client when there is nothing meaningful to show, so the page
+      // stays calm for returning families.
+      landing: {
+        firstLanding: firstLandingActive,
+        windowDays: firstLandingWindowDays,
+        essentials,
+        essentialsAttentionCount: essentialsAttention,
+      },
     };
   }
 

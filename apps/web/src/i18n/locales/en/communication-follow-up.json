@@ -72,6 +72,12 @@
           "subject": "A quick follow-up from the club",
           "body": "Hello,\n\nWe're reaching out with a quick operational update from the club regarding {{athleteName}}.\n\nIf there is anything we can help with, please reply on WhatsApp anytime.",
           "hint": "Default starting point when no other template fits."
+        },
+        "activationReminder": {
+          "title": "Family portal activation reminder",
+          "subject": "Your family portal link is ready",
+          "body": "Hello,\n\nWe sent you a one-time activation link so you can see {{athleteName}}'s schedule and updates from the club in your family portal.\n\nIf you can't find the email, just reply here and we'll send a fresh link — there's no rush.",
+          "hint": "Calm reminder for families who haven't yet stepped into the portal."
         }
       },
       "audience": {

@@ -134,6 +134,19 @@ const scopedPrefixes = [
   'portal.login.forgotAccess',
   'portal.login.recoveryHint',
   'portal.recovery',
+  // Family Activation & Landing Pack v1 — staff-side activation visibility,
+  // calm follow-up audience slices, and the parent first-landing surfaces.
+  'pages.guardians.activationViewToggle',
+  'pages.guardians.activation',
+  'pages.communications.portalNotActivatedOnly',
+  'pages.communications.portalRecoveryOnly',
+  'portal.home.landingBadge',
+  'portal.home.landingTitle',
+  'portal.home.landingTitleClub',
+  'portal.home.landingBody',
+  'portal.home.essentialsTitle',
+  'portal.home.essentialsHint',
+  'portal.home.essentials',
 ];
 
 function flattenKeys(input, prefix = '') {
