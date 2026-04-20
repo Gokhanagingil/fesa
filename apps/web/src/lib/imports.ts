@@ -168,6 +168,8 @@ export interface OnboardingReadiness {
 export interface OnboardingHistoryEntry {
   id: string;
   entity: string;
+  /** Stable onboarding step key the entry belongs to. */
+  stepKey: string;
   status: ImportBatchStatus;
   committedAt: string;
   source: string | null;
@@ -179,6 +181,38 @@ export interface OnboardingHistoryEntry {
   warningRows: number;
   durationMs: number;
   triggeredBy: string | null;
+  /** Calm "what could you safely do next with this batch?" hint key. */
+  replayHintKey: string;
+  /** True when re-running this step is the recommended supportive next move. */
+  retryRecommended: boolean;
+}
+
+export interface OnboardingBatchDetail extends OnboardingHistoryEntry {
+  /** Up to ~6 short hint lines captured during the original validation pass. */
+  hints: string[];
+}
+
+export interface OnboardingRecommendedAction {
+  key: string;
+  titleKey: string;
+  hintKey: string;
+  stepKey?: string;
+  to?: string;
+}
+
+export interface OnboardingFirstThirtyDaysItem {
+  key: string;
+  titleKey: string;
+  hintKey: string;
+  to?: string;
+  stepKey?: string;
+}
+
+export interface OnboardingFirstThirtyDays {
+  state: 'dormant' | 'active';
+  headlineKey: string;
+  subtitleKey: string;
+  items: OnboardingFirstThirtyDaysItem[];
 }
 
 export interface OnboardingStateReport {
@@ -190,6 +224,8 @@ export interface OnboardingStateReport {
   nextStepKey: string | null;
   readiness: OnboardingReadiness;
   recentImports: OnboardingHistoryEntry[];
+  recommendedActions: OnboardingRecommendedAction[];
+  firstThirtyDays: OnboardingFirstThirtyDays;
   generatedAt: string;
 }
 
@@ -197,12 +233,20 @@ export async function fetchOnboardingState(): Promise<OnboardingStateReport> {
   return apiGet<OnboardingStateReport>('/api/onboarding/state');
 }
 
-export async function fetchOnboardingHistory(limit = 25): Promise<OnboardingHistoryEntry[]> {
-  const safe = Math.min(Math.max(Math.trunc(limit), 1), 100);
+export async function fetchOnboardingHistory(
+  options: { limit?: number; step?: string } = {},
+): Promise<OnboardingHistoryEntry[]> {
+  const safe = Math.min(Math.max(Math.trunc(options.limit ?? 25), 1), 100);
+  const params = new URLSearchParams({ limit: String(safe) });
+  if (options.step) params.set('step', options.step);
   const res = await apiGet<{ items: OnboardingHistoryEntry[] }>(
-    `/api/onboarding/history?limit=${safe}`,
+    `/api/onboarding/history?${params.toString()}`,
   );
   return res.items;
+}
+
+export async function fetchOnboardingBatch(batchId: string): Promise<OnboardingBatchDetail> {
+  return apiGet<OnboardingBatchDetail>(`/api/onboarding/batches/${encodeURIComponent(batchId)}`);
 }
 
 export async function previewImport(payload: ImportPreviewPayload): Promise<ImportPreviewReport> {

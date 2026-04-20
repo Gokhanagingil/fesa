@@ -136,6 +136,8 @@ export interface OnboardingReadiness {
 export interface OnboardingHistoryEntry {
   id: string;
   entity: string;
+  /** Stable onboarding step key the entry belongs to (mirrors `entity`). */
+  stepKey: string;
   status: ImportBatchStatus;
   committedAt: string;
   source: string | null;
@@ -147,6 +149,68 @@ export interface OnboardingHistoryEntry {
   warningRows: number;
   durationMs: number;
   triggeredBy: string | null;
+  /**
+   * Calm "what could you safely do next with this batch?" hint key. The wizard
+   * uses it to render a single supportive line on the history card without
+   * pretending we can roll back anything.
+   */
+  replayHintKey: string;
+  /**
+   * True when re-running this step (uploading a corrected file) is the
+   * recommended supportive next move. We never auto-trigger replay; this
+   * just enables a calm "Try again with a corrected file" affordance.
+   */
+  retryRecommended: boolean;
+}
+
+/** Detailed view of a single recorded batch — used by the calm batch drawer. */
+export interface OnboardingBatchDetail extends OnboardingHistoryEntry {
+  /** Up to ~6 short hint lines captured during the original validation pass. */
+  hints: string[];
+}
+
+/**
+ * One supportive recommendation surfaced in the go-live review. Each entry is
+ * deliberately short, honest, and points back to a concrete in-product
+ * surface — never invented certainty.
+ */
+export interface OnboardingRecommendedAction {
+  key: string;
+  /** Short i18n key for the action title. */
+  titleKey: string;
+  /** Short i18n key for the supportive subtitle. */
+  hintKey: string;
+  /** Optional onboarding step key the action deep-links into. */
+  stepKey?: string;
+  /** Optional in-app route the action deep-links into. */
+  to?: string;
+}
+
+/**
+ * Calm "first 30 days" strip surfaced once a club has finished the required
+ * steps. Each item is a single supportive next move, not a checklist item the
+ * platform tracks completion for. We deliberately keep this short so the
+ * post-onboarding experience reduces fear instead of creating a new
+ * admin workload.
+ */
+export interface OnboardingFirstThirtyDaysItem {
+  key: string;
+  titleKey: string;
+  hintKey: string;
+  to?: string;
+  stepKey?: string;
+}
+
+export interface OnboardingFirstThirtyDays {
+  /**
+   * `dormant` — required steps not done yet, the strip stays gentle.
+   * `active`  — required steps done, the strip becomes the post-onboarding
+   *             companion and is the primary panel on the go-live step.
+   */
+  state: 'dormant' | 'active';
+  headlineKey: string;
+  subtitleKey: string;
+  items: OnboardingFirstThirtyDaysItem[];
 }
 
 export interface OnboardingStateReport {
@@ -161,6 +225,17 @@ export interface OnboardingStateReport {
   readiness: OnboardingReadiness;
   /** Up to a handful of the most recent server-recorded import batches. */
   recentImports: OnboardingHistoryEntry[];
+  /**
+   * Short, honest list of recommended next actions surfaced in the go-live
+   * review. Empty when the club has nothing supportive to nudge.
+   */
+  recommendedActions: OnboardingRecommendedAction[];
+  /**
+   * Calm "first 30 days" companion. Stays in `dormant` mode until the
+   * required onboarding steps are done; once active, it becomes the
+   * primary panel on the go-live step.
+   */
+  firstThirtyDays: OnboardingFirstThirtyDays;
   generatedAt: string;
 }
 
@@ -451,21 +526,19 @@ export class OnboardingService {
       groupCount,
     });
 
-    const recentImports: OnboardingHistoryEntry[] = recentBatches.map((batch) => ({
-      id: batch.id,
-      entity: batch.entity,
-      status: batch.status,
-      committedAt: batch.createdAt.toISOString(),
-      source: batch.source,
-      totalRows: batch.totalRows,
-      createdRows: batch.createdRows,
-      updatedRows: batch.updatedRows,
-      skippedRows: batch.skippedRows,
-      rejectedRows: batch.rejectedRows,
-      warningRows: batch.warningRows,
-      durationMs: batch.durationMs,
-      triggeredBy: batch.triggeredByDisplayName,
-    }));
+    const recentImports = recentBatches.map((batch) => this.toHistoryEntry(batch));
+
+    const recommendedActions = this.buildRecommendedActions({
+      steps,
+      requiredAllDone: requiredCompleted === requiredSteps.length,
+      brandConfigured,
+      readinessSignals: readiness.signals,
+      recentImports,
+    });
+
+    const firstThirtyDays = this.buildFirstThirtyDays({
+      readyForLaunch: overallState === 'ready',
+    });
 
     return {
       tenantId,
@@ -482,6 +555,8 @@ export class OnboardingService {
       nextStepKey: nextStep?.key ?? 'go_live',
       readiness,
       recentImports,
+      recommendedActions,
+      firstThirtyDays,
       generatedAt: new Date().toISOString(),
     };
   }
@@ -490,13 +565,61 @@ export class OnboardingService {
    * Returns the most recent N server-recorded import batches for this
    * tenant, newest first. This is the data source behind the wizard's
    * "Recent imports" strip and the dedicated history endpoint.
+   *
+   * When `step` is provided, the response is scoped to that onboarding step
+   * (the underlying entity). Useful for the per-step "see all imports for
+   * this step" drawer.
    */
-  async getHistory(tenantId: string, limit = 25): Promise<OnboardingHistoryEntry[]> {
+  async getHistory(
+    tenantId: string,
+    options: { limit?: number; step?: string } = {},
+  ): Promise<OnboardingHistoryEntry[]> {
+    const limit = options.limit ?? 25;
     const safeLimit = Math.min(Math.max(limit, 1), 100);
-    const batches = await this.fetchRecentBatches(tenantId, safeLimit);
-    return batches.map((batch) => ({
+    const entity = options.step ? STEP_TO_ENTITY[options.step] ?? null : null;
+    const where = entity ? { tenantId, entity } : { tenantId };
+    const batches = await this.importBatches.find({
+      where,
+      order: { createdAt: 'DESC' },
+      take: safeLimit,
+    });
+    return batches.map((batch) => this.toHistoryEntry(batch));
+  }
+
+  /**
+   * Returns the calm "what happened in this batch?" view used by the wizard
+   * batch drawer. Returns null when the batch does not exist for this
+   * tenant — callers should translate that into a 404.
+   */
+  async getBatch(tenantId: string, batchId: string): Promise<OnboardingBatchDetail | null> {
+    const batch = await this.importBatches.findOne({ where: { id: batchId, tenantId } });
+    if (!batch) return null;
+    return {
+      ...this.toHistoryEntry(batch),
+      hints: parseSummaryHints(batch.summary),
+    };
+  }
+
+  private async fetchRecentBatches(tenantId: string, limit: number): Promise<ImportBatch[]> {
+    return this.importBatches.find({
+      where: { tenantId },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+  }
+
+  /**
+   * Map a stored batch row into the wire-shape used by the wizard. We attach
+   * a single calm replay hint so the UI can render supportive guidance
+   * without inventing a rollback story.
+   */
+  private toHistoryEntry(batch: ImportBatch): OnboardingHistoryEntry {
+    const stepKey = ENTITY_TO_STEP[batch.entity] ?? batch.entity;
+    const replayHint = buildReplayHint(batch);
+    return {
       id: batch.id,
       entity: batch.entity,
+      stepKey,
       status: batch.status,
       committedAt: batch.createdAt.toISOString(),
       source: batch.source,
@@ -508,15 +631,9 @@ export class OnboardingService {
       warningRows: batch.warningRows,
       durationMs: batch.durationMs,
       triggeredBy: batch.triggeredByDisplayName,
-    }));
-  }
-
-  private async fetchRecentBatches(tenantId: string, limit: number): Promise<ImportBatch[]> {
-    return this.importBatches.find({
-      where: { tenantId },
-      order: { createdAt: 'DESC' },
-      take: limit,
-    });
+      replayHintKey: replayHint.key,
+      retryRecommended: replayHint.retryRecommended,
+    };
   }
 
   private async fetchLastBatchesPerEntity(tenantId: string): Promise<Map<string, ImportBatch>> {
@@ -649,5 +766,197 @@ export class OnboardingService {
   /** Convenience: maps a stored entity key back to its onboarding step. */
   static stepKeyForEntity(entity: string): string | null {
     return ENTITY_TO_STEP[entity] ?? null;
+  }
+
+  /**
+   * Build the calm "recommended next actions" list rendered in the go-live
+   * review. We deliberately keep this short (top ~5) and only surface
+   * actions that map to a real step or in-product surface — never invented
+   * certainty or fake checklists.
+   */
+  private buildRecommendedActions(input: {
+    steps: OnboardingStepReport[];
+    requiredAllDone: boolean;
+    brandConfigured: boolean;
+    readinessSignals: OnboardingReadinessSignal[];
+    recentImports: OnboardingHistoryEntry[];
+  }): OnboardingRecommendedAction[] {
+    const { steps, requiredAllDone, brandConfigured, readinessSignals, recentImports } = input;
+    const actions: OnboardingRecommendedAction[] = [];
+
+    const stepsNeedingAttention = steps.filter(
+      (step) => step.status === 'needs_attention' && step.key !== 'go_live',
+    );
+    for (const step of stepsNeedingAttention.slice(0, 3)) {
+      actions.push({
+        key: `attention_${step.key}`,
+        titleKey: 'pages.onboarding.recommendations.reviewStep.title',
+        hintKey: 'pages.onboarding.recommendations.reviewStep.hint',
+        stepKey: step.key,
+      });
+    }
+
+    if (!brandConfigured) {
+      actions.push({
+        key: 'configure_brand',
+        titleKey: 'pages.onboarding.recommendations.configureBrand.title',
+        hintKey: 'pages.onboarding.recommendations.configureBrand.hint',
+        to: '/app/settings',
+        stepKey: 'club_basics',
+      });
+    }
+
+    const linksMissingSignal = readinessSignals.find((signal) => signal.key === 'links_missing');
+    if (linksMissingSignal) {
+      actions.push({
+        key: 'link_families',
+        titleKey: 'pages.onboarding.recommendations.linkFamilies.title',
+        hintKey: 'pages.onboarding.recommendations.linkFamilies.hint',
+        stepKey: 'athlete_guardians',
+      });
+    }
+
+    const athletesWithoutGroupsSignal = readinessSignals.find(
+      (signal) => signal.key === 'athletes_without_groups',
+    );
+    if (athletesWithoutGroupsSignal) {
+      actions.push({
+        key: 'create_group',
+        titleKey: 'pages.onboarding.recommendations.createGroup.title',
+        hintKey: 'pages.onboarding.recommendations.createGroup.hint',
+        stepKey: 'groups',
+      });
+    }
+
+    const recentNeedsAttention = recentImports.find((entry) => entry.status === 'needs_attention');
+    if (recentNeedsAttention) {
+      actions.push({
+        key: `revisit_${recentNeedsAttention.id}`,
+        titleKey: 'pages.onboarding.recommendations.revisitBatch.title',
+        hintKey: 'pages.onboarding.recommendations.revisitBatch.hint',
+        stepKey: recentNeedsAttention.stepKey,
+      });
+    }
+
+    if (requiredAllDone && actions.length === 0) {
+      actions.push({
+        key: 'invite_staff',
+        titleKey: 'pages.onboarding.recommendations.inviteStaff.title',
+        hintKey: 'pages.onboarding.recommendations.inviteStaff.hint',
+        to: '/app/settings',
+      });
+      actions.push({
+        key: 'share_portal',
+        titleKey: 'pages.onboarding.recommendations.sharePortal.title',
+        hintKey: 'pages.onboarding.recommendations.sharePortal.hint',
+        to: '/app/club-updates',
+      });
+    }
+
+    return actions.slice(0, 5);
+  }
+
+  /**
+   * Build the calm "first 30 days" companion strip. We deliberately keep
+   * this lightweight: a short headline, a one-line subtitle, and at most
+   * a few practical next moves the platform actually supports today.
+   */
+  private buildFirstThirtyDays(input: { readyForLaunch: boolean }): OnboardingFirstThirtyDays {
+    const items: OnboardingFirstThirtyDaysItem[] = [
+      {
+        key: 'check_dashboard',
+        titleKey: 'pages.onboarding.firstThirtyDays.items.checkDashboard.title',
+        hintKey: 'pages.onboarding.firstThirtyDays.items.checkDashboard.hint',
+        to: '/app/dashboard',
+      },
+      {
+        key: 'invite_families',
+        titleKey: 'pages.onboarding.firstThirtyDays.items.inviteFamilies.title',
+        hintKey: 'pages.onboarding.firstThirtyDays.items.inviteFamilies.hint',
+        to: '/app/guardians',
+      },
+      {
+        key: 'first_charge_run',
+        titleKey: 'pages.onboarding.firstThirtyDays.items.firstChargeRun.title',
+        hintKey: 'pages.onboarding.firstThirtyDays.items.firstChargeRun.hint',
+        to: '/app/finance',
+      },
+      {
+        key: 'first_announcement',
+        titleKey: 'pages.onboarding.firstThirtyDays.items.firstAnnouncement.title',
+        hintKey: 'pages.onboarding.firstThirtyDays.items.firstAnnouncement.hint',
+        to: '/app/club-updates',
+      },
+      {
+        key: 'attendance_rhythm',
+        titleKey: 'pages.onboarding.firstThirtyDays.items.attendanceRhythm.title',
+        hintKey: 'pages.onboarding.firstThirtyDays.items.attendanceRhythm.hint',
+        to: '/app/training',
+      },
+    ];
+
+    return {
+      state: input.readyForLaunch ? 'active' : 'dormant',
+      headlineKey: input.readyForLaunch
+        ? 'pages.onboarding.firstThirtyDays.headline.active'
+        : 'pages.onboarding.firstThirtyDays.headline.dormant',
+      subtitleKey: input.readyForLaunch
+        ? 'pages.onboarding.firstThirtyDays.subtitle.active'
+        : 'pages.onboarding.firstThirtyDays.subtitle.dormant',
+      items,
+    };
+  }
+}
+
+/**
+ * Calm "what could you safely do next with this batch?" hint. We deliberately
+ * never speak in audit-log terms (no "rollback", no "undo"). The wizard is
+ * honest about what each tone means: clean batches simply confirm what
+ * landed, partial batches confirm what was already on file, and batches
+ * that "need attention" carry a gentle invitation to re-run with a
+ * corrected file.
+ */
+function buildReplayHint(batch: ImportBatch): { key: string; retryRecommended: boolean } {
+  if (batch.status === 'needs_attention' || batch.rejectedRows > 0) {
+    return {
+      key: 'pages.onboarding.history.replay.needsAttention',
+      retryRecommended: true,
+    };
+  }
+  if (batch.warningRows > 0) {
+    return {
+      key: 'pages.onboarding.history.replay.warnings',
+      retryRecommended: true,
+    };
+  }
+  if (batch.status === 'partial') {
+    return {
+      key: 'pages.onboarding.history.replay.partial',
+      retryRecommended: false,
+    };
+  }
+  return {
+    key: 'pages.onboarding.history.replay.success',
+    retryRecommended: false,
+  };
+}
+
+/**
+ * Parse the small `summary` JSON blob we attach to each batch on commit.
+ * Returns up to 6 short hint lines so the batch detail drawer can show the
+ * same supportive guidance we offered at preview time.
+ */
+function parseSummaryHints(summary: string | null | undefined): string[] {
+  if (!summary) return [];
+  try {
+    const parsed = JSON.parse(summary) as { hints?: unknown };
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.hints)) return [];
+    return parsed.hints
+      .filter((hint): hint is string => typeof hint === 'string')
+      .map((hint) => hint.trim())
+      .filter((hint) => hint.length > 0)
+      .slice(0, 6);
+  } catch {
+    return [];
   }
 }

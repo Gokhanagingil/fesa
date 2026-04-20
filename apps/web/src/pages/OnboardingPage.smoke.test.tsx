@@ -87,20 +87,20 @@ beforeEach(() => {
         hintKey: 'pages.onboarding.steps.sport_branches.hint',
         importEntity: 'sport_branches',
         count: 2,
-        status: 'completed',
+        status: 'needs_attention',
         blocked: false,
         blockedBy: [],
         optional: false,
         lastImport: {
           batchId: 'batch-1',
-          status: 'success',
+          status: 'needs_attention',
           committedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
           source: 'branches.csv',
           totalRows: 2,
-          createdRows: 2,
+          createdRows: 1,
           updatedRows: 0,
           skippedRows: 0,
-          rejectedRows: 0,
+          rejectedRows: 1,
           warningRows: 0,
           triggeredBy: 'Demo Admin',
         },
@@ -145,19 +145,44 @@ beforeEach(() => {
       {
         id: 'batch-1',
         entity: 'sport_branches',
-        status: 'success',
+        stepKey: 'sport_branches',
+        status: 'needs_attention',
         committedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
         source: 'branches.csv',
         totalRows: 2,
-        createdRows: 2,
+        createdRows: 1,
         updatedRows: 0,
         skippedRows: 0,
-        rejectedRows: 0,
+        rejectedRows: 1,
         warningRows: 0,
         durationMs: 120,
         triggeredBy: 'Demo Admin',
+        replayHintKey: 'pages.onboarding.history.replay.needsAttention',
+        retryRecommended: true,
       },
     ],
+    recommendedActions: [
+      {
+        key: 'configure_brand',
+        titleKey: 'pages.onboarding.recommendations.configureBrand.title',
+        hintKey: 'pages.onboarding.recommendations.configureBrand.hint',
+        to: '/app/settings',
+        stepKey: 'club_basics',
+      },
+    ],
+    firstThirtyDays: {
+      state: 'dormant',
+      headlineKey: 'pages.onboarding.firstThirtyDays.headline.dormant',
+      subtitleKey: 'pages.onboarding.firstThirtyDays.subtitle.dormant',
+      items: [
+        {
+          key: 'check_dashboard',
+          titleKey: 'pages.onboarding.firstThirtyDays.items.checkDashboard.title',
+          hintKey: 'pages.onboarding.firstThirtyDays.items.checkDashboard.hint',
+          to: '/app/dashboard',
+        },
+      ],
+    },
     generatedAt: new Date().toISOString(),
   });
 });
@@ -211,5 +236,45 @@ describe('OnboardingPage smoke coverage', () => {
     expect(screen.getByText(/Recent imports/i)).toBeInTheDocument();
     expect(screen.getByText(/branches\.csv/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Demo Admin/i).length).toBeGreaterThan(0);
+  });
+
+  it('renders the completion panel, recommended actions and first-30-days strip on go-live', async () => {
+    renderWithRoute(<OnboardingPage />, {
+      path: '/app/onboarding',
+      initialEntry: '/app/onboarding?step=go_live',
+    });
+
+    const completion = await screen.findByLabelText(/Honest launch readiness/i);
+    expect(
+      within(completion).getByText(/A few things still need attention/i),
+    ).toBeInTheDocument();
+
+    expect(screen.getByText(/Recommended next moves/i)).toBeInTheDocument();
+    expect(screen.getByText(/Add your club brand/i)).toBeInTheDocument();
+
+    const first30 = screen.getByLabelText(/First 30 days/i);
+    expect(
+      within(first30).getByText(/When you're ready, here's what tends to come next/i),
+    ).toBeInTheDocument();
+    expect(within(first30).getByText(/Skim the dashboard once a day/i)).toBeInTheDocument();
+
+    // Each recent batch should show the calm replay hint, not a fake undo.
+    expect(
+      screen.getByText(/Some rows were rejected\. Fix them in the file/i),
+    ).toBeInTheDocument();
+  });
+
+  it('exposes a try-again affordance when the last import needs attention', async () => {
+    renderWithRoute(<OnboardingPage />, {
+      path: '/app/onboarding',
+      initialEntry: '/app/onboarding?step=sport_branches',
+    });
+
+    expect(await screen.findByText(/Last import for this step/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Try again with a corrected file/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /See all imports for this step/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Open result summary/i })).toBeInTheDocument();
   });
 });

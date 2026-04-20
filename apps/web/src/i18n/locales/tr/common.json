@@ -2164,7 +2164,11 @@
         "title": "Bu adımın son içe aktarımı",
         "line": "{{when}} · {{who}} · {{source}}",
         "counts": "{{created}} oluşturuldu · {{updated}} güncellendi · {{skipped}} atlandı",
-        "attention": "{{rejected}} reddedildi · {{warnings}} uyarı — bu adıma güvenmeden önce gözden geçirin."
+        "attention": "{{rejected}} reddedildi · {{warnings}} uyarı — bu adıma güvenmeden önce gözden geçirin.",
+        "openResult": "Sonuç özetini aç",
+        "viewAll": "Bu adımın tüm içe aktarımlarını gör",
+        "tryAgain": "Düzeltilmiş bir dosyayla yeniden dene",
+        "tryAgainHint": "Bu adımı tekrar çalıştırmak güvenlidir — aynı satırı iki kez içe aktarmayız. Mevcut kayıtlar adım kurallarına göre atlanır veya güncellenir."
       },
       "history": {
         "title": "Son içe aktarımlar",
@@ -2174,10 +2178,94 @@
         "sourceFallback": "Yapıştırılan CSV",
         "triggeredBy": "{{who}} tarafından",
         "attention": "{{rejected}} satır reddedildi · {{warnings}} uyarı — incelemek için adımı açın.",
+        "openBatch": "Sonucu aç",
+        "openStep": "Adımı aç",
+        "tryAgain": "Düzeltilmiş bir dosyayla yeniden dene",
+        "stepHistoryTitle": "Bu adımdaki tüm içe aktarımlar",
+        "stepHistoryHint": "En yenisi en üstte. Herhangi birini açıp commit anındaki destekleyici özetin aynısını görebilirsiniz.",
+        "stepHistoryEmpty": "Bu adıma henüz bir şey aktarılmadı — bir dosyayı onayladığınızda burada bir kayıt oluşur.",
+        "drawerTitle": "İçe aktarım sonucu",
+        "drawerSubtitle": "Bu commit'te ne yapıldığına dair sakin bir özet.",
+        "drawerHints": "Bu içe aktarımın notları",
+        "drawerNoHints": "Bu commit için destekleyici bir not kaydedilmedi.",
+        "drawerClose": "Kapat",
         "status": {
           "success": "Sorunsuz aktarıldı",
           "partial": "Zaten kayıtlı",
           "needs_attention": "İlgi bekliyor"
+        },
+        "replay": {
+          "success": "Bu dosyadaki her şey sorunsuz işlendi. Daha fazla satırınız olduğunda yeni bir dosyayla güvenle yeniden çalıştırabilirsiniz.",
+          "partial": "Çoğu satır zaten kayıtlı olduğu için atlandı — önceki verileriniz korundu.",
+          "warnings": "Birkaç satır küçük uyarılarla geldi. Düzelttikten sonra düzeltilmiş bir dosyayla yeniden çalıştırın.",
+          "needsAttention": "Bazı satırlar reddedildi. Dosyada düzeltip bu adımı yeniden çalıştırın — aynı satırı iki kez içe aktarmayız."
+        }
+      },
+      "recommendations": {
+        "title": "Önerilen sonraki adımlar",
+        "hint": "Kulübünüzün mevcut verilerine göre kısa ve dürüst öneriler. Siz istemediğiniz sürece hiçbir şey değişmez.",
+        "empty": "Şu an dikkat çeken bir şey yok. Destekleyici bir konu çıktığında burada görünecek.",
+        "open": "Aç",
+        "reviewStep": {
+          "title": "İlgi bekleyen bir adımı yeniden ziyaret et",
+          "hint": "Adımı açın, sonucu kontrol edin ve gerekirse düzeltilmiş bir dosyayla yeniden çalıştırın."
+        },
+        "configureBrand": {
+          "title": "Kulüp markanızı ekleyin",
+          "hint": "Aile portalında ailelerin sizi tanıyabilmesi için kulüp adı, ana renk ve logo ekleyin."
+        },
+        "linkFamilies": {
+          "title": "Sporcuları aileleriyle bağlayın",
+          "hint": "Bu olmadan aileler sporcularını portalda göremez."
+        },
+        "createGroup": {
+          "title": "En az bir antrenman grubu oluşturun",
+          "hint": "Sporcular yüklendi ama henüz hiç kohort yok — bir tane eklemek günlük operasyonu sakinleştirir."
+        },
+        "revisitBatch": {
+          "title": "İlgi bekleyen son içe aktarımı yeniden ziyaret edin",
+          "hint": "Sonucu açın, neyin dikkat çektiğini görün ve yeniden çalıştırmak isteyip istemediğinize karar verin."
+        },
+        "inviteStaff": {
+          "title": "Diğer personeli davet edin",
+          "hint": "Yayına geçtikten sonra iş tek kişiye kalmadığında her şey çok daha sakin ilerler."
+        },
+        "sharePortal": {
+          "title": "İlk duyuruyu paylaşın",
+          "hint": "Portalın yayında olduğunu ailelere kısa, sakin bir notla bildirin."
+        }
+      },
+      "firstThirtyDays": {
+        "title": "İlk 30 gün",
+        "headline": {
+          "dormant": "Hazır olduğunuzda, çoğunlukla ardından gelen şeyler",
+          "active": "İlk 30 gününüze hoş geldiniz"
+        },
+        "subtitle": {
+          "dormant": "Bunlar, kuruluşun ardından çoğu kulübün yumuşak bir iniş yapmasına yardımcı olan pratik adımlardır. Zorunlu adımları bitirdiğinizde bu strip rehberinize dönüşür.",
+          "active": "İlk ay için kısa, dostane bir rehber. Hiçbir şey zorunlu değildir — sadece çoğu kulübün yumuşak iniş yaptığı yoldur."
+        },
+        "items": {
+          "checkDashboard": {
+            "title": "Günde bir kez panele göz atın",
+            "hint": "Neyin değiştiğini ve ekibinizin nelere bakması gerektiğini sakince gösterir."
+          },
+          "inviteFamilies": {
+            "title": "İlk aileleri portala davet edin",
+            "hint": "Önce bir-iki aileye aktivasyon bağlantısı gönderip her şeyin doğru göründüğünü doğrulayın."
+          },
+          "firstChargeRun": {
+            "title": "İlk ödeme turunuzu çalıştırın",
+            "hint": "Tek bir kalem veya tek bir grupla başlayın; bakiyelerin beklediğiniz gibi göründüğünü doğrulayın."
+          },
+          "firstAnnouncement": {
+            "title": "Kısa bir karşılama duyurusu yayınlayın",
+            "hint": "Kulüp güncellemelerinde sakin bir not, ailelerin portalın gerçek olduğunu görmesini sağlar."
+          },
+          "attendanceRhythm": {
+            "title": "Antrenman yoklama ritmine girin",
+            "hint": "İlk seansın yoklamasını işaretleyin — platformun geri kalanı bu sinyalden öğrenir."
+          }
         }
       },
       "readiness": {
@@ -2291,6 +2379,17 @@
         "someone": "ekibiniz",
         "nextStepsTitle": "Aileleri davet etmeye hazır olduğunuzda",
         "nextStepsHint": "Zorunlu adımlar yerine oturduğunda atılabilecek güvenli sonraki adımlar.",
+        "completionTitle": "Dürüst yayın hazırlığı",
+        "completionState": {
+          "needs_attention": "Birkaç şey hâlâ ilgi bekliyor",
+          "almost_ready": "Çok yaklaştınız — aşağıda sakin hatırlatmalar var",
+          "ready": "Tüm zorunlu adımlar yerinde görünüyor"
+        },
+        "completionHint": {
+          "needs_attention": "Aşağıda işaretlenen adımı açın ve ya düzeltilmiş bir dosyayla yeniden çalıştırın ya da olduğu gibi kabul edin. \"Hazır\" sadece \"zorunlu adımlar tamam\" demektir — yasal bir garanti değildir.",
+          "almost_ready": "Zorunlu adımlar tamam. Aşağıdaki notlar engel değil, sakin hatırlatmalardır. Kendi temponuzda ele alın.",
+          "ready": "Zorunlu adımlar tamam ve dikkat çeken bir şey yok. Aileleri istediğiniz zaman davet edebilirsiniz."
+        },
         "links": {
           "dashboard": "Paneli aç",
           "athletes": "Sporcuları aç",

@@ -2136,7 +2136,11 @@
         "title": "Last import for this step",
         "line": "{{when}} · {{who}} · {{source}}",
         "counts": "{{created}} created · {{updated}} updated · {{skipped}} skipped",
-        "attention": "{{rejected}} rejected · {{warnings}} warning(s) — review before relying on this step."
+        "attention": "{{rejected}} rejected · {{warnings}} warning(s) — review before relying on this step.",
+        "openResult": "Open result summary",
+        "viewAll": "See all imports for this step",
+        "tryAgain": "Try again with a corrected file",
+        "tryAgainHint": "Re-running this step is safe — we won't import the same row twice. Existing rows are skipped or updated based on the per-step rules."
       },
       "history": {
         "title": "Recent imports",
@@ -2146,10 +2150,94 @@
         "sourceFallback": "Pasted CSV",
         "triggeredBy": "By {{who}}",
         "attention": "{{rejected}} row(s) were rejected · {{warnings}} warning(s) — open the step to review.",
+        "openBatch": "Open result",
+        "openStep": "Open step",
+        "tryAgain": "Try again with a corrected file",
+        "stepHistoryTitle": "All imports for this step",
+        "stepHistoryHint": "Newest first. Open any one to see the same supportive summary the wizard showed at commit time.",
+        "stepHistoryEmpty": "Nothing imported here yet — committing a file will record an entry.",
+        "drawerTitle": "Import result",
+        "drawerSubtitle": "A calm summary of what landed in this commit.",
+        "drawerHints": "Notes from this import",
+        "drawerNoHints": "No supportive notes were captured for this commit.",
+        "drawerClose": "Close",
         "status": {
           "success": "Imported cleanly",
           "partial": "Already on file",
           "needs_attention": "Needs attention"
+        },
+        "replay": {
+          "success": "Everything in this file landed cleanly. You can safely re-run with a new file when you have more rows.",
+          "partial": "Most rows were already on file and skipped — your prior data was preserved.",
+          "warnings": "A few rows came in with gentle warnings. Re-run with a corrected file when you've fixed them.",
+          "needsAttention": "Some rows were rejected. Fix them in the file and re-run this step — we won't import the same row twice."
+        }
+      },
+      "recommendations": {
+        "title": "Recommended next moves",
+        "hint": "Short, honest nudges based on what your club already has on file. Nothing here will change anything until you ask.",
+        "empty": "Nothing stands out right now. When something supportive comes up, you'll see it here.",
+        "open": "Open",
+        "reviewStep": {
+          "title": "Revisit a step that needs attention",
+          "hint": "Open the step, double-check the result, and re-run with a corrected file if needed."
+        },
+        "configureBrand": {
+          "title": "Add your club brand",
+          "hint": "Set your name, primary colour, and logo so families recognise you in the portal."
+        },
+        "linkFamilies": {
+          "title": "Link athletes to their families",
+          "hint": "Without this, families won't see their athletes in the portal."
+        },
+        "createGroup": {
+          "title": "Create at least one training group",
+          "hint": "Athletes are loaded but no cohort exists yet — adding one keeps daily ops calm."
+        },
+        "revisitBatch": {
+          "title": "Revisit your last attention-flagged import",
+          "hint": "Open the result, see what stood out, and decide if you'd like to re-run."
+        },
+        "inviteStaff": {
+          "title": "Invite the rest of your staff",
+          "hint": "Once you go live, the work is much calmer when it isn't on one person."
+        },
+        "sharePortal": {
+          "title": "Share a first announcement",
+          "hint": "Let families know the portal is live with a short, calm note."
+        }
+      },
+      "firstThirtyDays": {
+        "title": "First 30 days",
+        "headline": {
+          "dormant": "When you're ready, here's what tends to come next",
+          "active": "Welcome to your first 30 days"
+        },
+        "subtitle": {
+          "dormant": "These are the practical moves that help most clubs land softly after onboarding. Finish the required steps and they become your companion strip.",
+          "active": "A short, friendly companion for the first month. Nothing here is mandatory — it's just the path most clubs land softly on."
+        },
+        "items": {
+          "checkDashboard": {
+            "title": "Skim the dashboard once a day",
+            "hint": "It quietly surfaces what changed and what your team should look at."
+          },
+          "inviteFamilies": {
+            "title": "Invite the first families to the portal",
+            "hint": "Send activation links to one or two families first to confirm everything looks right."
+          },
+          "firstChargeRun": {
+            "title": "Run your first round of charges",
+            "hint": "Start with one item or one group so you can confirm balances look how you expect."
+          },
+          "firstAnnouncement": {
+            "title": "Post a short welcome update",
+            "hint": "A single calm note in club updates lets families know the portal is real."
+          },
+          "attendanceRhythm": {
+            "title": "Settle into a training-attendance rhythm",
+            "hint": "Mark attendance for the first session — the rest of the platform learns from this signal."
+          }
         }
       },
       "readiness": {
@@ -2263,6 +2351,17 @@
         "someone": "your team",
         "nextStepsTitle": "When you're ready to invite families",
         "nextStepsHint": "These are the safe next moves once required steps look settled.",
+        "completionTitle": "Honest launch readiness",
+        "completionState": {
+          "needs_attention": "A few things still need attention",
+          "almost_ready": "You're close — gentle nudges below",
+          "ready": "Everything required looks settled"
+        },
+        "completionHint": {
+          "needs_attention": "Open any step flagged below and either re-run with a corrected file or accept it as-is. \"Ready\" only means \"required steps done\" — it isn't a legal guarantee.",
+          "almost_ready": "Required steps are done. The notes below are gentle, not blocking. Take them at your own pace.",
+          "ready": "Required steps are done and nothing concerning stands out. You can invite families whenever you'd like."
+        },
         "links": {
           "dashboard": "Open dashboard",
           "athletes": "Open athletes",

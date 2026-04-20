@@ -243,7 +243,13 @@ export class ImportsService {
         }
       }
 
-      const summaryHints = (validation.hints ?? []).slice(0, 6);
+      // Cap the supportive notes to ~6 short hint lines so the on-disk blob
+      // stays predictable. The wizard re-renders these in the batch detail
+      // drawer to give clubs the same calm guidance we offered at preview.
+      const summaryHints = (validation.hints ?? [])
+        .map((hint) => hint.trim())
+        .filter((hint) => hint.length > 0)
+        .slice(0, 6);
       const summary = JSON.stringify({ hints: summaryHints });
       const source = (dto.source ?? '').trim().slice(0, 240) || null;
 
@@ -377,7 +383,12 @@ export class ImportsService {
       hints.push('Review highlighted warnings before committing.');
     }
     if (counts.skipReady > 0) {
-      hints.push('Some rows match an existing record and will be skipped.');
+      // Calm "we won't import the same row twice" messaging — the wizard
+      // surfaces this both at preview time and again on the history card so
+      // staff can safely re-run a corrected file without fearing duplicates.
+      hints.push(
+        "Some rows match an existing record and will be skipped — re-running this step is safe and won't create duplicates.",
+      );
     }
     if (counts.updateReady > 0) {
       hints.push('Some rows match an existing record and will be updated in place.');
