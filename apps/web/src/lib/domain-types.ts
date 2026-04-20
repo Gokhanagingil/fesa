@@ -120,6 +120,9 @@ export type GuardianPortalAccessSummary = {
   awaitingReview: number;
   linkedAthletes: number;
   inviteLink?: string;
+  /** Parent Portal v1.2 — surfaced when a family used the public recovery form. */
+  recoveryRequestedAt?: string | null;
+  recoveryRequestCount?: number;
 };
 
 export type GuardianPortalActionSubmissionInput = {
@@ -519,6 +522,22 @@ export type TenantBrandingPayload = {
 export type ClubUpdateCategory = 'announcement' | 'event' | 'reminder';
 export type ClubUpdateStatus = 'draft' | 'published' | 'archived';
 
+/**
+ * Parent Portal v1.2 — Targeted announcements.
+ * The audience model is intentionally tiny — single scope per card and
+ * at most one targeting id.
+ */
+export type ClubUpdateAudienceScope = 'all' | 'sport_branch' | 'group' | 'team';
+
+export type ClubUpdateAudience = {
+  scope: ClubUpdateAudienceScope;
+  sportBranchId: string | null;
+  groupId: string | null;
+  teamId: string | null;
+  /** Resolved label for staff/parent rendering, e.g. "U14 Kızlar". */
+  label: string | null;
+};
+
 export type ClubUpdateParentSummary = {
   id: string;
   category: ClubUpdateCategory;
@@ -528,6 +547,7 @@ export type ClubUpdateParentSummary = {
   linkLabel: string | null;
   publishedAt: string | null;
   pinned: boolean;
+  audience: ClubUpdateAudience;
 };
 
 export type ClubUpdate = {
@@ -544,6 +564,7 @@ export type ClubUpdate = {
   pinnedUntil: string | null;
   pinned: boolean;
   expired: boolean;
+  audience: ClubUpdateAudience;
   createdAt: string;
   updatedAt: string;
 };
@@ -558,6 +579,20 @@ export type ClubUpdateInput = {
   publishedAt?: string | null;
   expiresAt?: string | null;
   pinnedUntil?: string | null;
+  audienceScope?: ClubUpdateAudienceScope;
+  audienceSportBranchId?: string | null;
+  audienceGroupId?: string | null;
+  audienceTeamId?: string | null;
+};
+
+/**
+ * Parent Portal v1.2 — staff editor catalog of targeting handles.
+ * Returned by `GET /api/club-updates/audience-options`.
+ */
+export type ClubUpdateAudienceOptions = {
+  sportBranches: Array<{ id: string; name: string }>;
+  groups: Array<{ id: string; name: string; sportBranchId: string | null }>;
+  teams: Array<{ id: string; name: string; sportBranchId: string | null; groupId: string | null }>;
 };
 
 export type GuardianPortalActivationStatus = {
@@ -591,6 +626,14 @@ export type GuardianPortalLinkedAthlete = {
     scheduledStart: string;
     coachName: string | null;
   } | null;
+  /** Parent Portal v1.2 — open inventory assignments for this athlete. */
+  inventoryInHand?: Array<{
+    id: string;
+    itemName: string;
+    variantLabel: string;
+    quantity: number;
+    assignedAt: string;
+  }>;
 };
 
 export type GuardianPortalTodayItem = {
@@ -601,6 +644,23 @@ export type GuardianPortalTodayItem = {
   athleteId?: string;
   athleteName?: string;
   coachName?: string | null;
+};
+
+/**
+ * Parent Portal v1.2 — "this week" merged digest item. Either a training
+ * session ("training") or a private lesson ("lesson"). The portal sorts
+ * by `scheduledStart` and caps the list at 5 entries to keep the home
+ * scannable.
+ */
+export type GuardianPortalWeekItem = {
+  kind: 'training' | 'lesson';
+  id: string;
+  title: string | null;
+  scheduledStart: string;
+  location: string | null;
+  athleteId: string | null;
+  athleteName: string | null;
+  coachName: string | null;
 };
 
 export type GuardianPortalHome = {
@@ -626,6 +686,9 @@ export type GuardianPortalHome = {
   today?: {
     training: GuardianPortalTodayItem[];
     privateLessons: GuardianPortalTodayItem[];
+  };
+  thisWeek?: {
+    items: GuardianPortalWeekItem[];
   };
   clubUpdates?: ClubUpdateParentSummary[];
 };

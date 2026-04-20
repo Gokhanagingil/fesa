@@ -29,6 +29,7 @@ import { ImportsPage } from './pages/ImportsPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { PortalShell } from './components/layout/PortalShell';
 import { GuardianPortalLoginPage } from './pages/GuardianPortalLoginPage';
+import { GuardianPortalRecoveryPage } from './pages/GuardianPortalRecoveryPage';
 import { GuardianPortalActivationPage } from './pages/GuardianPortalActivationPage';
 import { GuardianPortalHomePage } from './pages/GuardianPortalHomePage';
 import { GuardianPortalActionPage } from './pages/GuardianPortalActionPage';
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<StaffLoginPage />} />
         <Route path="/portal/login" element={<GuardianPortalLoginPage />} />
+        <Route path="/portal/recover" element={<GuardianPortalRecoveryPage />} />
         <Route path="/portal/activate" element={<GuardianPortalActivationPage />} />
         <Route element={<PortalShell />}>
           <Route path="/portal" element={<Navigate to="/portal/home" replace />} />

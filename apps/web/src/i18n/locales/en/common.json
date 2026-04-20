@@ -612,7 +612,8 @@
         "disable": "Disable access",
         "resendInvite": "Resend invite",
         "notEnabled": "Guardian portal access has not been enabled yet.",
-        "invite": "Invite to portal"
+        "invite": "Invite to portal",
+        "recoveryRequested": "This family asked for help signing in on {{when}} ({{count}} request(s)). Resending the invite will give them a fresh activation link."
       }
     },
     "groups": {
@@ -1828,6 +1829,27 @@
         "create": "Create update",
         "cancel": "Cancel",
         "saving": "Saving…"
+      },
+      "audience": {
+        "title": "Who sees this",
+        "hint": "Send to all families, or quietly target a single sport branch, group, or team. We never share lists of names — only the audience you pick.",
+        "scopeLabel": "Show to",
+        "scope": {
+          "all": "All families",
+          "sport_branch": "Families in one sport branch",
+          "group": "Families in one group",
+          "team": "Families in one team"
+        },
+        "pickBranch": "Sport branch",
+        "pickGroup": "Group",
+        "pickTeam": "Team",
+        "pickPlaceholder": "Choose one",
+        "allFamilies": "For: all families",
+        "scopeFor": {
+          "sport_branch": "For: {{label}} branch",
+          "group": "For: {{label}} group",
+          "team": "For: {{label}} team"
+        }
       }
     },
     "staffLogin": {
@@ -2295,7 +2317,24 @@
       "submit": "Sign in",
       "submitting": "Signing in…",
       "invitationHint": "New here? Your club will send you an activation link by email — there is no public sign-up.",
-      "signedOutHint": "You're signed out. This view is for parents and guardians of club athletes."
+      "signedOutHint": "You're signed out. This view is for parents and guardians of club athletes.",
+      "forgotAccess": "Lost access? Get help",
+      "recoveryHint": "Your club will help you back in."
+    },
+    "recovery": {
+      "badge": "We're here to help",
+      "title": "Lost access to your family portal?",
+      "hint": "Tell us the email your club has on file. Your club will get in touch and send you a fresh invite — there is no public reset link.",
+      "club": "Your club",
+      "clubAny": "I'm not sure",
+      "email": "Email",
+      "emailHint": "We'll quietly let your club know you need a fresh link.",
+      "submit": "Ask for help",
+      "submitting": "Sending…",
+      "safetyNote": "For your safety, we never confirm whether an email is on file. Either way, your club will hear about it.",
+      "submitted": "Thanks — we let your club know.",
+      "submittedHint": "If we found a match, your club will send you a new activation link by email. You can close this page.",
+      "backToLogin": "Back to sign in"
     },
     "activate": {
       "badge": "Welcome",
@@ -2325,6 +2364,10 @@
       "financeLine": "{{outstanding}} child(ren) has an open balance ({{overdue}} overdue).",
       "allClearTitle": "All caught up",
       "allClearBody": "There is nothing waiting on you right now. We'll let you know if anything comes up.",
+      "thisWeekTitle": "This week",
+      "thisWeekHint": "Up to five things coming up across your family",
+      "inventoryTitle": "Kit in hand",
+      "inventoryQuantity": "× {{count}}",
       "todayTitle": "Today",
       "todayHint": "What is on your family's schedule today.",
       "todayBadgeTraining": "Training",
@@ -2351,6 +2394,11 @@
         "announcement": "Note",
         "event": "Event",
         "reminder": "Reminder"
+      },
+      "clubUpdateAudienceFor": {
+        "sport_branch": "For {{label}}",
+        "group": "For {{label}}",
+        "team": "For {{label}}"
       }
     }
   }

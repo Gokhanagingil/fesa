@@ -170,6 +170,13 @@ describe('GuardianPortalHomePage', () => {
             linkLabel: 'See the program',
             publishedAt: '2026-04-12T08:00:00.000Z',
             pinned: true,
+            audience: {
+              scope: 'group',
+              sportBranchId: null,
+              groupId: 'group-u14',
+              teamId: null,
+              label: 'U14 Girls',
+            },
           },
         ],
       }),
@@ -182,5 +189,70 @@ describe('GuardianPortalHomePage', () => {
     );
     expect(screen.getByText('A short, calm note from the club.')).toBeInTheDocument();
     expect(screen.getByText('See the program')).toBeInTheDocument();
+    // Parent Portal v1.2 — the calm targeted-audience hint should render
+    // when the card is scoped to a single group / team / branch.
+    expect(screen.getByText(/For U14 Girls/)).toBeInTheDocument();
+  });
+
+  it('renders the family this-week digest and inventory-in-hand when present', async () => {
+    mockApiGet.mockResolvedValueOnce(
+      makeHome({
+        thisWeek: {
+          items: [
+            {
+              kind: 'training',
+              id: 'ts-1',
+              title: 'Group practice',
+              scheduledStart: '2026-04-22T15:00:00.000Z',
+              location: 'Court A',
+              athleteId: null,
+              athleteName: null,
+              coachName: null,
+            },
+            {
+              kind: 'lesson',
+              id: 'pl-1',
+              title: null,
+              scheduledStart: '2026-04-23T16:00:00.000Z',
+              location: null,
+              athleteId: 'athlete-1',
+              athleteName: 'Deniz Kaya',
+              coachName: 'Coach Mete',
+            },
+          ],
+        },
+        linkedAthletes: [
+          {
+            linkId: 'link-1',
+            athleteId: 'athlete-1',
+            relationshipType: 'mother',
+            isPrimaryContact: true,
+            athleteName: 'Deniz Kaya',
+            groupName: 'U14 Girls',
+            status: 'active',
+            outstandingAmount: '0.00',
+            overdueAmount: '0.00',
+            nextTraining: [],
+            nextPrivateLesson: null,
+            inventoryInHand: [
+              {
+                id: 'asg-1',
+                itemName: 'Match jersey',
+                variantLabel: 'M',
+                quantity: 2,
+                assignedAt: '2026-03-01T08:00:00.000Z',
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    renderWithRoute(<GuardianPortalHomePage />, { path: '/portal' });
+
+    await waitFor(() => expect(screen.getByText('This week')).toBeInTheDocument());
+    expect(screen.getByText('Group practice')).toBeInTheDocument();
+    expect(screen.getByText('Kit in hand')).toBeInTheDocument();
+    expect(screen.getByText(/Match jersey · M/)).toBeInTheDocument();
   });
 });

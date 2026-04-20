@@ -646,7 +646,8 @@
         "disable": "Erişimi kapat",
         "resendInvite": "Daveti yeniden gönder",
         "notEnabled": "Veli portal erişimi henüz açılmadı.",
-        "invite": "Portala davet et"
+        "invite": "Portala davet et",
+        "recoveryRequested": "Bu aile {{when}} tarihinde giriş için yardım istedi ({{count}} talep). Daveti yeniden göndermek onlara taze bir aktivasyon bağlantısı sağlar."
       }
     },
     "groups": {
@@ -1856,6 +1857,27 @@
         "create": "Duyuru oluştur",
         "cancel": "Vazgeç",
         "saving": "Kaydediliyor…"
+      },
+      "audience": {
+        "title": "Kimler görsün",
+        "hint": "Tüm ailelere gönderebilir veya sessizce tek bir spor branşını, grubu ya da takımı hedefleyebilirsiniz. Hiçbir isim listesi paylaşılmaz; yalnızca seçtiğiniz kitle.",
+        "scopeLabel": "Görünürlük",
+        "scope": {
+          "all": "Tüm aileler",
+          "sport_branch": "Tek bir spor branşındaki aileler",
+          "group": "Tek bir gruptaki aileler",
+          "team": "Tek bir takımdaki aileler"
+        },
+        "pickBranch": "Spor branşı",
+        "pickGroup": "Grup",
+        "pickTeam": "Takım",
+        "pickPlaceholder": "Birini seçin",
+        "allFamilies": "Hedef: tüm aileler",
+        "scopeFor": {
+          "sport_branch": "Hedef: {{label}} branşı",
+          "group": "Hedef: {{label}} grubu",
+          "team": "Hedef: {{label}} takımı"
+        }
       }
     },
     "staffLogin": {
@@ -2325,7 +2347,24 @@
       "submit": "Giriş yap",
       "submitting": "Giriş yapılıyor…",
       "invitationHint": "Yeni misiniz? Kulübünüz size e-posta ile bir aktivasyon bağlantısı gönderecek — açık bir kayıt sayfası yok.",
-      "signedOutHint": "Çıkış yaptınız. Bu görünüm kulüp sporcularının veli ve aileleri içindir."
+      "signedOutHint": "Çıkış yaptınız. Bu görünüm kulüp sporcularının veli ve aileleri içindir.",
+      "forgotAccess": "Erişimi mi kaybettiniz? Yardım isteyin",
+      "recoveryHint": "Kulübünüz size yeni bir bağlantı gönderecek."
+    },
+    "recovery": {
+      "badge": "Yardım edelim",
+      "title": "Aile portalına erişimi mi kaybettiniz?",
+      "hint": "Kulübünüzde kayıtlı e-postayı yazın. Kulübünüz sizinle iletişime geçip yeni bir davet bağlantısı gönderecek — açık bir sıfırlama bağlantısı yok.",
+      "club": "Kulübünüz",
+      "clubAny": "Emin değilim",
+      "email": "E-posta",
+      "emailHint": "Kulübünüze sessizce yeni bir bağlantıya ihtiyacınız olduğunu bildireceğiz.",
+      "submit": "Yardım iste",
+      "submitting": "Gönderiliyor…",
+      "safetyNote": "Güvenliğiniz için bir e-postanın kayıtlı olup olmadığını asla doğrulamıyoruz. Her durumda, kulübünüz haberdar olur.",
+      "submitted": "Teşekkürler — kulübünüze ilettik.",
+      "submittedHint": "Eğer bir eşleşme bulduysak, kulübünüz size e-posta ile yeni bir aktivasyon bağlantısı gönderecek. Bu sayfayı kapatabilirsiniz.",
+      "backToLogin": "Girişe dön"
     },
     "activate": {
       "badge": "Hoş geldiniz",
@@ -2355,6 +2394,10 @@
       "financeLine": "{{outstanding}} sporcunun açık bakiyesi var ({{overdue}} adet gecikmiş).",
       "allClearTitle": "Her şey yolunda",
       "allClearBody": "Şu anda sizden bekleyen bir şey yok. Yeni bir konu olduğunda burada haberdar ederiz.",
+      "thisWeekTitle": "Bu hafta",
+      "thisWeekHint": "Aileniz için yaklaşan en fazla beş program",
+      "inventoryTitle": "Eşyalar",
+      "inventoryQuantity": "× {{count}}",
       "todayTitle": "Bugün",
       "todayHint": "Ailenizin bugünkü programı.",
       "todayBadgeTraining": "Antrenman",
@@ -2381,6 +2424,11 @@
         "announcement": "Not",
         "event": "Etkinlik",
         "reminder": "Hatırlatma"
+      },
+      "clubUpdateAudienceFor": {
+        "sport_branch": "Hedef: {{label}}",
+        "group": "Hedef: {{label}}",
+        "team": "Hedef: {{label}}"
       }
     }
   }

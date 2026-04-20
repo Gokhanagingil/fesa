@@ -81,6 +81,30 @@ export class ClubUpdate {
   @Column({ type: 'timestamptz', nullable: true })
   pinnedUntil!: Date | null;
 
+  /**
+   * Parent Portal v1.2 — Targeted announcements.
+   *
+   * Audience is intentionally simple: every card matches one of four
+   * scopes (`all`, `sport_branch`, `group`, `team`). When the scope is
+   * not `all` exactly one targeting id is set, and the parent portal
+   * intersects the card's audience against the parent's own derived
+   * audience set (the union of every linked athlete's branch / group /
+   * team membership). This is small enough to stay calm — no audience
+   * builder, no lists of ids — but already strong enough for the most
+   * common parent-relevant filters clubs ask for.
+   */
+  @Column({ type: 'varchar', length: 32, default: 'all' })
+  audienceScope!: 'all' | 'sport_branch' | 'group' | 'team';
+
+  @Column({ type: 'uuid', nullable: true })
+  audienceSportBranchId!: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  audienceGroupId!: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  audienceTeamId!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 

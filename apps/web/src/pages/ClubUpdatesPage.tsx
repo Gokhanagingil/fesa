@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from '../lib/api';
 import type {
   ClubUpdate,
+  ClubUpdateAudienceOptions,
+  ClubUpdateAudienceScope,
   ClubUpdateCategory,
   ClubUpdateInput,
   ClubUpdateStatus,
@@ -30,6 +32,7 @@ export function ClubUpdatesPage() {
   const { t, i18n } = useTranslation();
   const { tenantId } = useTenant();
   const [items, setItems] = useState<ClubUpdate[]>([]);
+  const [audienceOptions, setAudienceOptions] = useState<ClubUpdateAudienceOptions | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ClubUpdate | null>(null);
@@ -45,8 +48,16 @@ export function ClubUpdatesPage() {
     setLoading(true);
     setError(null);
     try {
-      const next = await apiGet<ClubUpdate[]>('/api/club-updates');
+      const [next, options] = await Promise.all([
+        apiGet<ClubUpdate[]>('/api/club-updates'),
+        apiGet<ClubUpdateAudienceOptions>('/api/club-updates/audience-options').catch(() => ({
+          sportBranches: [],
+          groups: [],
+          teams: [],
+        })),
+      ]);
       setItems(next);
+      setAudienceOptions(options);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('app.errors.loadFailed'));
     } finally {
@@ -143,6 +154,7 @@ export function ClubUpdatesPage() {
             <UpdateForm
               key={editing.id || 'new'}
               draft={editing}
+              audienceOptions={audienceOptions}
               onSubmit={(payload) => submit(payload, editing.id ? editing : null)}
               onCancel={() => setEditing(null)}
               savedAt={savedAt}
@@ -173,6 +185,7 @@ function emptyDraft(): ClubUpdate {
     pinnedUntil: null,
     pinned: false,
     expired: false,
+    audience: { scope: 'all', sportBranchId: null, groupId: null, teamId: null, label: null },
     createdAt: '',
     updatedAt: '',
   };
@@ -212,6 +225,13 @@ function UpdateCard({
             ) : null}
           </div>
           <h3 className="mt-2 font-display text-base font-semibold text-amateur-ink">{item.title}</h3>
+          <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-amateur-muted">
+            {item.audience.scope === 'all'
+              ? t('pages.clubUpdates.audience.allFamilies')
+              : t(`pages.clubUpdates.audience.scopeFor.${item.audience.scope}`, {
+                  label: item.audience.label ?? '—',
+                })}
+          </p>
           <p className="mt-1 whitespace-pre-line text-sm text-amateur-muted">{item.body}</p>
           {item.linkUrl ? (
             <p className="mt-2 truncate text-xs text-amateur-muted">
@@ -276,11 +296,13 @@ function statusTone(status: ClubUpdateStatus): 'default' | 'success' | 'info' | 
 
 function UpdateForm({
   draft,
+  audienceOptions,
   onSubmit,
   onCancel,
   savedAt,
 }: {
   draft: ClubUpdate;
+  audienceOptions: ClubUpdateAudienceOptions | null;
   onSubmit: (input: ClubUpdateInput) => Promise<void>;
   onCancel: () => void;
   savedAt: number | null;
@@ -295,6 +317,10 @@ function UpdateForm({
     linkLabel: draft.linkLabel ?? '',
     expiresAt: toLocalDateTime(draft.expiresAt),
     pinnedUntil: toLocalDateTime(draft.pinnedUntil),
+    audienceScope: draft.audience.scope,
+    audienceSportBranchId: draft.audience.sportBranchId ?? '',
+    audienceGroupId: draft.audience.groupId ?? '',
+    audienceTeamId: draft.audience.teamId ?? '',
   });
   const [submitting, setSubmitting] = useState(false);
   const isNew = !draft.id;
@@ -303,7 +329,16 @@ function UpdateForm({
 
   const titleValid = form.title.trim().length > 0;
   const bodyValid = form.body.trim().length > 0;
-  const ready = titleValid && bodyValid;
+  const audienceValid =
+    form.audienceScope === 'all' ||
+    (form.audienceScope === 'sport_branch' && Boolean(form.audienceSportBranchId)) ||
+    (form.audienceScope === 'group' && Boolean(form.audienceGroupId)) ||
+    (form.audienceScope === 'team' && Boolean(form.audienceTeamId));
+  const ready = titleValid && bodyValid && audienceValid;
+
+  const sportBranches = useMemo(() => audienceOptions?.sportBranches ?? [], [audienceOptions]);
+  const groups = useMemo(() => audienceOptions?.groups ?? [], [audienceOptions]);
+  const teams = useMemo(() => audienceOptions?.teams ?? [], [audienceOptions]);
 
   return (
     <form
@@ -322,6 +357,11 @@ function UpdateForm({
             linkLabel: form.linkLabel.trim() || null,
             expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
             pinnedUntil: form.pinnedUntil ? new Date(form.pinnedUntil).toISOString() : null,
+            audienceScope: form.audienceScope,
+            audienceSportBranchId:
+              form.audienceScope === 'sport_branch' ? form.audienceSportBranchId : null,
+            audienceGroupId: form.audienceScope === 'group' ? form.audienceGroupId : null,
+            audienceTeamId: form.audienceScope === 'team' ? form.audienceTeamId : null,
           });
         } finally {
           setSubmitting(false);
@@ -427,6 +467,112 @@ function UpdateForm({
             />
           </label>
         </div>
+        <fieldset className="rounded-2xl border border-amateur-border bg-amateur-canvas/60 p-3">
+          <legend className="px-2 text-xs font-semibold uppercase tracking-wide text-amateur-muted">
+            {t('pages.clubUpdates.audience.title')}
+          </legend>
+          <p className="px-2 pb-2 text-xs text-amateur-muted">
+            {t('pages.clubUpdates.audience.hint')}
+          </p>
+          <label className="block px-2 text-sm">
+            <span className="mb-1 block text-xs font-medium text-amateur-muted">
+              {t('pages.clubUpdates.audience.scopeLabel')}
+            </span>
+            <select
+              value={form.audienceScope}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  audienceScope: event.target.value as ClubUpdateAudienceScope,
+                  audienceSportBranchId: '',
+                  audienceGroupId: '',
+                  audienceTeamId: '',
+                }))
+              }
+              className="w-full rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-ink shadow-sm"
+            >
+              <option value="all">{t('pages.clubUpdates.audience.scope.all')}</option>
+              {sportBranches.length > 0 ? (
+                <option value="sport_branch">
+                  {t('pages.clubUpdates.audience.scope.sport_branch')}
+                </option>
+              ) : null}
+              {groups.length > 0 ? (
+                <option value="group">{t('pages.clubUpdates.audience.scope.group')}</option>
+              ) : null}
+              {teams.length > 0 ? (
+                <option value="team">{t('pages.clubUpdates.audience.scope.team')}</option>
+              ) : null}
+            </select>
+          </label>
+          {form.audienceScope === 'sport_branch' ? (
+            <label className="mt-3 block px-2 text-sm">
+              <span className="mb-1 block text-xs font-medium text-amateur-muted">
+                {t('pages.clubUpdates.audience.pickBranch')}
+              </span>
+              <select
+                value={form.audienceSportBranchId}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, audienceSportBranchId: event.target.value }))
+                }
+                className="w-full rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-ink shadow-sm"
+                required
+              >
+                <option value="">{t('pages.clubUpdates.audience.pickPlaceholder')}</option>
+                {sportBranches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {form.audienceScope === 'group' ? (
+            <label className="mt-3 block px-2 text-sm">
+              <span className="mb-1 block text-xs font-medium text-amateur-muted">
+                {t('pages.clubUpdates.audience.pickGroup')}
+              </span>
+              <select
+                value={form.audienceGroupId}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, audienceGroupId: event.target.value }))
+                }
+                className="w-full rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-ink shadow-sm"
+                required
+              >
+                <option value="">{t('pages.clubUpdates.audience.pickPlaceholder')}</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {form.audienceScope === 'team' ? (
+            <label className="mt-3 block px-2 text-sm">
+              <span className="mb-1 block text-xs font-medium text-amateur-muted">
+                {t('pages.clubUpdates.audience.pickTeam')}
+              </span>
+              <select
+                value={form.audienceTeamId}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, audienceTeamId: event.target.value }))
+                }
+                className="w-full rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-ink shadow-sm"
+                required
+              >
+                <option value="">{t('pages.clubUpdates.audience.pickPlaceholder')}</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </fieldset>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="mb-1 block text-xs font-medium text-amateur-muted">

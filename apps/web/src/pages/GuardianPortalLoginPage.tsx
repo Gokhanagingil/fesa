@@ -168,6 +168,17 @@ export function GuardianPortalLoginPage() {
           </form>
 
           <p className="mt-6 text-xs text-amateur-muted">{t('portal.login.invitationHint')}</p>
+
+          <div className="mt-4 flex items-center justify-between text-xs">
+            <Link
+              to="/portal/recover"
+              className="font-medium text-amateur-ink underline-offset-2 hover:underline"
+              style={{ color: tokens.primary }}
+            >
+              {t('portal.login.forgotAccess')}
+            </Link>
+            <span className="text-amateur-muted">{t('portal.login.recoveryHint')}</span>
+          </div>
         </section>
 
         <p className="text-center text-xs text-amateur-muted">

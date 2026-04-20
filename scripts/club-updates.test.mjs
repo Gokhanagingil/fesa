@@ -150,4 +150,72 @@ const visible = candidates
   .slice(0, PARENT_LIMIT);
 expect(visible.length === 1 && visible[0].id === 'live', 'parent-facing filter drops expired and future-dated cards');
 
+// Parent Portal v1.2 — targeted audience matching.
+function matchesAudience(card, audience) {
+  const { scope, sportBranchId, groupId, teamId } = card.audience;
+  if (scope === 'all') return true;
+  if (scope === 'sport_branch') {
+    return Boolean(sportBranchId && audience.sportBranchIds.has(sportBranchId));
+  }
+  if (scope === 'group') {
+    return Boolean(groupId && audience.groupIds.has(groupId));
+  }
+  if (scope === 'team') {
+    return Boolean(teamId && audience.teamIds.has(teamId));
+  }
+  return false;
+}
+
+const parentAudience = {
+  sportBranchIds: new Set(['branch-vb']),
+  groupIds: new Set(['group-u14']),
+  teamIds: new Set(['team-a']),
+};
+
+const targetingCases = [
+  { id: 'all-card', audience: { scope: 'all', sportBranchId: null, groupId: null, teamId: null } },
+  {
+    id: 'matching-branch',
+    audience: { scope: 'sport_branch', sportBranchId: 'branch-vb', groupId: null, teamId: null },
+  },
+  {
+    id: 'wrong-branch',
+    audience: { scope: 'sport_branch', sportBranchId: 'branch-bb', groupId: null, teamId: null },
+  },
+  {
+    id: 'matching-group',
+    audience: { scope: 'group', sportBranchId: null, groupId: 'group-u14', teamId: null },
+  },
+  {
+    id: 'wrong-group',
+    audience: { scope: 'group', sportBranchId: null, groupId: 'group-u16', teamId: null },
+  },
+  {
+    id: 'matching-team',
+    audience: { scope: 'team', sportBranchId: null, groupId: null, teamId: 'team-a' },
+  },
+  {
+    id: 'wrong-team',
+    audience: { scope: 'team', sportBranchId: null, groupId: null, teamId: 'team-b' },
+  },
+];
+const matched = targetingCases.filter((card) => matchesAudience(card, parentAudience)).map((c) => c.id);
+expect(
+  matched.join(',') === 'all-card,matching-branch,matching-group,matching-team',
+  'audience filter only keeps cards the parent actually belongs to',
+);
+
+// An empty parent audience set should still see "all" cards but never any
+// targeted card — relevant when a guardian has no linked athletes yet.
+const emptyAudience = {
+  sportBranchIds: new Set(),
+  groupIds: new Set(),
+  teamIds: new Set(),
+};
+const emptyMatch = targetingCases.filter((card) => matchesAudience(card, emptyAudience)).map((c) => c.id);
+expect(
+  emptyMatch.join(',') === 'all-card',
+  'empty audience set still sees the all-families card and nothing targeted',
+);
+
 console.log('club-updates: OK');

@@ -18,11 +18,14 @@ import { PrivateLesson } from '../../database/entities/private-lesson.entity';
 import { TrainingSession } from '../../database/entities/training-session.entity';
 import { Team } from '../../database/entities/team.entity';
 import { ClubGroup } from '../../database/entities/club-group.entity';
+import { AthleteTeamMembership } from '../../database/entities/athlete-team-membership.entity';
 import { FamilyActionService } from '../family-action/family-action.service';
 import { FinanceService } from '../finance/finance.service';
+import { InventoryService } from '../inventory/inventory.service';
 import { TenantService } from '../tenant/tenant.service';
 import { TenantBrandingService } from '../tenant/tenant-branding.service';
 import { ClubUpdateService } from '../club-update/club-update.service';
+import { ParentAudienceSet } from '../club-update/club-update.types';
 import { GUARDIAN_PORTAL_SESSION_COOKIE } from './guardian-portal.constants';
 
 type AccessStatus = GuardianPortalAccess['status'];
@@ -47,6 +50,17 @@ type GuardianAccessSummary = {
   pendingActions: number;
   awaitingReview: number;
   linkedAthletes: number;
+  /**
+   * Parent Portal v1.2 — recovery surface.
+   *
+   * Stamped from the public "I lost access" form so staff can spot,
+   * from the existing access summary, when a family asked for help.
+   * `recoveryRequestedAt` resets to null whenever staff resends an
+   * invite (which is the canonical way to give the family a fresh
+   * activation link).
+   */
+  recoveryRequestedAt: Date | null;
+  recoveryRequestCount: number;
 };
 
 @Injectable()
@@ -74,8 +88,11 @@ export class GuardianPortalService {
     private readonly groups: Repository<ClubGroup>,
     @InjectRepository(Team)
     private readonly teams: Repository<Team>,
+    @InjectRepository(AthleteTeamMembership)
+    private readonly teamMemberships: Repository<AthleteTeamMembership>,
     private readonly familyActions: FamilyActionService,
     private readonly finance: FinanceService,
+    private readonly inventory: InventoryService,
     private readonly tenants: TenantService,
     private readonly branding: TenantBrandingService,
     private readonly clubUpdates: ClubUpdateService,
@@ -227,6 +244,8 @@ export class GuardianPortalService {
         ['submitted', 'under_review'].includes(item.status),
       ).length,
       linkedAthletes: readiness.summary.linkedAthletes,
+      recoveryRequestedAt: access.recoveryRequestedAt ?? null,
+      recoveryRequestCount: access.recoveryRequestCount ?? 0,
     };
   }
 
@@ -293,6 +312,10 @@ export class GuardianPortalService {
       access.inviteTokenExpiresAt = inviteTokenExpiresAt;
       access.invitedAt = now;
       access.disabledAt = null;
+      // Parent Portal v1.2 — staff has now responded to the family,
+      // so clear the recovery flag from the access summary surface.
+      access.recoveryRequestedAt = null;
+      access.recoveryRequestCount = 0;
     }
 
     const saved = await this.accesses.save(access);
@@ -386,6 +409,39 @@ export class GuardianPortalService {
       expiresAt: session.expiresAt,
       summary: await this.getPortalHome(access.tenantId, access.guardianId),
     };
+  }
+
+  /**
+   * Parent Portal v1.2 — calm "I lost access" UX.
+   *
+   * The public response is intentionally identical for both
+   * "we found you" and "we did not" cases so we never leak whether an
+   * email exists in any tenant. When a row is found we stamp the
+   * recovery columns so club staff can see, from the existing access
+   * summary surface, that this family asked for help recently. The
+   * actual reset still flows through the staff resend-invite path —
+   * that keeps the recovery loop safely under club control without
+   * forcing us to invent a new public reset link in v1.2.
+   */
+  async requestRecovery(input: { email: string; tenantId: string | null }): Promise<{
+    submitted: true;
+    helpMessageKey: 'portal.recovery.submitted';
+  }> {
+    const email = this.normalizeEmail(input.email);
+    if (!email) {
+      return { submitted: true, helpMessageKey: 'portal.recovery.submitted' };
+    }
+    const where = input.tenantId
+      ? { tenantId: input.tenantId, email }
+      : { email };
+    const matches = await this.accesses.find({ where });
+    const now = new Date();
+    for (const access of matches) {
+      access.recoveryRequestedAt = now;
+      access.recoveryRequestCount = (access.recoveryRequestCount ?? 0) + 1;
+      await this.accesses.save(access);
+    }
+    return { submitted: true, helpMessageKey: 'portal.recovery.submitted' };
   }
 
   async login(input: { email: string; password: string; tenantId: string }) {
@@ -516,47 +572,108 @@ export class GuardianPortalService {
     ]);
 
     const teamMap = new Map(teams.map((team) => [team.id, team]));
-    const visibleTraining = upcomingTraining.filter((session) =>
-      links.some(
-        (link) =>
-          link.athlete?.primaryGroupId === session.groupId &&
-          (!session.teamId || teamMap.get(session.teamId)),
-      ),
-    );
 
-    const linkedAthletes = links.map((link) => ({
-      linkId: link.id,
-      athleteId: link.athleteId,
-      relationshipType: link.relationshipType,
-      isPrimaryContact: link.isPrimaryContact,
-      athleteName: link.athlete ? `${link.athlete.preferredName || link.athlete.firstName} ${link.athlete.lastName}` : link.athleteId,
-      groupName: link.athlete?.primaryGroup?.name ?? null,
-      status: link.athlete?.status ?? null,
-      outstandingAmount: financeByAthlete.get(link.athleteId)?.totalOutstanding.toFixed(2) ?? '0.00',
-      overdueAmount: financeByAthlete.get(link.athleteId)?.totalOverdue.toFixed(2) ?? '0.00',
-      nextTraining: visibleTraining
-        .filter((session) => session.groupId === link.athlete?.primaryGroupId)
-        .slice(0, 2)
-        .map((session) => ({
-          id: session.id,
-          title: session.title,
-          scheduledStart: session.scheduledStart,
-        })),
-      nextPrivateLesson: upcomingLessons
-        .filter((lesson) => lesson.athleteId === link.athleteId)
-        .slice(0, 1)
-        .map((lesson) => ({
-          id: lesson.id,
-          scheduledStart: lesson.scheduledStart,
-          coachName: lesson.coach
-            ? `${lesson.coach.preferredName || lesson.coach.firstName} ${lesson.coach.lastName}`
-            : null,
-        }))[0] ?? null,
-    }));
+    // Parent Portal v1.2 — derived audience set across the whole family.
+    // Athletes contribute their sport branch and primary group; their
+    // open team memberships contribute teams. We use this for two
+    // things: targeted club-updates filtering and the upcoming-week
+    // schedule digest.
+    const memberships = athleteIds.length
+      ? await this.teamMemberships.find({
+          where: athleteIds.map((athleteId) => ({ tenantId, athleteId })),
+        })
+      : [];
+    const openMemberships = memberships.filter((row) => row.endedAt == null);
+    const teamIdsForFamily = new Set<string>(openMemberships.map((row) => row.teamId));
+    const audienceSet: ParentAudienceSet = {
+      sportBranchIds: new Set(
+        links
+          .map((link) => link.athlete?.sportBranchId ?? null)
+          .filter((id): id is string => Boolean(id)),
+      ),
+      groupIds: new Set(
+        links
+          .map((link) => link.athlete?.primaryGroupId ?? null)
+          .filter((id): id is string => Boolean(id)),
+      ),
+      teamIds: teamIdsForFamily,
+    };
+
+    const visibleTraining = upcomingTraining.filter((session) => {
+      const matchesGroup = links.some((link) => link.athlete?.primaryGroupId === session.groupId);
+      if (!matchesGroup) return false;
+      if (!session.teamId) return true;
+      return teamIdsForFamily.has(session.teamId) || teamMap.has(session.teamId);
+    });
+
+    // Parent Portal v1.2 — inventory in hand per athlete (active only).
+    // Pulled through the inventory service so the parent payload reuses
+    // exactly the same active-assignment definition staff see.
+    const inventoryByAthlete = new Map<string, Awaited<ReturnType<InventoryService['listAssignmentsForAthlete']>>>();
+    if (athleteIds.length) {
+      await Promise.all(
+        athleteIds.map(async (athleteId) => {
+          try {
+            const items = await this.inventory.listAssignmentsForAthlete(tenantId, athleteId, {
+              includeReturned: false,
+            });
+            inventoryByAthlete.set(athleteId, items);
+          } catch {
+            inventoryByAthlete.set(athleteId, []);
+          }
+        }),
+      );
+    }
+
+    const linkedAthletes = links.map((link) => {
+      const inventoryItems = inventoryByAthlete.get(link.athleteId) ?? [];
+      return {
+        linkId: link.id,
+        athleteId: link.athleteId,
+        relationshipType: link.relationshipType,
+        isPrimaryContact: link.isPrimaryContact,
+        athleteName: link.athlete
+          ? `${link.athlete.preferredName || link.athlete.firstName} ${link.athlete.lastName}`
+          : link.athleteId,
+        groupName: link.athlete?.primaryGroup?.name ?? null,
+        status: link.athlete?.status ?? null,
+        outstandingAmount: financeByAthlete.get(link.athleteId)?.totalOutstanding.toFixed(2) ?? '0.00',
+        overdueAmount: financeByAthlete.get(link.athleteId)?.totalOverdue.toFixed(2) ?? '0.00',
+        nextTraining: visibleTraining
+          .filter((session) => session.groupId === link.athlete?.primaryGroupId)
+          .slice(0, 2)
+          .map((session) => ({
+            id: session.id,
+            title: session.title,
+            scheduledStart: session.scheduledStart,
+          })),
+        nextPrivateLesson:
+          upcomingLessons
+            .filter((lesson) => lesson.athleteId === link.athleteId)
+            .slice(0, 1)
+            .map((lesson) => ({
+              id: lesson.id,
+              scheduledStart: lesson.scheduledStart,
+              coachName: lesson.coach
+                ? `${lesson.coach.preferredName || lesson.coach.firstName} ${lesson.coach.lastName}`
+                : null,
+            }))[0] ?? null,
+        inventoryInHand: inventoryItems
+          .filter((row) => row.isOpen)
+          .slice(0, 5)
+          .map((row) => ({
+            id: row.id,
+            itemName: row.inventoryItemName,
+            variantLabel: row.variantLabel,
+            quantity: row.quantity,
+            assignedAt: row.assignedAt,
+          })),
+      };
+    });
 
     const [brand, clubUpdates] = await Promise.all([
       this.branding.getForTenant(tenantId),
-      this.clubUpdates.listForParents(tenantId),
+      this.clubUpdates.listForParents(tenantId, audienceSet),
     ]);
 
     const todayBoundary = new Date();
@@ -588,6 +705,49 @@ export class GuardianPortalService {
           : null,
       }));
 
+    // Parent Portal v1.2 — "this week" family digest. Same data sources
+    // as the per-athlete cards, just merged, sorted by start, and
+    // capped at five entries so the home stays a calm, scannable column.
+    const weekBoundary = new Date(todayStart);
+    weekBoundary.setDate(weekBoundary.getDate() + 7);
+    const weekTraining = visibleTraining
+      .filter(
+        (session) =>
+          session.scheduledStart > todayBoundary && session.scheduledStart <= weekBoundary,
+      )
+      .map((session) => ({
+        kind: 'training' as const,
+        id: session.id,
+        title: session.title ?? null,
+        scheduledStart: session.scheduledStart,
+        location: session.location ?? null,
+        athleteId: null as string | null,
+        athleteName: null as string | null,
+        coachName: null as string | null,
+      }));
+    const weekLessons = upcomingLessons
+      .filter(
+        (lesson) =>
+          lesson.scheduledStart > todayBoundary && lesson.scheduledStart <= weekBoundary,
+      )
+      .map((lesson) => ({
+        kind: 'lesson' as const,
+        id: lesson.id,
+        title: null as string | null,
+        scheduledStart: lesson.scheduledStart,
+        location: lesson.location ?? null,
+        athleteId: lesson.athleteId,
+        athleteName: lesson.athlete
+          ? `${lesson.athlete.preferredName || lesson.athlete.firstName} ${lesson.athlete.lastName}`
+          : null,
+        coachName: lesson.coach
+          ? `${lesson.coach.preferredName || lesson.coach.firstName} ${lesson.coach.lastName}`
+          : null,
+      }));
+    const weekItems = [...weekTraining, ...weekLessons]
+      .sort((a, b) => a.scheduledStart.getTime() - b.scheduledStart.getTime())
+      .slice(0, 5);
+
     return {
       guardian: {
         id: guardian.id,
@@ -611,6 +771,9 @@ export class GuardianPortalService {
       today: {
         training: todayTraining,
         privateLessons: todayLessons,
+      },
+      thisWeek: {
+        items: weekItems,
       },
       clubUpdates,
     };

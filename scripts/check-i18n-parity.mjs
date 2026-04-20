@@ -121,6 +121,19 @@ const scopedPrefixes = [
   'portal.home.clubUpdateCategory',
   // Sidebar nav keys for the club updates surface.
   'app.nav.clubUpdates',
+  // Parent Portal v1.2 — Targeted announcements + family utility refinement +
+  // parent recovery UX. Protect every new key set across both locales so the
+  // staff editor, recovery surface, and refined home never silently drift.
+  'pages.clubUpdates.audience',
+  'pages.guardians.portalAccess.recoveryRequested',
+  'portal.home.thisWeekTitle',
+  'portal.home.thisWeekHint',
+  'portal.home.inventoryTitle',
+  'portal.home.inventoryQuantity',
+  'portal.home.clubUpdateAudienceFor',
+  'portal.login.forgotAccess',
+  'portal.login.recoveryHint',
+  'portal.recovery',
 ];
 
 function flattenKeys(input, prefix = '') {

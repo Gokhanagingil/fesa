@@ -33,6 +33,11 @@ export class StaffClubUpdateController {
     return this.updates.listForStaff(req.tenantId!);
   }
 
+  @Get('audience-options')
+  audienceOptions(@Req() req: Request) {
+    return this.updates.listAudienceOptions(req.tenantId!);
+  }
+
   @Get(':id')
   one(@Req() req: Request, @Param('id') id: string) {
     return this.updates.getOne(req.tenantId!, id);
