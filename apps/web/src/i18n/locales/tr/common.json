@@ -924,7 +924,11 @@
       "totalOverdueHint": "Vadesi geçmiş ve açık kalan ücretler",
       "privateLessonCollections": "Özel ders takibi",
       "privateLessonCollectionsHint": "Ücreti kapanmamış veya aksiyon isteyen 1’e 1 işleri buradan izleyin.",
-      "noPrivateLessonCollections": "Şu anda özel ders kaynaklı ek takip gerekmiyor."
+      "noPrivateLessonCollections": "Şu anda özel ders kaynaklı ek takip gerekmiyor.",
+      "athleteChargesPrimaryHint": "Ücret atayın, dönemsel paket üretin ve tahsilatları tek sakin operasyon yüzeyinden kaydedin.",
+      "openAthleteCharges": "Sporcu borçlarını aç",
+      "moreToolsTitle": "Daha fazla finans aracı",
+      "moreToolsHint": "Tekrar kullanılabilir tanımlar, özel dersler, takip kitleleri ve gelişmiş finans gezgini tek tıklama uzakta."
     },
     "chargeItems": {
       "title": "Ücret kalemleri",
@@ -956,14 +960,40 @@
     },
     "athleteCharges": {
       "title": "Sporcu borçları",
-      "subtitle": "Atanan ücretler, kalan bakiye ve tahsilat durumu.",
+      "subtitle": "Tek sakin operasyon yüzeyi: bakiyeleri görün, hatırlatma hazırlayın, tahsilatı kaydedin.",
       "empty": "Henüz borç atanmadı.",
+      "emptyHint": "Yeni borç atamak veya dönemsel paket üretmek için yukarıdaki aksiyon panelini kullanın.",
+      "listTitle": "Açık ve son borçlar",
+      "listCount_one": "Görünen {{count}} borç",
+      "listCount_other": "Görünen {{count}} borç",
       "new": "Yeni borç",
       "athlete": "Sporcu",
       "item": "Ücret kalemi",
+      "chargeItem": "Ücret kalemi",
+      "outstanding": "Açık bakiye",
       "amount": "Tutar",
       "due": "Vade",
       "status": "Durum",
+      "actions": {
+        "title": "Ne yapmak istersiniz?",
+        "hint": "Aynı anda tek bir aksiyonla ilerleyin. Diğer akışlar tek tıklama uzakta kalır, ekranı yormaz.",
+        "advancedDetails": "Gelişmiş alanlar",
+        "recordPayment": "Tahsilat kaydet",
+        "recordPaymentHint": "Ödemeyi sporcunun açık borçlarına dağıtarak kaydedin.",
+        "bulkAssign": "Toplu ücret ata",
+        "bulkAssignHint": "Aynı ücreti seçili sporculara, gruba veya takıma uygulayın.",
+        "periodic": "Dönemsel ücret üret",
+        "periodicHint": "Aylık veya dönemsel aidatları çakışma yapmadan oluşturun."
+      },
+      "attention": {
+        "title": "Şu an dikkat isteyen aileler",
+        "summary_one": "Şu an {{count}} sporcunun açık bakiyesi var.",
+        "summary_other": "Şu an {{count}} sporcunun açık bakiyesi var.",
+        "empty": "Açık bakiye görünmüyor — tahsilat akışı temiz.",
+        "openFollowUp": "Hatırlatma hazırla",
+        "viewCharges": "Borçları aç"
+      },
+      "selectAthletesHint": "Aşağıdaki listeden sporcu seçin veya grup/takım kapsamına geçin.",
       "quickAssign": "Hızlı ücret atama",
       "quickAssignHint": "Bu sporcunun kaydından çıkmadan tek bir ücret ekleyin.",
       "profileHint": "Son atanan ücretler ve tahsilat durumu burada görünür.",
@@ -1042,7 +1072,8 @@
         "totalCharged": "Toplam ücret",
         "totalCollected": "Toplam tahsilat",
         "totalOutstanding": "Toplam açık bakiye",
-        "totalOverdue": "Toplam gecikmiş bakiye"
+        "totalOverdue": "Toplam gecikmiş bakiye",
+        "totalOverdueHint": "Vadesi geçmiş ve hâlâ takip isteyen bakiyeler."
       }
     },
     "payments": {

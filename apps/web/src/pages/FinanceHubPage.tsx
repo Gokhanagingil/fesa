@@ -47,6 +47,16 @@ type FinanceSummaryResponse = {
   }>;
 };
 
+/**
+ * Finance Hub — Collections Clarity Pack.
+ *
+ * The previous hub layout placed five competing equal-weight blocks above the
+ * fold (reporting hero, stat row, nav grid, priority collections, lessons
+ * follow-up, checklist column). The clarity pack reorders the page so the
+ * primary jobs (read totals → look at who needs attention → step into the
+ * right action surface) come first, and demotes secondary navigation /
+ * reporting deep-links into a calm "more tools" strip below.
+ */
 export function FinanceHubPage() {
   const { t, i18n } = useTranslation();
   const { tenantId, loading: tenantLoading } = useTenant();
@@ -75,72 +85,7 @@ export function FinanceHubPage() {
   return (
     <div>
       <PageHeader title={t('pages.finance.title')} subtitle={t('pages.finance.subtitle')} />
-      <section className="mb-6 rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amateur-accent">
-              {t('pages.finance.reportingEyebrow')}
-            </p>
-            <h2 className="mt-2 font-display text-xl font-semibold text-amateur-ink">
-              {t('pages.finance.reportingTitle')}
-            </h2>
-            <p className="mt-2 text-sm text-amateur-muted">{t('pages.finance.reportingBody')}</p>
-          </div>
-          <Link
-            to="/app/reports"
-            className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-2 text-sm font-semibold text-amateur-accent shadow-sm hover:bg-white"
-          >
-            {t('pages.finance.reportingOpenHub')}
-          </Link>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <Link
-            to={buildStarterLink('finance.overdue')}
-            className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4 shadow-sm transition hover:border-amateur-accent/40"
-          >
-            <p className="text-sm font-semibold text-amateur-ink">{t('pages.finance.reportingCards.overdueTitle')}</p>
-            <p className="mt-1 text-sm text-amateur-muted">{t('pages.finance.reportingCards.overdueBody')}</p>
-            <p className="mt-3 text-sm font-semibold text-amateur-accent">
-              {t('pages.finance.reportingCards.openAction')} →
-            </p>
-          </Link>
-          <Link
-            to={buildStarterLink('finance.outstandingByItem')}
-            className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4 shadow-sm transition hover:border-amateur-accent/40"
-          >
-            <p className="text-sm font-semibold text-amateur-ink">
-              {t('pages.finance.reportingCards.byItemTitle')}
-            </p>
-            <p className="mt-1 text-sm text-amateur-muted">{t('pages.finance.reportingCards.byItemBody')}</p>
-            <p className="mt-3 text-sm font-semibold text-amateur-accent">
-              {t('pages.finance.reportingCards.openAction')} →
-            </p>
-          </Link>
-          <Link
-            to={buildStarterLink('finance.overdueByCategory')}
-            className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4 shadow-sm transition hover:border-amateur-accent/40"
-          >
-            <p className="text-sm font-semibold text-amateur-ink">
-              {t('pages.finance.reportingCards.byCategoryTitle')}
-            </p>
-            <p className="mt-1 text-sm text-amateur-muted">
-              {t('pages.finance.reportingCards.byCategoryBody')}
-            </p>
-            <p className="mt-3 text-sm font-semibold text-amateur-accent">
-              {t('pages.finance.reportingCards.openAction')} →
-            </p>
-          </Link>
-        </div>
-        <details className="mt-4 rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-          <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
-            {t('pages.finance.advancedExplorer')}
-          </summary>
-          <p className="mt-1 text-xs text-amateur-muted">{t('pages.finance.advancedExplorerHint')}</p>
-          <div className="mt-3">
-            {tenantId ? <DataExplorer entity="finance_charges" embed /> : null}
-          </div>
-        </details>
-      </section>
+
       {!tenantId && !tenantLoading ? (
         <InlineAlert tone="info" className="mb-6">
           {t('app.errors.needTenant')}
@@ -151,185 +96,242 @@ export function FinanceHubPage() {
           {error}
         </InlineAlert>
       ) : null}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+      {/* 1. Compact summary band — read first, no competing eyebrow text. */}
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label={t('pages.finance.totalCharged')}
           value={summary?.totals.totalCharged ?? '0.00'}
           helper={t('pages.finance.totalChargedHint')}
+          compact
         />
         <StatCard
           label={t('pages.finance.totalCollected')}
           value={summary?.totals.totalCollected ?? '0.00'}
           helper={t('pages.finance.totalCollectedHint')}
+          compact
         />
         <StatCard
           label={t('pages.finance.totalOutstanding')}
           value={summary?.totals.totalOutstanding ?? '0.00'}
           helper={t('pages.finance.totalOutstandingHint')}
+          compact
         />
         <StatCard
           label={t('pages.finance.totalOverdue')}
           value={summary?.totals.totalOverdue ?? '0.00'}
           helper={t('pages.finance.totalOverdueHint')}
           tone="danger"
+          compact
         />
       </div>
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="grid gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Link
-              to="/app/finance/charge-items"
-              className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm transition hover:border-amateur-accent/40"
-            >
-              <h2 className="font-display text-lg font-semibold text-amateur-ink">
-                {t('pages.finance.chargeItemsLink')}
-              </h2>
-              <p className="mt-2 text-sm text-amateur-muted">{t('pages.chargeItems.subtitle')}</p>
-            </Link>
-            <Link
-              to="/app/finance/athlete-charges"
-              className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm transition hover:border-amateur-accent/40"
-            >
-              <h2 className="font-display text-lg font-semibold text-amateur-ink">
-                {t('pages.finance.athleteChargesLink')}
-              </h2>
-              <p className="mt-2 text-sm text-amateur-muted">{t('pages.athleteCharges.subtitle')}</p>
-            </Link>
-            <Link
-              to="/app/private-lessons"
-              className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm transition hover:border-amateur-accent/40"
-            >
-              <h2 className="font-display text-lg font-semibold text-amateur-ink">
-                {t('pages.privateLessons.title')}
-              </h2>
-              <p className="mt-2 text-sm text-amateur-muted">{t('pages.privateLessons.financeHint')}</p>
-            </Link>
-            <Link
-              to="/app/communications?financialState=overdue&primaryContactsOnly=true&channel=whatsapp&template=overdue_payment_reminder&source=finance_overdue"
-              className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm transition hover:border-amateur-accent/40"
-            >
-              <h2 className="font-display text-lg font-semibold text-amateur-ink">
-                {t('pages.communications.title')}
-              </h2>
-              <p className="mt-2 text-sm text-amateur-muted">{t('pages.communications.financeHint')}</p>
-            </Link>
+
+      {/* 2. Primary action surface — Athlete Charges is the operational hub. */}
+      <section className="mb-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="max-w-2xl">
+            <h2 className="font-display text-lg font-semibold text-amateur-ink">
+              {t('pages.finance.athleteChargesLink')}
+            </h2>
+            <p className="mt-2 text-sm text-amateur-muted">{t('pages.finance.athleteChargesPrimaryHint')}</p>
           </div>
-          <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-amateur-ink">
-                  {t('pages.finance.priorityCollections')}
-                </h2>
-                <p className="mt-1 text-sm text-amateur-muted">{t('pages.finance.priorityCollectionsHint')}</p>
-              </div>
-              <Link to="/app/finance/athlete-charges" className="text-sm font-semibold text-amateur-accent hover:underline">
-                {t('pages.athleteCharges.viewAll')} →
-              </Link>
-            </div>
-            {loading && !summary ? (
-              <p className="mt-4 text-sm text-amateur-muted">{t('app.states.loading')}</p>
-            ) : summary && summary.athletes.length > 0 ? (
-              <ul className="mt-4 divide-y divide-amateur-border">
-                {summary.athletes.slice(0, 5).map((entry) => (
-                  <li key={entry.athlete.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-medium text-amateur-ink">
-                        {entry.athlete.preferredName || `${entry.athlete.firstName} ${entry.athlete.lastName}`}
-                      </p>
-                      <p className="text-xs text-amateur-muted">
-                        {t('pages.finance.outstandingAmount', { amount: entry.totalOutstanding.toFixed(2) })}
-                        {entry.overdueCount > 0 ? ` · ${t('pages.finance.overdueCount', { count: entry.overdueCount })}` : ''}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-sm font-semibold">
-                      <Link
-                        to={`/app/finance/athlete-charges?athleteId=${entry.athlete.id}`}
-                        className="text-amateur-accent hover:underline"
-                      >
-                        {t('pages.finance.athleteChargesLink')}
-                      </Link>
-                      <Link
-                        to={`/app/communications?athleteIds=${entry.athlete.id}&primaryContactsOnly=true&channel=whatsapp&template=overdue_payment_reminder&source=finance_overdue&sourceKey=priority-${entry.athlete.id}`}
-                        className="text-emerald-700 hover:underline"
-                      >
-                        {t('pages.finance.priorityCollectionsPrepare')}
-                      </Link>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-4 text-sm text-amateur-muted">{t('pages.finance.noPriorityCollections')}</p>
-            )}
-          </section>
-          <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-amateur-ink">
-                  {t('pages.finance.privateLessonCollections')}
-                </h2>
-                <p className="mt-1 text-sm text-amateur-muted">{t('pages.finance.privateLessonCollectionsHint')}</p>
-              </div>
-              <Link to="/app/private-lessons" className="text-sm font-semibold text-amateur-accent hover:underline">
-                {t('pages.privateLessons.openBoard')} →
-              </Link>
-            </div>
-            {summary?.privateLessons?.length ? (
-              <ul className="mt-4 divide-y divide-amateur-border">
-                {summary.privateLessons.slice(0, 5).map((lesson) => (
-                  <li key={lesson.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-medium text-amateur-ink">
-                        {lesson.athlete ? getPersonName(lesson.athlete) : t('pages.athleteCharges.openAthlete')}
-                      </p>
-                      <p className="text-xs text-amateur-muted">
-                        {new Date(lesson.scheduledStart).toLocaleString(i18n.language)} ·{' '}
-                        {getLessonStatusLabel(t, lesson.status)}
-                      </p>
-                    </div>
-                    <Link
-                      to={`/app/private-lessons?athleteId=${lesson.athleteId}`}
-                      className="text-sm font-semibold text-amateur-accent hover:underline"
-                    >
-                      {t('pages.privateLessons.openBoard')}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-4 text-sm text-amateur-muted">{t('pages.finance.noPrivateLessonCollections')}</p>
-            )}
-          </section>
+          <Link
+            to="/app/finance/athlete-charges"
+            className="rounded-xl bg-amateur-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amateur-highlight"
+          >
+            {t('pages.finance.openAthleteCharges')} →
+          </Link>
         </div>
-        <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
-          <p className="text-sm font-semibold text-amateur-accent">{t('pages.finance.hubChecklistTitle')}</p>
-          <ul className="mt-4 space-y-3 text-sm text-amateur-muted">
-            {(
-              [
-                'pages.finance.hubChecklist1',
-                'pages.finance.hubChecklist2',
-                'pages.finance.hubChecklist3',
-              ] as const
-            ).map((key) => (
-              <li key={key} className="flex gap-3">
-                <span className="mt-1 text-amateur-accent">•</span>
-                <span>{t(key)}</span>
+      </section>
+
+      {/* 3. Collections clarity — who needs attention right now. */}
+      <section className="mb-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-amateur-ink">
+              {t('pages.finance.priorityCollections')}
+            </h2>
+            <p className="mt-1 text-sm text-amateur-muted">{t('pages.finance.priorityCollectionsHint')}</p>
+          </div>
+          <Link
+            to="/app/finance/athlete-charges"
+            className="text-sm font-semibold text-amateur-accent hover:underline"
+          >
+            {t('pages.athleteCharges.viewAll')} →
+          </Link>
+        </div>
+        {loading && !summary ? (
+          <p className="mt-4 text-sm text-amateur-muted">{t('app.states.loading')}</p>
+        ) : summary && summary.athletes.length > 0 ? (
+          <ul className="mt-4 divide-y divide-amateur-border">
+            {summary.athletes.slice(0, 5).map((entry) => (
+              <li
+                key={entry.athlete.id}
+                className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-amateur-ink">
+                    {entry.athlete.preferredName || `${entry.athlete.firstName} ${entry.athlete.lastName}`}
+                  </p>
+                  <p className="text-xs text-amateur-muted">
+                    {t('pages.finance.outstandingAmount', { amount: entry.totalOutstanding.toFixed(2) })}
+                    {entry.overdueCount > 0
+                      ? ` · ${t('pages.finance.overdueCount', { count: entry.overdueCount })}`
+                      : ''}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 text-sm font-semibold">
+                  <Link
+                    to={`/app/finance/athlete-charges?athleteId=${entry.athlete.id}`}
+                    className="text-amateur-accent hover:underline"
+                  >
+                    {t('pages.finance.athleteChargesLink')}
+                  </Link>
+                  <Link
+                    to={`/app/communications?athleteIds=${entry.athlete.id}&primaryContactsOnly=true&channel=whatsapp&template=overdue_payment_reminder&source=finance_overdue&sourceKey=priority-${entry.athlete.id}`}
+                    className="text-emerald-700 hover:underline"
+                  >
+                    {t('pages.finance.priorityCollectionsPrepare')}
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>
-          <p className="mt-6 text-sm text-amateur-muted">{t('pages.finance.hubBody')}</p>
-          <div className="mt-6 rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
-              {t('pages.finance.recentCollections')}
-            </p>
-            <p className="mt-2 text-sm text-amateur-ink">
-              {summary?.recentPayments.length
-                ? t('pages.finance.recentCollectionsCount', { count: summary.recentPayments.length })
-                : t('pages.finance.noCollectionsYet')}
-            </p>
+        ) : (
+          <p className="mt-4 text-sm text-amateur-muted">{t('pages.finance.noPriorityCollections')}</p>
+        )}
+      </section>
+
+      {/* 4. Private lesson follow-up — only surfaces when there is real follow-up to do. */}
+      {summary?.privateLessons?.length ? (
+        <section className="mb-6 rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-amateur-ink">
+                {t('pages.finance.privateLessonCollections')}
+              </h2>
+              <p className="mt-1 text-sm text-amateur-muted">{t('pages.finance.privateLessonCollectionsHint')}</p>
+            </div>
+            <Link
+              to="/app/private-lessons"
+              className="text-sm font-semibold text-amateur-accent hover:underline"
+            >
+              {t('pages.privateLessons.openBoard')} →
+            </Link>
           </div>
+          <ul className="mt-4 divide-y divide-amateur-border">
+            {summary.privateLessons.slice(0, 5).map((lesson) => (
+              <li
+                key={lesson.id}
+                className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-amateur-ink">
+                    {lesson.athlete ? getPersonName(lesson.athlete) : t('pages.athleteCharges.openAthlete')}
+                  </p>
+                  <p className="text-xs text-amateur-muted">
+                    {new Date(lesson.scheduledStart).toLocaleString(i18n.language)} ·{' '}
+                    {getLessonStatusLabel(t, lesson.status)}
+                  </p>
+                </div>
+                <Link
+                  to={`/app/private-lessons?athleteId=${lesson.athleteId}`}
+                  className="text-sm font-semibold text-amateur-accent hover:underline"
+                >
+                  {t('pages.privateLessons.openBoard')}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
-      </div>
+      ) : null}
+
+      {/* 5. More finance tools — calm, demoted strip with secondary navigation. */}
+      <section className="mb-6 rounded-2xl border border-amateur-border bg-amateur-canvas p-5 shadow-sm">
+        <h2 className="font-display text-base font-semibold text-amateur-ink">
+          {t('pages.finance.moreToolsTitle')}
+        </h2>
+        <p className="mt-1 text-sm text-amateur-muted">{t('pages.finance.moreToolsHint')}</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <Link
+            to="/app/finance/charge-items"
+            className="rounded-xl border border-amateur-border bg-amateur-surface p-4 transition hover:border-amateur-accent/40"
+          >
+            <p className="text-sm font-semibold text-amateur-ink">{t('pages.finance.chargeItemsLink')}</p>
+            <p className="mt-1 text-xs text-amateur-muted">{t('pages.chargeItems.subtitle')}</p>
+          </Link>
+          <Link
+            to="/app/private-lessons"
+            className="rounded-xl border border-amateur-border bg-amateur-surface p-4 transition hover:border-amateur-accent/40"
+          >
+            <p className="text-sm font-semibold text-amateur-ink">{t('pages.privateLessons.title')}</p>
+            <p className="mt-1 text-xs text-amateur-muted">{t('pages.privateLessons.financeHint')}</p>
+          </Link>
+          <Link
+            to="/app/communications?financialState=overdue&primaryContactsOnly=true&channel=whatsapp&template=overdue_payment_reminder&source=finance_overdue"
+            className="rounded-xl border border-amateur-border bg-amateur-surface p-4 transition hover:border-amateur-accent/40"
+          >
+            <p className="text-sm font-semibold text-amateur-ink">{t('pages.communications.title')}</p>
+            <p className="mt-1 text-xs text-amateur-muted">{t('pages.communications.financeHint')}</p>
+          </Link>
+        </div>
+        <details className="mt-4 rounded-xl border border-amateur-border bg-amateur-surface p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
+            {t('pages.finance.reportingTitle')}
+          </summary>
+          <p className="mt-2 text-sm text-amateur-muted">{t('pages.finance.reportingBody')}</p>
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
+            <Link
+              to={buildStarterLink('finance.overdue')}
+              className="rounded-xl border border-amateur-border bg-amateur-canvas p-3 text-sm transition hover:border-amateur-accent/40"
+            >
+              <p className="font-semibold text-amateur-ink">
+                {t('pages.finance.reportingCards.overdueTitle')}
+              </p>
+              <p className="mt-1 text-xs text-amateur-muted">
+                {t('pages.finance.reportingCards.overdueBody')}
+              </p>
+            </Link>
+            <Link
+              to={buildStarterLink('finance.outstandingByItem')}
+              className="rounded-xl border border-amateur-border bg-amateur-canvas p-3 text-sm transition hover:border-amateur-accent/40"
+            >
+              <p className="font-semibold text-amateur-ink">
+                {t('pages.finance.reportingCards.byItemTitle')}
+              </p>
+              <p className="mt-1 text-xs text-amateur-muted">
+                {t('pages.finance.reportingCards.byItemBody')}
+              </p>
+            </Link>
+            <Link
+              to={buildStarterLink('finance.overdueByCategory')}
+              className="rounded-xl border border-amateur-border bg-amateur-canvas p-3 text-sm transition hover:border-amateur-accent/40"
+            >
+              <p className="font-semibold text-amateur-ink">
+                {t('pages.finance.reportingCards.byCategoryTitle')}
+              </p>
+              <p className="mt-1 text-xs text-amateur-muted">
+                {t('pages.finance.reportingCards.byCategoryBody')}
+              </p>
+            </Link>
+          </div>
+          <Link
+            to="/app/reports"
+            className="mt-3 inline-flex text-sm font-semibold text-amateur-accent hover:underline"
+          >
+            {t('pages.finance.reportingOpenHub')} →
+          </Link>
+        </details>
+        <details className="mt-3 rounded-xl border border-amateur-border bg-amateur-surface p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
+            {t('pages.finance.advancedExplorer')}
+          </summary>
+          <p className="mt-1 text-xs text-amateur-muted">{t('pages.finance.advancedExplorerHint')}</p>
+          <div className="mt-3">
+            {tenantId ? <DataExplorer entity="finance_charges" embed /> : null}
+          </div>
+        </details>
+      </section>
     </div>
   );
 }

@@ -951,7 +951,11 @@
       "privateLessonCollections": "Private lesson follow-up",
       "privateLessonCollectionsHint": "Track unpaid or missed 1-to-1 work before it turns into staff confusion.",
       "noPrivateLessonCollections": "No private lesson follow-up needed right now.",
-      "periodicLink": "Periodic charge generation"
+      "periodicLink": "Periodic charge generation",
+      "athleteChargesPrimaryHint": "Assign fees, generate periodic batches, and record collections from one calm operational page.",
+      "openAthleteCharges": "Open athlete charges",
+      "moreToolsTitle": "More finance tools",
+      "moreToolsHint": "Reusable definitions, private lessons, follow-up audiences, and the advanced finance explorer stay one tap away."
     },
     "chargeItems": {
       "title": "Charge items",
@@ -983,14 +987,40 @@
     },
     "athleteCharges": {
       "title": "Athlete charges",
-      "subtitle": "Fees assigned to individual athletes, with real balance and overdue visibility.",
+      "subtitle": "One calm operational view: see balances, prepare follow-ups, and record what was collected.",
       "empty": "No charges assigned yet.",
+      "emptyHint": "Use the action drawer above to assign a charge or generate a periodic batch.",
+      "listTitle": "Open and recent charges",
+      "listCount_one": "{{count}} charge in view",
+      "listCount_other": "{{count}} charges in view",
       "new": "New charge",
       "athlete": "Athlete",
       "item": "Charge item",
+      "chargeItem": "Charge item",
+      "outstanding": "Outstanding",
       "amount": "Amount",
       "due": "Due",
       "status": "Status",
+      "actions": {
+        "title": "What do you want to do?",
+        "hint": "Pick one action at a time. Powerful flows stay one tap away without crowding the page.",
+        "advancedDetails": "Advanced details",
+        "recordPayment": "Record a collection",
+        "recordPaymentHint": "Apply one real payment across an athlete's open charges.",
+        "bulkAssign": "Assign a fee in bulk",
+        "bulkAssignHint": "Send the same charge to a chosen roster, group, or team.",
+        "periodic": "Generate a period batch",
+        "periodicHint": "Roll out monthly or term dues without creating duplicates."
+      },
+      "attention": {
+        "title": "Who needs attention",
+        "summary_one": "{{count}} athlete currently has an open balance.",
+        "summary_other": "{{count}} athletes currently have open balances.",
+        "empty": "No open balances right now — collections are clear.",
+        "openFollowUp": "Prepare follow-ups",
+        "viewCharges": "View charges"
+      },
+      "selectAthletesHint": "Pick athletes from the list below or switch to a group/team scope.",
       "quickAssign": "Quick assign",
       "quickAssignHint": "Create a charge directly from the athlete profile.",
       "profileHint": "Recent charges stay visible here so staff can confirm status quickly.",
@@ -1071,7 +1101,8 @@
         "totalCharged": "Total charged",
         "totalCollected": "Total collected",
         "totalOutstanding": "Total outstanding",
-        "totalOverdue": "Total overdue"
+        "totalOverdue": "Total overdue",
+        "totalOverdueHint": "Past-due balances that still need a follow-up."
       }
     },
     "payments": {
