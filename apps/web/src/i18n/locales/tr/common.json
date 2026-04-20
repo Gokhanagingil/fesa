@@ -2618,7 +2618,32 @@
           "body": "Aileniz için açık bir bakiye var. Sorularınız için kulübünüz yardımcı olur.",
           "done": "Bakiyeniz şu anda sıfır."
         }
-      }
+      },
+      "continuityTitle": "Kulüpten son notlar",
+      "continuityHint": "Aileyi ilgilendiren güncel kulüp bağlamına sakin bir bakış",
+      "continuityBadgeClubUpdate": "Kulüp notu",
+      "continuityBadgeFamilyRequest": "Talep",
+      "continuityStatusOpen": "Cevabınız bekleniyor",
+      "continuityStatusReview": "Kulübünüzde inceleniyor",
+      "continuityStatusResolved": "Tamamlandı",
+      "continuityStatusClosed": "Kapatıldı",
+      "continuityForAudience": "{{label}} için",
+      "continuityOpenHint": "Açık bir talebi, kulübünüz dönüş yapana kadar nazikçe görünür tutarız.",
+      "paymentTitle": "Ödeme hazırlığı",
+      "paymentClearTag": "Her şey yolunda",
+      "paymentClearBody": "Şu anda ailenize ait açık bir kalem yok. Bir şey değişirse sizi sessizce haberdar ederiz.",
+      "paymentOpenHint": "Aileniz adına açık olan kalemlere sakin bir bakış.",
+      "paymentAttentionHint": "Birkaç kalem yakından bakmanızı isteyebilir. Sorularınız için kulübünüz her zaman yardımcı olur.",
+      "paymentTotalLabel": "Açık bakiye",
+      "paymentOverdueLabel": "Vadesi geçen:",
+      "paymentNextDueLabel": "Sırada",
+      "paymentDueOn": "Son tarih {{date}}",
+      "paymentNoDueDate": "Tarih belirtilmedi",
+      "paymentStatusOverdue": "Vadesi geçti",
+      "paymentStatusDueSoon": "Yaklaşıyor",
+      "paymentStatusOpen": "Açık",
+      "paymentOpenFooter": "Tutarlar {{currency}} olarak gösterilir. Portalda ödeme almıyoruz — bunu kulübünüz alıştığınız şekilde yürütür.",
+      "paymentAttentionFooter": "Bir şey size doğru görünmüyorsa kulübünüze yazmanız yeterli — açıklığa kavuşturup düzeltmenize yardımcı olur."
     }
   }
 }

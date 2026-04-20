@@ -226,6 +226,146 @@ describe('GuardianPortalHomePage', () => {
     expect(screen.getByText('Confirm a phone number')).toBeInTheDocument();
   });
 
+  it('renders the v1.3 communication continuity strip and payment readiness card', async () => {
+    mockApiGet.mockResolvedValueOnce(
+      makeHome({
+        communication: {
+          windowDays: 30,
+          hasOpenFamilyRequest: true,
+          moments: [
+            {
+              id: 'fa-101',
+              kind: 'family_request',
+              occurredAt: '2026-04-19T10:00:00.000Z',
+              title: 'Confirm your phone number',
+              summary: 'We need to confirm the number we have on file.',
+              athleteName: 'Deniz Kaya',
+              status: 'pending_family_action',
+              actionId: 'fa-101',
+              audienceLabel: null,
+            },
+            {
+              id: 'cu-22',
+              kind: 'club_update',
+              occurredAt: '2026-04-18T08:00:00.000Z',
+              title: 'Indoor practice moved to Court B',
+              summary: 'A short note about this week.',
+              athleteName: null,
+              status: 'published',
+              actionId: null,
+              audienceLabel: 'U14 Girls',
+            },
+          ],
+        },
+        paymentReadiness: {
+          currency: 'TRY',
+          totals: {
+            outstandingAmount: '450.00',
+            overdueAmount: '120.00',
+            openCount: 2,
+            overdueCount: 1,
+            dueSoonCount: 1,
+          },
+          tone: 'attention',
+          windowDays: 14,
+          nextDue: {
+            chargeId: 'ch-2',
+            athleteId: 'athlete-1',
+            athleteName: 'Deniz Kaya',
+            itemName: 'May dues',
+            amount: '330.00',
+            remainingAmount: '330.00',
+            dueDate: '2026-05-01T00:00:00.000Z',
+            currency: 'TRY',
+          },
+          charges: [
+            {
+              id: 'ch-1',
+              athleteId: 'athlete-1',
+              athleteName: 'Deniz Kaya',
+              itemName: 'April dues',
+              amount: '120.00',
+              remainingAmount: '120.00',
+              dueDate: '2026-04-01T00:00:00.000Z',
+              status: 'overdue',
+              isOverdue: true,
+              currency: 'TRY',
+              billingPeriodLabel: 'April 2026',
+            },
+            {
+              id: 'ch-2',
+              athleteId: 'athlete-1',
+              athleteName: 'Deniz Kaya',
+              itemName: 'May dues',
+              amount: '330.00',
+              remainingAmount: '330.00',
+              dueDate: '2026-05-01T00:00:00.000Z',
+              status: 'dueSoon',
+              isOverdue: false,
+              currency: 'TRY',
+              billingPeriodLabel: 'May 2026',
+            },
+          ],
+          perAthlete: [
+            {
+              athleteId: 'athlete-1',
+              athleteName: 'Deniz Kaya',
+              outstanding: '450.00',
+              overdue: '120.00',
+            },
+          ],
+        },
+      }),
+    );
+
+    renderWithRoute(<GuardianPortalHomePage />, { path: '/portal' });
+
+    await waitFor(() =>
+      expect(screen.getByText(/Recent from the club/)).toBeInTheDocument(),
+    );
+    expect(screen.getByText('Indoor practice moved to Court B')).toBeInTheDocument();
+    expect(screen.getAllByText('Confirm your phone number').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Awaiting your reply/)).toBeInTheDocument();
+    // The payment readiness card uses calm, family-facing copy with no
+    // collections / pressure language.
+    expect(screen.getByText(/Payment readiness/)).toBeInTheDocument();
+    expect(screen.getByText('April dues')).toBeInTheDocument();
+    expect(screen.getAllByText('May dues').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Past due/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Due soon/)).toBeInTheDocument();
+    expect(screen.getByText(/Next up/)).toBeInTheDocument();
+  });
+
+  it('renders the calm "all clear" payment readiness state when nothing is open', async () => {
+    mockApiGet.mockResolvedValueOnce(
+      makeHome({
+        paymentReadiness: {
+          currency: 'TRY',
+          totals: {
+            outstandingAmount: '0.00',
+            overdueAmount: '0.00',
+            openCount: 0,
+            overdueCount: 0,
+            dueSoonCount: 0,
+          },
+          tone: 'clear',
+          windowDays: 14,
+          nextDue: null,
+          charges: [],
+          perAthlete: [],
+        },
+      }),
+    );
+
+    renderWithRoute(<GuardianPortalHomePage />, { path: '/portal' });
+
+    await waitFor(() =>
+      expect(screen.getByText(/Payment readiness/)).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/All clear/)).toBeInTheDocument();
+    expect(screen.getByText(/There's nothing open on your family's account/)).toBeInTheDocument();
+  });
+
   it('renders the family this-week digest and inventory-in-hand when present', async () => {
     mockApiGet.mockResolvedValueOnce(
       makeHome({

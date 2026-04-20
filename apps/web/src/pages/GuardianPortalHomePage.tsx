@@ -4,11 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { apiGet } from '../lib/api';
 import type {
   ClubUpdateParentSummary,
+  GuardianPortalCommunicationContinuity,
+  GuardianPortalContinuityMoment,
   GuardianPortalEssential,
   GuardianPortalHome,
   GuardianPortalLandingSummary,
+  GuardianPortalPaymentReadiness,
 } from '../lib/domain-types';
 import {
+  formatDate,
   formatDateTime,
   getFamilyActionStatusLabel,
   getFamilyActionTypeLabel,
@@ -141,6 +145,10 @@ export function GuardianPortalHomePage() {
         hasOutstanding={hasOutstanding}
         pendingCount={pendingActions.length}
       />
+
+      <CommunicationContinuityStrip continuity={data.communication ?? null} />
+
+      <PaymentReadinessCard readiness={data.paymentReadiness ?? null} />
 
       {pendingActions.length > 0 || awaitingReview.length > 0 || hasOutstanding ? (
         <section
@@ -700,6 +708,317 @@ function ClubUpdatesStrip({
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/**
+ * Parent Portal v1.3 — Communication Continuity strip.
+ *
+ * A single calm strip carrying the most recent club->family context the
+ * parent should be aware of. We deliberately keep this small (max five
+ * moments), restrained in colour, and free of unread theatre. Each
+ * moment links back to a surface the parent already has access to:
+ *   - club-update moments scroll to the existing "From the club" strip;
+ *   - family-request moments deep-link into the existing action page.
+ * When the family has nothing recent, the strip hides itself entirely.
+ */
+function CommunicationContinuityStrip({
+  continuity,
+}: {
+  continuity: GuardianPortalCommunicationContinuity | null;
+}) {
+  const { t, i18n } = useTranslation();
+  if (!continuity || continuity.moments.length === 0) return null;
+  return (
+    <section
+      id="continuity"
+      className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm scroll-mt-24"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-display text-base font-semibold text-amateur-ink">
+          {t('portal.home.continuityTitle')}
+        </h2>
+        <span className="text-xs text-amateur-muted">
+          {t('portal.home.continuityHint')}
+        </span>
+      </div>
+      <ul className="mt-3 space-y-2">
+        {continuity.moments.map((moment) => (
+          <ContinuityMomentRow key={moment.id} moment={moment} language={i18n.language} />
+        ))}
+      </ul>
+      {continuity.hasOpenFamilyRequest ? (
+        <p className="mt-3 text-[11px] font-medium text-amateur-muted">
+          {t('portal.home.continuityOpenHint')}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function ContinuityMomentRow({
+  moment,
+  language,
+}: {
+  moment: GuardianPortalContinuityMoment;
+  language: string;
+}) {
+  const { t } = useTranslation();
+  const occurredAtLabel = formatDateTime(moment.occurredAt, language);
+  const badgeLabel =
+    moment.kind === 'club_update'
+      ? t('portal.home.continuityBadgeClubUpdate')
+      : t('portal.home.continuityBadgeFamilyRequest');
+  const statusLabel = (() => {
+    if (!moment.status) return null;
+    if (moment.status === 'published') return null;
+    if (moment.status === 'open' || moment.status === 'pending_family_action') {
+      return t('portal.home.continuityStatusOpen');
+    }
+    if (moment.status === 'submitted' || moment.status === 'under_review') {
+      return t('portal.home.continuityStatusReview');
+    }
+    if (moment.status === 'approved' || moment.status === 'completed') {
+      return t('portal.home.continuityStatusResolved');
+    }
+    if (moment.status === 'rejected' || moment.status === 'closed') {
+      return t('portal.home.continuityStatusClosed');
+    }
+    return null;
+  })();
+  const inner = (
+    <div className="flex items-start justify-between gap-3 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3">
+      <div className="min-w-0">
+        <p className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
+          <span
+            className="rounded-full px-2 py-0.5 text-[10px]"
+            style={{
+              backgroundColor: 'var(--portal-primary-soft, #e3f4ee)',
+              color: 'var(--portal-primary, #0d4a3c)',
+            }}
+          >
+            {badgeLabel}
+          </span>
+          {statusLabel ? (
+            <span className="rounded-full border border-amateur-border bg-amateur-surface/60 px-2 py-0.5 text-[10px] font-medium text-amateur-muted">
+              {statusLabel}
+            </span>
+          ) : null}
+          <span className="ml-auto text-[10px] font-medium text-amateur-muted">
+            {occurredAtLabel}
+          </span>
+        </p>
+        <p className="mt-1 truncate text-sm font-medium text-amateur-ink">{moment.title}</p>
+        {moment.summary ? (
+          <p className="mt-1 line-clamp-2 text-xs text-amateur-muted">{moment.summary}</p>
+        ) : null}
+        {moment.athleteName || moment.audienceLabel ? (
+          <p className="mt-1 text-[11px] text-amateur-muted">
+            {[
+              moment.athleteName,
+              moment.audienceLabel
+                ? t('portal.home.continuityForAudience', { label: moment.audienceLabel })
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+  if (moment.kind === 'family_request' && moment.actionId) {
+    return (
+      <li>
+        <Link
+          to={`/portal/actions/${moment.actionId}`}
+          className="block transition-colors hover:opacity-90"
+        >
+          {inner}
+        </Link>
+      </li>
+    );
+  }
+  if (moment.kind === 'club_update') {
+    return (
+      <li>
+        <a href="#updates" className="block transition-colors hover:opacity-90">
+          {inner}
+        </a>
+      </li>
+    );
+  }
+  return <li>{inner}</li>;
+}
+
+/**
+ * Parent Portal v1.3 — Payment Readiness card.
+ *
+ * Calm, family-facing, never collections. Three states drive the copy
+ * and the visual tone:
+ *   - "clear":     no open balance — a soft acknowledgement.
+ *   - "open":      open charges, none overdue — calm and informational.
+ *   - "attention": one or more overdue charges — still calm, but more
+ *                  visible, with a "let your club know if there's a
+ *                  question" hint instead of any pressure language.
+ *
+ * We never render `cancelled` or `paid` rows here, never invent
+ * urgency, and never expose internal staff metadata. The list of
+ * charges is hard-capped server-side (six entries across the family).
+ */
+function PaymentReadinessCard({
+  readiness,
+}: {
+  readiness: GuardianPortalPaymentReadiness | null;
+}) {
+  const { t, i18n } = useTranslation();
+  if (!readiness) return null;
+  const tone = readiness.tone;
+  const currency = readiness.currency || 'TRY';
+  const totalsOutstanding = readiness.totals.outstandingAmount;
+  const totalsOverdue = readiness.totals.overdueAmount;
+  const hasOpen = readiness.totals.openCount > 0;
+  if (tone === 'clear' && !hasOpen) {
+    return (
+      <section
+        id="payment"
+        className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm scroll-mt-24"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-display text-base font-semibold text-amateur-ink">
+            {t('portal.home.paymentTitle')}
+          </h2>
+          <span className="text-xs text-amateur-muted">
+            {t('portal.home.paymentClearTag')}
+          </span>
+        </div>
+        <p className="mt-2 text-sm text-amateur-muted">{t('portal.home.paymentClearBody')}</p>
+      </section>
+    );
+  }
+  const ringColor =
+    tone === 'attention'
+      ? 'var(--portal-ring-soft, #facc15)'
+      : 'var(--portal-ring-soft, var(--color-amateur-border))';
+  return (
+    <section
+      id="payment"
+      className="rounded-3xl border bg-amateur-surface p-5 shadow-sm scroll-mt-24"
+      style={{ borderColor: ringColor }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-display text-base font-semibold text-amateur-ink">
+            {t('portal.home.paymentTitle')}
+          </h2>
+          <p className="mt-1 text-xs text-amateur-muted">
+            {tone === 'attention'
+              ? t('portal.home.paymentAttentionHint')
+              : t('portal.home.paymentOpenHint')}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-[11px] uppercase tracking-wide text-amateur-muted">
+            {t('portal.home.paymentTotalLabel')}
+          </p>
+          <p className="text-sm font-semibold text-amateur-ink">
+            {getMoneyAmount(totalsOutstanding, currency)}
+          </p>
+          {Number(totalsOverdue) > 0 ? (
+            <p className="text-[11px] font-medium text-amber-700">
+              {t('portal.home.paymentOverdueLabel')}{' '}
+              {getMoneyAmount(totalsOverdue, currency)}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {readiness.nextDue ? (
+        <div className="mt-3 rounded-2xl border border-dashed border-amateur-border bg-amateur-canvas px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
+            {t('portal.home.paymentNextDueLabel')}
+          </p>
+          <p className="mt-1 text-sm font-medium text-amateur-ink">
+            {readiness.nextDue.itemName}
+          </p>
+          <p className="mt-0.5 text-xs text-amateur-muted">
+            {[
+              readiness.nextDue.athleteName,
+              readiness.nextDue.dueDate
+                ? t('portal.home.paymentDueOn', {
+                    date: formatDate(readiness.nextDue.dueDate, i18n.language),
+                  })
+                : null,
+              getMoneyAmount(
+                readiness.nextDue.remainingAmount ?? readiness.nextDue.amount,
+                readiness.nextDue.currency || currency,
+              ),
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        </div>
+      ) : null}
+
+      {readiness.charges.length > 0 ? (
+        <ul className="mt-3 space-y-2">
+          {readiness.charges.map((charge) => (
+            <li
+              key={charge.id}
+              className="flex items-start justify-between gap-3 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-amateur-ink">
+                  {charge.itemName}
+                </p>
+                <p className="mt-0.5 text-xs text-amateur-muted">
+                  {[
+                    charge.athleteName,
+                    charge.dueDate
+                      ? t('portal.home.paymentDueOn', {
+                          date: formatDate(charge.dueDate, i18n.language),
+                        })
+                      : t('portal.home.paymentNoDueDate'),
+                    charge.billingPeriodLabel,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-semibold text-amateur-ink">
+                  {getMoneyAmount(
+                    charge.remainingAmount || charge.amount,
+                    charge.currency || currency,
+                  )}
+                </p>
+                <p
+                  className={`mt-0.5 text-[11px] font-semibold uppercase tracking-wide ${
+                    charge.status === 'overdue'
+                      ? 'text-amber-700'
+                      : charge.status === 'dueSoon'
+                        ? 'text-amateur-ink'
+                        : 'text-amateur-muted'
+                  }`}
+                >
+                  {charge.status === 'overdue'
+                    ? t('portal.home.paymentStatusOverdue')
+                    : charge.status === 'dueSoon'
+                      ? t('portal.home.paymentStatusDueSoon')
+                      : t('portal.home.paymentStatusOpen')}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <p className="mt-3 text-[11px] text-amateur-muted">
+        {tone === 'attention'
+          ? t('portal.home.paymentAttentionFooter')
+          : t('portal.home.paymentOpenFooter', { currency })}
+      </p>
     </section>
   );
 }
