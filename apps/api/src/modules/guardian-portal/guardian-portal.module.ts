@@ -22,6 +22,7 @@ import { ClubUpdateModule } from '../club-update/club-update.module';
 import { GuardianPortalController } from './guardian-portal.controller';
 import { GuardianPortalGuard } from './guardian-portal.guard';
 import { GuardianPortalService } from './guardian-portal.service';
+import { InviteDeliveryService } from './invite-delivery.service';
 
 @Module({
   imports: [
@@ -48,7 +49,7 @@ import { GuardianPortalService } from './guardian-portal.service';
     ]),
   ],
   controllers: [GuardianPortalController],
-  providers: [GuardianPortalService, GuardianPortalGuard],
-  exports: [GuardianPortalService, GuardianPortalGuard],
+  providers: [GuardianPortalService, GuardianPortalGuard, InviteDeliveryService],
+  exports: [GuardianPortalService, GuardianPortalGuard, InviteDeliveryService],
 })
 export class GuardianPortalModule {}

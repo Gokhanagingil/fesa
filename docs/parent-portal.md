@@ -745,3 +745,201 @@ New regression protection:
   error surfacing, charge-item delete confirm, portal past-requests
   separation, activation recovery escape, settings deep-link
   anchors, portal bottom-nav off-home navigation).
+
+## Parent Invite Delivery & Access Reliability Pack
+
+The previous waves established the parent invitation, activation,
+recovery, and session model. This pack closes the **delivery** gap —
+the real-world reason a guardian record can be created and an invite
+"triggered" without the family ever receiving anything. The product
+principle is explicit: **truth over illusion**. The platform never
+implies an invite was delivered without a real provider response, and
+when delivery is unavailable it offers a calm, professional manual
+fallback rather than hiding the problem.
+
+### What was actually broken
+
+- `inviteGuardian` minted a token and persisted an access row, but
+  there was no email-dispatch path at all.
+- The staff UI rendered a success toast that referenced an i18n key
+  (`pages.guardians.portalAccess.inviteSuccess`) which did not exist
+  in either the EN or TR locale, so staff saw the raw key — and at
+  the same time, no email was actually being sent.
+- There was no "delivery is unavailable, share manually" fallback,
+  no copyable link surface, no truthful per-row delivery state, and
+  no provider readiness indicator anywhere.
+
+### What this pack adds (smallest strong strategy)
+
+This pack does **not** introduce a second auth model, a second
+activation flow, or a separate notification platform. It extends the
+existing guardian-portal module and the existing
+`guardian_portal_accesses` row with a tiny, honest delivery seam.
+
+#### Truthful delivery state on the access row
+
+A new migration `Wave21ParentInviteDeliveryReliability` adds a small
+set of columns to `guardian_portal_accesses` so every (re)issue carries
+the honest outcome of the most recent attempt. Existing rows stay safe
+— every column is nullable / has a sensible default.
+
+| Column | Purpose |
+|--------|---------|
+| `inviteDeliveryState` | `pending` · `sent` · `failed` · `shared_manually` · `unavailable` — the staff UI renders this verbatim. |
+| `inviteDeliveryProvider` | Provider that produced the state (`smtp` / `manual`). |
+| `inviteDeliveryDetail` | Operator-friendly short note (e.g. `provider_accepted:<id>`, `smtp_not_configured`, `550 mailbox unavailable`). |
+| `inviteDeliveryAttemptedAt` | Stamp of when the most recent dispatch was attempted. |
+| `inviteDeliveredAt` | Stamp of when the provider accepted the message (only stamped on `sent`). |
+| `inviteSharedAt` | Stamp of when staff explicitly used the manual fallback. |
+| `inviteAttemptCount` | Increments on every (re)issue so we can spot families that needed multiple invites. |
+
+Every fresh invite resets the delivery columns so the staff UI never
+carries a stale "sent" badge across attempts. The activation token,
+its expiry, the recovery flag, and the session model are unchanged.
+
+#### Tiny `InviteDeliveryService` (SMTP via nodemailer)
+
+Email is the primary channel — it is the lowest-trust-bar provider
+every club already has access to (their own provider, a transactional
+service, even a workspace mailbox in dev) and the activation page
+already expects an email-style invite. The service is intentionally
+small and never doubles as a generic notification platform.
+
+- **No SMTP configured** → `unavailable`. The activation link is still
+  minted; staff use the manual share fallback.
+- **SMTP configured but provider rejects** → `failed`. The detail line
+  carries the provider error verbatim (truncated to 480 chars).
+- **SMTP accepts the message for delivery** → `sent`, with the
+  provider message id captured in the detail line.
+
+Secret material stays in the host environment (`SMTP_HOST`,
+`SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`,
+`PORTAL_PUBLIC_ORIGIN`). The service never persists credentials. The
+outgoing email body is bilingual (EN / TR) and follows the existing
+calm parent-portal tone — no provider jargon, no scary copy.
+
+#### New staff endpoints
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `GET /api/guardian-portal/staff/invite-delivery/readiness` | staff (`TenantGuard`) | Calm "can the platform actually deliver invite emails right now?" answer. Renders as the truthful `Email delivery configured` / `Email delivery unavailable` chip in the staff UI. |
+| `POST /api/guardian-portal/staff/invite-delivery/verify` | staff (`TenantGuard`) | Opt-in live SMTP `verify()` roundtrip. Failures are reported truthfully; the readiness chip never auto-promotes. |
+| `PATCH /api/guardian-portal/staff/access/:accessId/mark-shared` | staff (`TenantGuard`) | Stamps the access row with `shared_manually` after staff have copied / shared the activation link themselves. The existing invite token continues to be the activation source of truth — no second token is minted. |
+
+The existing `POST /api/guardian-portal/staff/guardians/:guardianId/access`
+(invite + resend) and `PATCH /api/guardian-portal/staff/access/:accessId/enable`
+endpoints are unchanged in shape; their responses now also carry the
+truthful `delivery` summary plus an `absoluteInviteLink` so the staff
+UI can show the full, copyable link without reconstructing it from
+`window.location.origin` after the fact.
+
+#### Staff-side UX
+
+The Guardian detail page **Portal access** card now answers the three
+questions a staff user actually asks during an invite flow:
+
+1. _Can the platform send an email at all right now?_ — a calm
+   readiness chip (with an optional `Test delivery` button) renders
+   above the actions, both before and after the invite has been
+   issued.
+2. _What actually happened with the most recent attempt?_ — a calm,
+   truthful inline alert explains the latest state in plain language
+   (`Email sent`, `Email failed`, `Email unavailable`, `Shared
+   manually`, `Preparing`). We never write "sent" without a real
+   provider response.
+3. _How do I get the parent into the portal right now?_ — a dashed
+   "Activation link" panel exposes the absolute single-use link with
+   a `Copy link` button (clipboard API + textarea fallback), a
+   `Mark as shared with family` action when delivery was
+   `unavailable` / `failed` / `pending`, and a calm one-line hint
+   ("Share over a channel the family already trusts, then mark as
+   shared"). The link itself is rendered in a tappable, mobile-safe
+   monospace block.
+
+The previous "resend invite", "enable", and "disable" actions stay in
+place — none of them mint a parallel auth model.
+
+#### Parent-side activation reliability
+
+The parent activation page is functionally unchanged because it was
+already correct: it accepts the invite token, lets the parent set a
+password, and lands them in the portal. The Stabilization Gate work
+already added explicit `Recover an existing account` /
+`Sign in` escapes when the token can't be resolved (expired, used,
+malformed, or missing). What this pack changes is upstream of that:
+the activation link the parent receives is now backed by a truthful
+delivery contract, so we no longer hand families dead invites.
+
+When a parent receives the activation link via the manual share path,
+they land on exactly the same calm, branded activation page they
+would have landed on from a real email — there is no second flow.
+
+#### Mobile-first touches
+
+- The readiness chip and the activation-link panel both stay above
+  the fold on a phone.
+- `Copy link`, `Mark as shared with family`, and `Resend invite` use
+  comfortable 44px tap targets, never cluster more than three
+  actions per row, and wrap calmly on narrow widths.
+- The link itself is rendered with `break-all` so a single-handed
+  user can read the whole link without horizontal scroll.
+- The `Copy link` action emits a tiny inline `Copied` acknowledgement
+  rather than a system toast, keeping the page calm.
+
+### Validation additions for this pack
+
+- `npm run parent:invite:delivery:test` is a new pure-Node validator
+  smoke. It guards readiness classification (`SMTP_HOST` /
+  `SMTP_FROM` boundary cases), the delivery-state projection
+  (no silent re-classification of `unavailable` / `failed` to
+  `sent`), the resend semantics (every (re)issue resets stale
+  delivery columns), the staff-facing tone-key mapping (so the UI
+  never silently regresses to raw key copy), and the manual fallback
+  rule (`mark-shared` refuses to stamp when there is no active
+  invite token).
+- `npm run i18n:check` parity is extended to cover the entire new
+  `pages.guardians.portalAccess.deliveryStateLabel`,
+  `pages.guardians.portalAccess.deliveryTone`, and
+  `pages.guardians.portalAccess.deliveryReadiness` blocks plus the
+  new `inviteIssued`, `delivery*`, `share*`, `copy*`, and
+  `markShared` keys.
+- `npm run lint`, `npm run build`, `npm run repo:guard`,
+  `npm run frontend:smoke`, `npm run family:activation:test`,
+  `npm run club:updates:test`, `npm run tenant:branding:test`,
+  `npm run parent:portal:v1.3:test`, `npm run stabilization:gate:test`,
+  `npm run finance:clarity:test`, `npm run onboarding:imports:test`,
+  and `npm run onboarding:readiness:test` all stay green on top of
+  the new validator.
+
+### Configuration (operator-facing)
+
+Add the following to `apps/api/.env` to enable real delivery:
+
+```
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=invitations@example.com
+SMTP_PASSWORD=changeme
+SMTP_FROM="Amateur Club <invitations@example.com>"
+PORTAL_PUBLIC_ORIGIN=https://portal.example.com
+```
+
+When unset, the platform stays in the truthful `Email delivery
+unavailable` state — no env var has a fake-success default. Running
+the API without SMTP configured is fully supported and is the
+expected developer / demo mode: every invite falls back to the
+manual-share path, which is itself a legitimate operational surface,
+not a workaround.
+
+### What is intentionally still out of scope
+
+- Webhook-based bounce / delivery receipts. We claim `sent` only when
+  the provider accepts the message; deeper post-acceptance state is
+  intentionally deferred.
+- A per-tenant SMTP override (the env-resolved provider is
+  platform-wide for now).
+- A magic-link / phone-OTP recovery surface — recovery still flows
+  through the staff resend-invite path, the same as in v1.2.
+- A general-purpose notification platform / outbox — the seam is
+  bounded to parent invite delivery on purpose.

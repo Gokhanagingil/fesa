@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
@@ -22,9 +22,16 @@ import type {
   AthleteGuardianLink,
   Guardian,
   GuardianFamilyReadiness,
+  GuardianInviteDeliveryReadiness,
+  GuardianInviteDeliverySummary,
   GuardianPortalAccessSummary,
 } from '../lib/domain-types';
 import { useTenant } from '../lib/tenant-hooks';
+
+type AccessWithExtras = GuardianPortalAccessSummary & {
+  inviteLink?: string;
+  absoluteInviteLink?: string;
+};
 
 export function GuardianDetailPage() {
   const { id } = useParams();
@@ -33,27 +40,39 @@ export function GuardianDetailPage() {
   const [guardian, setGuardian] = useState<Guardian | null>(null);
   const [links, setLinks] = useState<AthleteGuardianLink[]>([]);
   const [readiness, setReadiness] = useState<GuardianFamilyReadiness | null>(null);
-  const [portalAccess, setPortalAccess] = useState<GuardianPortalAccessSummary | null>(null);
+  const [portalAccess, setPortalAccess] = useState<AccessWithExtras | null>(null);
+  const [deliveryReadiness, setDeliveryReadiness] =
+    useState<GuardianInviteDeliveryReadiness | null>(null);
+  const [latestInviteLink, setLatestInviteLink] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [savingPortal, setSavingPortal] = useState(false);
+  const [verifyingDelivery, setVerifyingDelivery] = useState(false);
+  const [copyAck, setCopyAck] = useState(false);
 
   const load = useCallback(async () => {
     if (!tenantId || !id) return;
     setLoading(true);
     setError(null);
     try {
-      const [guardianRes, athletesRes, readinessRes, portalAccessRes] = await Promise.all([
-        apiGet<Guardian>(`/api/guardians/${id}`),
-        apiGet<AthleteGuardianLink[]>(`/api/guardians/${id}/athletes`),
-        apiGet<GuardianFamilyReadiness>(`/api/guardians/${id}/family-readiness`),
-        apiGet<GuardianPortalAccessSummary | null>(`/api/guardian-portal/staff/guardians/${id}/access`).catch(() => null),
-      ]);
+      const [guardianRes, athletesRes, readinessRes, portalAccessRes, deliveryRes] =
+        await Promise.all([
+          apiGet<Guardian>(`/api/guardians/${id}`),
+          apiGet<AthleteGuardianLink[]>(`/api/guardians/${id}/athletes`),
+          apiGet<GuardianFamilyReadiness>(`/api/guardians/${id}/family-readiness`),
+          apiGet<AccessWithExtras | null>(
+            `/api/guardian-portal/staff/guardians/${id}/access`,
+          ).catch(() => null),
+          apiGet<GuardianInviteDeliveryReadiness>(
+            `/api/guardian-portal/staff/invite-delivery/readiness`,
+          ).catch(() => null),
+        ]);
       setGuardian(guardianRes);
       setLinks(athletesRes);
       setReadiness(readinessRes);
       setPortalAccess(portalAccessRes);
+      setDeliveryReadiness(deliveryRes);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.loadFailed'));
     } finally {
@@ -77,26 +96,50 @@ export function GuardianDetailPage() {
   const readinessStatus = readiness?.status ?? 'incomplete';
   const readinessTone = getFamilyReadinessTone(readinessStatus);
 
+  function resolveAbsoluteLink(access: AccessWithExtras | null): string | null {
+    if (!access) return null;
+    if (access.absoluteInviteLink) return access.absoluteInviteLink;
+    if (access.inviteLink) return `${window.location.origin}${access.inviteLink}`;
+    return null;
+  }
+
   async function invitePortalAccess() {
     if (!id || !guardian?.email) return;
     setSavingPortal(true);
     setError(null);
     setMessage(null);
+    setCopyAck(false);
     try {
-      const result = await apiPost<GuardianPortalAccessSummary & { inviteLink: string }>(
+      const result = await apiPost<AccessWithExtras>(
         `/api/guardian-portal/staff/guardians/${id}/access`,
-        { email: guardian.email },
+        { email: guardian.email, language: i18n.language === 'tr' ? 'tr' : 'en' },
       );
       setPortalAccess(result);
-      setMessage(
-        t('pages.guardians.portalAccess.inviteSuccess', {
-          link: `${window.location.origin}${result.inviteLink}`,
-        }),
-      );
+      const absolute = resolveAbsoluteLink(result);
+      setLatestInviteLink(absolute);
+      const delivery = result.delivery ?? result.inviteDelivery ?? null;
+      setMessage(messageForDelivery(delivery));
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
     } finally {
       setSavingPortal(false);
+    }
+  }
+
+  function messageForDelivery(delivery: GuardianInviteDeliverySummary | null): string {
+    if (!delivery) return t('pages.guardians.portalAccess.inviteIssued');
+    switch (delivery.state) {
+      case 'sent':
+        return t('pages.guardians.portalAccess.deliverySent');
+      case 'failed':
+        return t('pages.guardians.portalAccess.deliveryFailed');
+      case 'unavailable':
+        return t('pages.guardians.portalAccess.deliveryUnavailable');
+      case 'shared_manually':
+        return t('pages.guardians.portalAccess.deliveryShared');
+      case 'pending':
+      default:
+        return t('pages.guardians.portalAccess.inviteIssued');
     }
   }
 
@@ -108,25 +151,110 @@ export function GuardianDetailPage() {
     try {
       const result =
         action === 'enable'
-          ? await apiPatch<GuardianPortalAccessSummary & { inviteLink: string }>(
+          ? await apiPatch<AccessWithExtras>(
               `/api/guardian-portal/staff/access/${portalAccess.id}/enable`,
               {},
             )
-          : await apiPatch<GuardianPortalAccessSummary>(
+          : await apiPatch<AccessWithExtras>(
               `/api/guardian-portal/staff/access/${portalAccess.id}/disable`,
               {},
             );
       setPortalAccess(result);
-      setMessage(
-        action === 'enable'
-          ? t('pages.guardians.portalAccess.enabled')
-          : t('pages.guardians.portalAccess.disabled'),
-      );
+      if (action === 'enable') {
+        const absolute = resolveAbsoluteLink(result);
+        setLatestInviteLink(absolute);
+        setMessage(messageForDelivery(result.delivery ?? result.inviteDelivery ?? null));
+      } else {
+        setLatestInviteLink(null);
+        setMessage(t('pages.guardians.portalAccess.disabled'));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
     } finally {
       setSavingPortal(false);
     }
+  }
+
+  async function copyInviteLink() {
+    const link = latestInviteLink ?? resolveAbsoluteLink(portalAccess);
+    if (!link) {
+      setError(t('pages.guardians.portalAccess.copyMissing'));
+      return;
+    }
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = link;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+      setCopyAck(true);
+      setTimeout(() => setCopyAck(false), 2500);
+    } catch {
+      setError(t('pages.guardians.portalAccess.copyFailed'));
+    }
+  }
+
+  async function markInviteShared() {
+    if (!portalAccess) return;
+    setSavingPortal(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await apiPatch<AccessWithExtras>(
+        `/api/guardian-portal/staff/access/${portalAccess.id}/mark-shared`,
+        {},
+      );
+      setPortalAccess(result);
+      setMessage(t('pages.guardians.portalAccess.deliveryShared'));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
+    } finally {
+      setSavingPortal(false);
+    }
+  }
+
+  async function verifyInviteDelivery() {
+    setVerifyingDelivery(true);
+    setError(null);
+    try {
+      const next = await apiPost<GuardianInviteDeliveryReadiness>(
+        `/api/guardian-portal/staff/invite-delivery/verify`,
+        {},
+      );
+      setDeliveryReadiness(next);
+      if (next.state === 'configured' && next.verified) {
+        setMessage(t('pages.guardians.portalAccess.deliveryVerifyOk'));
+      } else if (next.state === 'error') {
+        setMessage(null);
+        setError(t('pages.guardians.portalAccess.deliveryVerifyFailed'));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
+    } finally {
+      setVerifyingDelivery(false);
+    }
+  }
+
+  function renderDeliveryBadge(summary: GuardianInviteDeliverySummary | null | undefined) {
+    if (!summary || !summary.state) return null;
+    const tone =
+      summary.state === 'sent'
+        ? 'success'
+        : summary.state === 'shared_manually'
+          ? 'info'
+          : summary.state === 'unavailable' || summary.state === 'pending'
+            ? 'warning'
+            : 'danger';
+    return (
+      <StatusBadge tone={tone}>
+        {t(`pages.guardians.portalAccess.deliveryStateLabel.${summary.state}`)}
+      </StatusBadge>
+    );
   }
 
   return (
@@ -263,6 +391,11 @@ export function GuardianDetailPage() {
             </div>
           ) : portalAccess ? (
             <div className="mt-4 space-y-4">
+              <DeliveryReadinessRow
+                readiness={deliveryReadiness}
+                verifying={verifyingDelivery}
+                onVerify={() => void verifyInviteDelivery()}
+              />
               {portalAccess.recoveryRequestedAt ? (
                 <InlineAlert tone="warning">
                   {t('pages.guardians.portalAccess.recoveryRequested', {
@@ -271,6 +404,19 @@ export function GuardianDetailPage() {
                   })}
                 </InlineAlert>
               ) : null}
+              <DeliveryStatusCard
+                summary={portalAccess.inviteDelivery ?? portalAccess.delivery ?? null}
+                badge={renderDeliveryBadge(portalAccess.inviteDelivery ?? portalAccess.delivery ?? null)}
+                language={i18n.language}
+              />
+              <InviteLinkPanel
+                link={latestInviteLink ?? resolveAbsoluteLink(portalAccess)}
+                copyAck={copyAck}
+                onCopy={() => void copyInviteLink()}
+                onMarkShared={() => void markInviteShared()}
+                disabled={savingPortal}
+                deliveryState={(portalAccess.inviteDelivery ?? portalAccess.delivery ?? null)?.state ?? null}
+              />
               <div className="grid gap-3 sm:grid-cols-3">
                 <StatCard label={t('pages.guardians.portalAccess.pendingActions')} value={portalAccess.pendingActions} compact />
                 <StatCard label={t('pages.guardians.portalAccess.awaitingReview')} value={portalAccess.awaitingReview} compact />
@@ -307,7 +453,12 @@ export function GuardianDetailPage() {
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-dashed border-amateur-border bg-amateur-canvas px-4 py-4">
-              <p className="text-sm text-amateur-muted">{t('pages.guardians.portalAccess.notEnabled')}</p>
+              <DeliveryReadinessRow
+                readiness={deliveryReadiness}
+                verifying={verifyingDelivery}
+                onVerify={() => void verifyInviteDelivery()}
+              />
+              <p className="mt-3 text-sm text-amateur-muted">{t('pages.guardians.portalAccess.notEnabled')}</p>
               <div className="mt-3">
                 <Button type="button" onClick={() => void invitePortalAccess()} disabled={savingPortal}>
                   {t('pages.guardians.portalAccess.invite')}
@@ -358,6 +509,161 @@ export function GuardianDetailPage() {
           )}
         </section>
       </div>
+    </div>
+  );
+}
+
+type DeliveryReadinessRowProps = {
+  readiness: GuardianInviteDeliveryReadiness | null;
+  verifying: boolean;
+  onVerify: () => void;
+};
+
+function DeliveryReadinessRow({ readiness, verifying, onVerify }: DeliveryReadinessRowProps) {
+  const { t } = useTranslation();
+  if (!readiness) return null;
+  const tone =
+    readiness.state === 'configured' && readiness.verified
+      ? 'success'
+      : readiness.state === 'configured'
+        ? 'info'
+        : readiness.state === 'error'
+          ? 'danger'
+          : 'warning';
+  const labelKey =
+    readiness.state === 'configured' && readiness.verified
+      ? 'pages.guardians.portalAccess.deliveryReadiness.verified'
+      : readiness.state === 'configured'
+        ? 'pages.guardians.portalAccess.deliveryReadiness.configured'
+        : readiness.state === 'error'
+          ? 'pages.guardians.portalAccess.deliveryReadiness.error'
+          : 'pages.guardians.portalAccess.deliveryReadiness.unavailable';
+  const hintKey =
+    readiness.state === 'configured'
+      ? 'pages.guardians.portalAccess.deliveryReadiness.configuredHint'
+      : readiness.state === 'error'
+        ? 'pages.guardians.portalAccess.deliveryReadiness.errorHint'
+        : 'pages.guardians.portalAccess.deliveryReadiness.unavailableHint';
+  return (
+    <div className="rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <StatusBadge tone={tone}>{t(labelKey)}</StatusBadge>
+          {readiness.fromAddress ? (
+            <span className="text-xs text-amateur-muted">{readiness.fromAddress}</span>
+          ) : null}
+        </div>
+        {readiness.state === 'configured' ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onVerify}
+            disabled={verifying}
+            className="min-h-[40px]"
+          >
+            {verifying
+              ? t('app.states.loading')
+              : t('pages.guardians.portalAccess.deliveryReadiness.verify')}
+          </Button>
+        ) : null}
+      </div>
+      <p className="mt-2 text-xs text-amateur-muted">{t(hintKey)}</p>
+    </div>
+  );
+}
+
+type DeliveryStatusCardProps = {
+  summary: GuardianInviteDeliverySummary | null;
+  badge: ReactNode;
+  language: string;
+};
+
+function DeliveryStatusCard({ summary, badge, language }: DeliveryStatusCardProps) {
+  const { t } = useTranslation();
+  if (!summary || !summary.state) return null;
+  const tone =
+    summary.state === 'sent'
+      ? 'success'
+      : summary.state === 'shared_manually'
+        ? 'info'
+        : summary.state === 'unavailable' || summary.state === 'pending'
+          ? 'warning'
+          : 'error';
+  const message = t(summary.toneKey);
+  const stamp =
+    summary.state === 'sent'
+      ? formatDateTime(summary.deliveredAt ?? summary.attemptedAt, language)
+      : summary.state === 'shared_manually'
+        ? formatDateTime(summary.sharedAt ?? summary.attemptedAt, language)
+        : formatDateTime(summary.attemptedAt, language);
+  return (
+    <InlineAlert tone={tone}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {badge}
+          <span>{message}</span>
+        </div>
+        <span className="text-xs opacity-70">{stamp}</span>
+      </div>
+    </InlineAlert>
+  );
+}
+
+type InviteLinkPanelProps = {
+  link: string | null;
+  copyAck: boolean;
+  onCopy: () => void;
+  onMarkShared: () => void;
+  disabled: boolean;
+  deliveryState: GuardianInviteDeliverySummary['state'] | null;
+};
+
+function InviteLinkPanel({
+  link,
+  copyAck,
+  onCopy,
+  onMarkShared,
+  disabled,
+  deliveryState,
+}: InviteLinkPanelProps) {
+  const { t } = useTranslation();
+  const showMarkShared =
+    deliveryState === 'unavailable' || deliveryState === 'failed' || deliveryState === 'pending';
+  if (!link) return null;
+  return (
+    <div className="rounded-xl border border-dashed border-amateur-border bg-amateur-canvas px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
+          {t('pages.guardians.portalAccess.shareTitle')}
+        </p>
+        {copyAck ? (
+          <span className="text-xs text-emerald-700">
+            {t('pages.guardians.portalAccess.copyAck')}
+          </span>
+        ) : null}
+      </div>
+      <p className="mt-2 break-all rounded-lg bg-amateur-surface px-3 py-2 text-xs text-amateur-ink">
+        {link}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button type="button" onClick={onCopy} disabled={disabled} className="min-h-[44px]">
+          {t('pages.guardians.portalAccess.copyLink')}
+        </Button>
+        {showMarkShared ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onMarkShared}
+            disabled={disabled}
+            className="min-h-[44px]"
+          >
+            {t('pages.guardians.portalAccess.markShared')}
+          </Button>
+        ) : null}
+      </div>
+      <p className="mt-2 text-xs text-amateur-muted">
+        {t('pages.guardians.portalAccess.shareHint')}
+      </p>
     </div>
   );
 }

@@ -106,6 +106,44 @@ export type Guardian = {
 
 export type GuardianPortalAccessStatus = 'invited' | 'active' | 'disabled';
 
+/**
+ * Parent Invite Delivery & Access Reliability Pack — truthful invite
+ * delivery state. The staff UI renders one of these states verbatim;
+ * we never imply an invite was delivered when it was not.
+ */
+export type GuardianInviteDeliveryState =
+  | 'pending'
+  | 'sent'
+  | 'failed'
+  | 'shared_manually'
+  | 'unavailable';
+
+export type GuardianInviteDeliverySummary = {
+  state: GuardianInviteDeliveryState | null;
+  provider: string | null;
+  detail: string | null;
+  attemptedAt: string | null;
+  deliveredAt: string | null;
+  sharedAt: string | null;
+  attemptCount: number;
+  toneKey:
+    | 'pages.guardians.portalAccess.deliveryTone.sent'
+    | 'pages.guardians.portalAccess.deliveryTone.failed'
+    | 'pages.guardians.portalAccess.deliveryTone.unavailable'
+    | 'pages.guardians.portalAccess.deliveryTone.sharedManually'
+    | 'pages.guardians.portalAccess.deliveryTone.pending';
+};
+
+export type GuardianInviteDeliveryReadiness = {
+  available: boolean;
+  provider: 'smtp' | 'manual';
+  state: 'configured' | 'not_configured' | 'error';
+  message: string | null;
+  fromAddress: string | null;
+  verified: boolean;
+  verifiedAt: string | null;
+};
+
 export type GuardianPortalAccessSummary = {
   id: string;
   guardianId: string;
@@ -120,9 +158,15 @@ export type GuardianPortalAccessSummary = {
   awaitingReview: number;
   linkedAthletes: number;
   inviteLink?: string;
+  /** Parent Invite Delivery & Access Reliability Pack — absolute link for manual share. */
+  absoluteInviteLink?: string;
   /** Parent Portal v1.2 — surfaced when a family used the public recovery form. */
   recoveryRequestedAt?: string | null;
   recoveryRequestCount?: number;
+  /** Parent Invite Delivery & Access Reliability Pack — truthful state. */
+  inviteDelivery?: GuardianInviteDeliverySummary;
+  /** Same data, surfaced under `delivery` on invite mutations. */
+  delivery?: GuardianInviteDeliverySummary;
 };
 
 export type GuardianPortalActionSubmissionInput = {

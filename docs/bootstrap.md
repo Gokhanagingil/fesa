@@ -29,6 +29,12 @@ The amateur platform ships a **single, repeatable demo seed** for local developm
 - Does **not** wipe the database or delete other tenants.
 - Does **not** replace migrations — apply migrations first so the schema exists.
 - Does **not** require secrets or external services.
+- Does **not** require an SMTP provider to be configured. Parent
+  invite delivery is honestly reported as `unavailable` until you set
+  `SMTP_HOST` + `SMTP_FROM`; staff can still issue, copy, and
+  manually share invite links from the staff UI in that mode. See the
+  *Parent Invite Delivery & Access Reliability Pack* section in
+  [`parent-portal.md`](./parent-portal.md) for the full env contract.
 
 ## Prerequisites
 

@@ -27,6 +27,11 @@ import { TenantBrandingService } from '../tenant/tenant-branding.service';
 import { ClubUpdateService } from '../club-update/club-update.service';
 import { ParentAudienceSet } from '../club-update/club-update.types';
 import { GUARDIAN_PORTAL_SESSION_COOKIE } from './guardian-portal.constants';
+import {
+  InviteDeliveryAttempt,
+  InviteDeliveryReadiness,
+  InviteDeliveryService,
+} from './invite-delivery.service';
 
 type AccessStatus = GuardianPortalAccess['status'];
 
@@ -84,6 +89,35 @@ type ActivationOverview = {
   };
 };
 
+/**
+ * Parent Invite Delivery & Access Reliability Pack — truthful invite
+ * delivery state surfaced to staff. We never imply an invite was
+ * delivered; the UI renders one of these states verbatim.
+ */
+export type InviteDeliveryStateValue =
+  | 'pending'
+  | 'sent'
+  | 'failed'
+  | 'shared_manually'
+  | 'unavailable';
+
+export type InviteDeliverySummary = {
+  state: InviteDeliveryStateValue | null;
+  provider: string | null;
+  detail: string | null;
+  attemptedAt: Date | null;
+  deliveredAt: Date | null;
+  sharedAt: Date | null;
+  attemptCount: number;
+  /** Pre-rendered i18n key the staff UI uses for the calm tone copy. */
+  toneKey:
+    | 'pages.guardians.portalAccess.deliveryTone.sent'
+    | 'pages.guardians.portalAccess.deliveryTone.failed'
+    | 'pages.guardians.portalAccess.deliveryTone.unavailable'
+    | 'pages.guardians.portalAccess.deliveryTone.sharedManually'
+    | 'pages.guardians.portalAccess.deliveryTone.pending';
+};
+
 type GuardianAccessSummary = {
   id: string;
   guardianId: string;
@@ -97,6 +131,8 @@ type GuardianAccessSummary = {
   pendingActions: number;
   awaitingReview: number;
   linkedAthletes: number;
+  /** Parent Invite Delivery & Access Reliability Pack — truthful state. */
+  inviteDelivery: InviteDeliverySummary;
   /**
    * Parent Portal v1.2 — recovery surface.
    *
@@ -144,7 +180,61 @@ export class GuardianPortalService {
     private readonly branding: TenantBrandingService,
     private readonly clubUpdates: ClubUpdateService,
     private readonly config: ConfigService,
+    private readonly inviteDelivery: InviteDeliveryService,
   ) {}
+
+  getInviteDeliveryReadiness(): InviteDeliveryReadiness {
+    return this.inviteDelivery.getReadiness();
+  }
+
+  async verifyInviteDelivery(): Promise<InviteDeliveryReadiness> {
+    return this.inviteDelivery.verifyDelivery();
+  }
+
+  /**
+   * Build the absolute activation URL the parent will see in the
+   * outgoing email. Falls back to the relative path the staff UI
+   * already renders when no public origin is configured — the manual
+   * share fallback works either way.
+   */
+  buildAbsoluteInviteLink(token: string): string {
+    const origin = (this.config.get<string>('PORTAL_PUBLIC_ORIGIN') ?? '').trim();
+    const path = this.buildInviteLink(token);
+    if (!origin) return path;
+    const trimmed = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+    return `${trimmed}${path}`;
+  }
+
+  private buildInviteDeliverySummary(access: GuardianPortalAccess): InviteDeliverySummary {
+    const state = (access.inviteDeliveryState ?? null) as
+      | InviteDeliveryStateValue
+      | null;
+    const toneKey: InviteDeliverySummary['toneKey'] = (() => {
+      switch (state) {
+        case 'sent':
+          return 'pages.guardians.portalAccess.deliveryTone.sent';
+        case 'failed':
+          return 'pages.guardians.portalAccess.deliveryTone.failed';
+        case 'unavailable':
+          return 'pages.guardians.portalAccess.deliveryTone.unavailable';
+        case 'shared_manually':
+          return 'pages.guardians.portalAccess.deliveryTone.sharedManually';
+        case 'pending':
+        default:
+          return 'pages.guardians.portalAccess.deliveryTone.pending';
+      }
+    })();
+    return {
+      state,
+      provider: access.inviteDeliveryProvider ?? null,
+      detail: access.inviteDeliveryDetail ?? null,
+      attemptedAt: access.inviteDeliveryAttemptedAt ?? null,
+      deliveredAt: access.inviteDeliveredAt ?? null,
+      sharedAt: access.inviteSharedAt ?? null,
+      attemptCount: access.inviteAttemptCount ?? 0,
+      toneKey,
+    };
+  }
 
   private hashToken(value: string): string {
     return createHash('sha256').update(value).digest('hex');
@@ -293,6 +383,7 @@ export class GuardianPortalService {
       linkedAthletes: readiness.summary.linkedAthletes,
       recoveryRequestedAt: access.recoveryRequestedAt ?? null,
       recoveryRequestCount: access.recoveryRequestCount ?? 0,
+      inviteDelivery: this.buildInviteDeliverySummary(access),
     };
   }
 
@@ -525,8 +616,14 @@ export class GuardianPortalService {
   async inviteGuardian(
     tenantId: string,
     guardianId: string,
-    input: { email?: string | null },
-  ): Promise<GuardianAccessSummary & { inviteLink: string }> {
+    input: { email?: string | null; language?: 'en' | 'tr' },
+  ): Promise<
+    GuardianAccessSummary & {
+      inviteLink: string;
+      absoluteInviteLink: string;
+      delivery: InviteDeliverySummary;
+    }
+  > {
     const guardian = await this.assertGuardian(tenantId, guardianId);
     const email = this.normalizeEmail(input.email ?? guardian.email ?? '');
     if (!email) {
@@ -539,6 +636,7 @@ export class GuardianPortalService {
     const now = new Date();
 
     let access = await this.findAccessByGuardian(tenantId, guardianId);
+    const previousAttemptCount = access?.inviteAttemptCount ?? 0;
     if (!access) {
       access = this.accesses.create({
         tenantId,
@@ -553,6 +651,13 @@ export class GuardianPortalService {
         activatedAt: null,
         lastLoginAt: null,
         disabledAt: null,
+        inviteDeliveryState: 'pending',
+        inviteDeliveryProvider: null,
+        inviteDeliveryDetail: null,
+        inviteDeliveryAttemptedAt: null,
+        inviteDeliveredAt: null,
+        inviteSharedAt: null,
+        inviteAttemptCount: 1,
       });
     } else {
       access.email = email;
@@ -565,15 +670,85 @@ export class GuardianPortalService {
       // so clear the recovery flag from the access summary surface.
       access.recoveryRequestedAt = null;
       access.recoveryRequestCount = 0;
+      // Parent Invite Delivery & Access Reliability Pack — every fresh
+      // (re)issue resets delivery state so the staff UI never carries a
+      // stale "sent" badge over from a previous attempt.
+      access.inviteDeliveryState = 'pending';
+      access.inviteDeliveryProvider = null;
+      access.inviteDeliveryDetail = null;
+      access.inviteDeliveryAttemptedAt = null;
+      access.inviteDeliveredAt = null;
+      access.inviteSharedAt = null;
+      access.inviteAttemptCount = previousAttemptCount + 1;
     }
 
     const saved = await this.accesses.save(access);
+
+    const tenantName = saved.tenant?.name ?? null;
+    const tenantNameForCopy =
+      tenantName ?? (await this.tenants.findById(tenantId).then((t) => t?.name ?? 'Amateur'));
+    const absoluteLink = this.buildAbsoluteInviteLink(token);
+    const guardianName = this.getGuardianName(guardian);
+
+    const attempt: InviteDeliveryAttempt = await this.inviteDelivery.sendInvite({
+      toEmail: email,
+      guardianName,
+      tenantName: tenantNameForCopy,
+      activationUrl: absoluteLink,
+      expiresInHours: this.inviteTtlHours,
+      language: input.language,
+    });
+
+    saved.inviteDeliveryProvider = attempt.provider;
+    saved.inviteDeliveryDetail = attempt.detail;
+    saved.inviteDeliveryAttemptedAt = attempt.attemptedAt;
+    saved.inviteDeliveredAt = attempt.deliveredAt;
+    saved.inviteDeliveryState = attempt.state;
+
+    await this.accesses.save(saved);
+
     const hydrated = await this.findAccessById(tenantId, saved.id);
-    const readiness = await this.familyActions.getGuardianReadiness(tenantId, guardianId);
+    const familyReadiness = await this.familyActions.getGuardianReadiness(tenantId, guardianId);
+    const summary = this.buildAccessSummary(hydrated, familyReadiness);
     return {
-      ...this.buildAccessSummary(hydrated, readiness),
+      ...summary,
       inviteLink: this.buildInviteLink(token),
+      absoluteInviteLink: absoluteLink,
+      delivery: summary.inviteDelivery,
     };
+  }
+
+  /**
+   * Parent Invite Delivery & Access Reliability Pack — manual fallback.
+   *
+   * Staff have already copied / shared the activation link themselves
+   * (e.g. via WhatsApp, in person, on a printed page). We stamp the
+   * row so the UI flips to a calm `shared_manually` badge instead of
+   * leaving it on the alarming `unavailable` / `failed` state. We do
+   * NOT mint a new token here — the existing invite token remains the
+   * single source of truth for the activation page.
+   */
+  async markInviteShared(tenantId: string, accessId: string): Promise<GuardianAccessSummary> {
+    const access = await this.findAccessById(tenantId, accessId);
+    if (!access.inviteTokenHash) {
+      throw new BadRequestException(
+        'No active invite token to share — issue or resend an invite first.',
+      );
+    }
+    access.inviteDeliveryState = 'shared_manually';
+    access.inviteSharedAt = new Date();
+    if (!access.inviteDeliveryProvider) {
+      access.inviteDeliveryProvider = 'manual';
+    }
+    if (!access.inviteDeliveryDetail) {
+      access.inviteDeliveryDetail = 'shared_by_staff';
+    }
+    await this.accesses.save(access);
+    const familyReadiness = await this.familyActions.getGuardianReadiness(
+      tenantId,
+      access.guardianId,
+    );
+    return this.buildAccessSummary(access, familyReadiness);
   }
 
   async disableAccess(tenantId: string, accessId: string): Promise<GuardianAccessSummary> {
