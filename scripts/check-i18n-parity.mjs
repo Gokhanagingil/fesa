@@ -147,6 +147,35 @@ const scopedPrefixes = [
   'portal.home.essentialsTitle',
   'portal.home.essentialsHint',
   'portal.home.essentials',
+  // Parent Portal v1.3 — Family Communication Continuity, Payment
+  // Readiness, and Club-to-Family Trust Layer. Protect every new
+  // parent-facing key set across both locales so the calm continuity
+  // strip and the payment readiness card never silently drift.
+  'portal.home.continuityTitle',
+  'portal.home.continuityHint',
+  'portal.home.continuityBadgeClubUpdate',
+  'portal.home.continuityBadgeFamilyRequest',
+  'portal.home.continuityStatusOpen',
+  'portal.home.continuityStatusReview',
+  'portal.home.continuityStatusResolved',
+  'portal.home.continuityStatusClosed',
+  'portal.home.continuityForAudience',
+  'portal.home.continuityOpenHint',
+  'portal.home.paymentTitle',
+  'portal.home.paymentClearTag',
+  'portal.home.paymentClearBody',
+  'portal.home.paymentOpenHint',
+  'portal.home.paymentAttentionHint',
+  'portal.home.paymentTotalLabel',
+  'portal.home.paymentOverdueLabel',
+  'portal.home.paymentNextDueLabel',
+  'portal.home.paymentDueOn',
+  'portal.home.paymentNoDueDate',
+  'portal.home.paymentStatusOverdue',
+  'portal.home.paymentStatusDueSoon',
+  'portal.home.paymentStatusOpen',
+  'portal.home.paymentOpenFooter',
+  'portal.home.paymentAttentionFooter',
 ];
 
 function flattenKeys(input, prefix = '') {
