@@ -4,6 +4,7 @@
     "tagline": "Club operations for amateur sports",
     "nav": {
       "dashboard": "Dashboard",
+      "onboarding": "Onboarding",
       "actionCenter": "Action center",
       "athletes": "Athletes",
       "guardians": "Guardians",
@@ -1932,6 +1933,27 @@
       "defaultBranchHint": "Used when a row leaves the sport branch column empty.",
       "anyBranch": "— pick a branch —",
       "fields": {
+        "sportBranches": {
+          "name": "Sport branch name",
+          "code": "Short code"
+        },
+        "coaches": {
+          "firstName": "First name",
+          "lastName": "Last name",
+          "preferredName": "Preferred name",
+          "sportBranch": "Sport branch",
+          "phone": "Phone",
+          "email": "Email",
+          "specialties": "Specialties",
+          "notes": "Notes"
+        },
+        "teams": {
+          "name": "Team name",
+          "sportBranch": "Sport branch",
+          "groupName": "Linked group",
+          "code": "Short code",
+          "headCoachName": "Head coach"
+        },
         "athletes": {
           "firstName": "First name",
           "lastName": "Last name",
@@ -1964,12 +1986,42 @@
           "name": "Group name",
           "sportBranch": "Sport branch",
           "headCoachName": "Head coach"
+        },
+        "chargeItems": {
+          "name": "Item name",
+          "category": "Category",
+          "defaultAmount": "Default amount",
+          "currency": "Currency"
+        },
+        "inventoryItems": {
+          "name": "Item name",
+          "category": "Category",
+          "sportBranch": "Sport branch",
+          "trackAssignment": "Hand out to athletes",
+          "initialStock": "Starting stock",
+          "lowStockThreshold": "Low-stock threshold",
+          "description": "Description"
         }
       },
       "entities": {
+        "sportBranches": {
+          "title": "Sport branches",
+          "description": "Set up the sports your club runs. Everything else (coaches, groups, teams, athletes) will reference these."
+        },
+        "coaches": {
+          "title": "Coaches",
+          "description": "Add the people who run trainings. Each coach belongs to one sport branch.",
+          "dependencies": "Make sure your sport branches exist first."
+        },
+        "teams": {
+          "title": "Teams",
+          "description": "Optional competitive squads. Useful for clubs that play in leagues; clubs that only train can skip this.",
+          "dependencies": "Sport branches are required. Linked groups and head coaches are optional but recommended."
+        },
         "athletes": {
           "title": "Athletes",
-          "description": "Bring your athlete roster into the platform with sport branch and group context."
+          "description": "Bring your athlete roster into the platform with sport branch and group context.",
+          "dependencies": "Import sport branches first. Groups are optional but recommended so athletes land in the right cohort."
         },
         "guardians": {
           "title": "Guardians",
@@ -1977,20 +2029,42 @@
         },
         "athleteGuardians": {
           "title": "Athlete ↔ guardian links",
-          "description": "Connect existing athletes to existing guardians with relationship metadata."
+          "description": "Connect existing athletes to existing guardians with relationship metadata.",
+          "dependencies": "Athletes and guardians must already exist before you link them."
         },
         "groups": {
           "title": "Groups",
-          "description": "Create training groups in bulk so you can map athletes to them right away."
+          "description": "Create training groups in bulk so you can map athletes to them right away.",
+          "dependencies": "Sport branches are required first; head coaches are optional."
+        },
+        "chargeItems": {
+          "title": "Finance starting items",
+          "description": "Set up the dues, camps, and merchandise lines you'll bill families for.",
+          "dependencies": "No dependencies — use this any time before you start issuing charges."
+        },
+        "inventoryItems": {
+          "title": "Inventory & stock",
+          "description": "Bring jerseys, balls, and other club kit into the system with starting stock counts.",
+          "dependencies": "Sport branches are optional but help with branch-scoped reporting."
         }
       },
       "hints": {
         "dateFormat": "Accepts YYYY-MM-DD or DD/MM/YYYY.",
         "sportBranch": "Use the branch name or its short code.",
+        "sportBranchOptional": "Optional. Use the branch name or short code if the item is branch-specific.",
+        "sportBranchCode": "Short uppercase code for integrations, e.g. BASKETBALL.",
         "primaryGroup": "Group must already exist in the chosen sport branch.",
         "athleteStatus": "trial · active · paused · inactive · archived.",
         "relationshipType": "mother · father · guardian · other.",
-        "headCoach": "Match an existing coach by full name. Unknown names create the group without a head coach."
+        "headCoach": "Match an existing coach by full name. Unknown names create the row without a head coach.",
+        "teamGroup": "Optional. Link the team to one of your existing groups for the same branch.",
+        "chargeCategory": "A short label, e.g. dues, camp, tournament, merchandise.",
+        "amount": "Use a decimal number, e.g. 750 or 1250.50.",
+        "currency": "Three-letter ISO currency code, e.g. TRY, EUR, USD.",
+        "inventoryCategory": "apparel · balls · equipment · gear · other.",
+        "trackAssignment": "Yes for items handed to a specific athlete (jerseys), no for pooled stock (balls, cones).",
+        "initialStock": "How many units you currently own. Leave blank for zero.",
+        "lowStockThreshold": "We'll quietly flag the item when available stock drops to this number."
       },
       "historyTitle": "Recent imports",
       "historyHint": "A short, on-device record of the imports you committed from this browser.",
@@ -2005,6 +2079,100 @@
         "guardians": "Export current guardians (CSV)",
         "training": "Export upcoming training (CSV)",
         "finance": "Export overdue charges (CSV)"
+      }
+    },
+    "onboarding": {
+      "title": "Club onboarding",
+      "subtitle": "A guided way to bring your club into the platform — at your own pace, without surprises.",
+      "openClassicImports": "Open the classic imports view",
+      "loading": "Reading where your club is right now…",
+      "loadFailed": "Could not load the onboarding overview.",
+      "stepsTitle": "Steps",
+      "stepNumber": "Step {{index}}",
+      "optional": "Optional",
+      "alreadyHave_one": "{{count}} record already in this section.",
+      "alreadyHave_other": "{{count}} records already in this section.",
+      "blocked": "Finish {{steps}} first so this step has something to reference.",
+      "greeting": "Welcome, {{name}}.",
+      "progressLabel": "Onboarding progress",
+      "progressLine": "{{done}} of {{total}} required steps complete.",
+      "progress": {
+        "fresh": "Just getting started",
+        "in_progress": "In progress",
+        "ready": "Ready to go live"
+      },
+      "status": {
+        "not_started": "Not started",
+        "in_progress": "In progress",
+        "completed": "Done",
+        "needs_attention": "Needs attention"
+      },
+      "steps": {
+        "club_basics": {
+          "title": "Club basics",
+          "hint": "Take a moment to confirm how your club is named and how the family portal will look. You can refine this any time."
+        },
+        "sport_branches": {
+          "title": "Sport branches",
+          "hint": "List the sports your club runs. Everything else (coaches, groups, athletes) plugs into these."
+        },
+        "coaches": {
+          "title": "Coaches",
+          "hint": "Add the people who lead trainings. Each coach belongs to one sport branch."
+        },
+        "groups": {
+          "title": "Groups",
+          "hint": "Training cohorts (for example U10 Basketball). Athletes will land in one of these."
+        },
+        "teams": {
+          "title": "Teams",
+          "hint": "Optional competitive squads. Skip this step if your club only runs trainings."
+        },
+        "athletes": {
+          "title": "Athletes",
+          "hint": "Bring in your athlete roster. Sport branch is required; group is recommended."
+        },
+        "guardians": {
+          "title": "Guardians",
+          "hint": "Add parent and guardian contact details so you can reach families later."
+        },
+        "athlete_guardians": {
+          "title": "Athlete ↔ guardian links",
+          "hint": "Connect each athlete to one or more guardians and mark the primary contact."
+        },
+        "charge_items": {
+          "title": "Finance starter",
+          "hint": "Define the dues, camps, and merchandise lines you'll bill families for."
+        },
+        "inventory_items": {
+          "title": "Inventory & stock",
+          "hint": "Bring jerseys, balls, and other club kit into the system with starting stock counts."
+        },
+        "go_live": {
+          "title": "Review & go live",
+          "hint": "A short checklist before you tell families you're ready."
+        }
+      },
+      "clubBasics": {
+        "title": "Confirm your club identity",
+        "hint": "Set how your club is named and how the family portal will look. You can refine this any time.",
+        "bulletAccount": "Your club account is active.",
+        "bulletBranding": "Add your club name, primary colour, and logo for the family portal.",
+        "openSettings": "Open settings"
+      },
+      "goLive": {
+        "title": "You're almost ready",
+        "hint": "These quick links open the surfaces your club will live in day-to-day.",
+        "bulletReview": "Skim each section once to confirm what came in is what you expected.",
+        "bulletInvite": "Invite the rest of your staff so the work isn't on one person.",
+        "bulletCommunicate": "When you're ready, share the family portal link with your community.",
+        "links": {
+          "dashboard": "Open dashboard",
+          "athletes": "Open athletes",
+          "groups": "Open groups",
+          "finance": "Open finance",
+          "settings": "Open settings"
+        }
       }
     }
   },

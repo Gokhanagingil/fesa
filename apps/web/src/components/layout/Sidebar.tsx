@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 const links = [
   { to: '/app/dashboard', key: 'dashboard' as const },
+  { to: '/app/onboarding', key: 'onboarding' as const },
   { to: '/app/action-center', key: 'actionCenter' as const },
   { to: '/app/athletes', key: 'athletes' as const },
   { to: '/app/coaches', key: 'coaches' as const },

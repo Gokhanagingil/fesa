@@ -1,8 +1,25 @@
 import { apiGet, apiPost } from './api';
 
-export type ImportEntityKey = 'athletes' | 'guardians' | 'athlete_guardians' | 'groups';
+export type ImportEntityKey =
+  | 'sport_branches'
+  | 'coaches'
+  | 'groups'
+  | 'teams'
+  | 'athletes'
+  | 'guardians'
+  | 'athlete_guardians'
+  | 'charge_items'
+  | 'inventory_items';
 
-export type ImportFieldType = 'string' | 'enum' | 'date' | 'email' | 'phone' | 'boolean';
+export type ImportFieldType =
+  | 'string'
+  | 'enum'
+  | 'date'
+  | 'email'
+  | 'phone'
+  | 'boolean'
+  | 'integer'
+  | 'decimal';
 
 export interface ImportFieldDefinition {
   key: string;
@@ -21,6 +38,8 @@ export interface ImportEntityDefinition {
   descriptionKey: string;
   sample: Array<Record<string, string>>;
   fields: ImportFieldDefinition[];
+  /** Optional i18n key surfacing prerequisite expectations (calmly). */
+  dependencyKey?: string;
 }
 
 export type ImportIssueSeverity = 'error' | 'warning' | 'info';
@@ -33,10 +52,12 @@ export interface ImportRowIssue {
 
 export type ImportRowOutcome = 'create' | 'update' | 'skip' | 'reject';
 
+export type ImportResolvedValue = string | boolean | number | null;
+
 export interface ImportRowReport {
   rowNumber: number;
   outcome: ImportRowOutcome;
-  resolved: Record<string, string | boolean | null>;
+  resolved: Record<string, ImportResolvedValue>;
   displayLabel: string;
   issues: ImportRowIssue[];
 }
@@ -80,6 +101,46 @@ export interface ImportPreviewPayload {
 export async function fetchImportDefinitions(): Promise<ImportEntityDefinition[]> {
   const res = await apiGet<{ items: ImportEntityDefinition[] }>('/api/imports/definitions');
   return res.items;
+}
+
+export type OnboardingStepStatus =
+  | 'not_started'
+  | 'in_progress'
+  | 'completed'
+  | 'needs_attention';
+
+export interface OnboardingStepReport {
+  key: string;
+  titleKey: string;
+  hintKey: string;
+  importEntity: ImportEntityKey | null;
+  count: number;
+  status: OnboardingStepStatus;
+  blocked: boolean;
+  blockedBy: string[];
+  optional: boolean;
+}
+
+export interface OnboardingProgress {
+  requiredCompleted: number;
+  requiredTotal: number;
+  totalCompleted: number;
+  totalSteps: number;
+  state: 'fresh' | 'in_progress' | 'ready';
+}
+
+export interface OnboardingStateReport {
+  tenantId: string;
+  tenantName: string;
+  brandConfigured: boolean;
+  steps: OnboardingStepReport[];
+  progress: OnboardingProgress;
+  nextStepKey: string | null;
+  generatedAt: string;
+}
+
+export async function fetchOnboardingState(): Promise<OnboardingStateReport> {
+  return apiGet<OnboardingStateReport>('/api/onboarding/state');
 }
 
 export async function previewImport(payload: ImportPreviewPayload): Promise<ImportPreviewReport> {
