@@ -2096,6 +2096,69 @@
       "greeting": "Welcome, {{name}}.",
       "progressLabel": "Onboarding progress",
       "progressLine": "{{done}} of {{total}} required steps complete.",
+      "rail": {
+        "lastImportedAt": "Last imported {{when}}"
+      },
+      "relative": {
+        "justNow": "just now",
+        "minutesAgo_one": "{{count}} minute ago",
+        "minutesAgo_other": "{{count}} minutes ago",
+        "hoursAgo_one": "{{count}} hour ago",
+        "hoursAgo_other": "{{count}} hours ago",
+        "daysAgo_one": "{{count}} day ago",
+        "daysAgo_other": "{{count}} days ago",
+        "weeksAgo_one": "{{count}} week ago",
+        "weeksAgo_other": "{{count}} weeks ago"
+      },
+      "lastImport": {
+        "title": "Last import for this step",
+        "line": "{{when}} · {{who}} · {{source}}",
+        "counts": "{{created}} created · {{updated}} updated · {{skipped}} skipped",
+        "attention": "{{rejected}} rejected · {{warnings}} warning(s) — review before relying on this step."
+      },
+      "history": {
+        "title": "Recent imports",
+        "hint": "A short, supportive memory of what your club has brought in recently.",
+        "empty": "Nothing imported yet. Once you commit a step, it will appear here.",
+        "line": "{{source}} — {{created}} created · {{updated}} updated · {{skipped}} skipped",
+        "sourceFallback": "Pasted CSV",
+        "triggeredBy": "By {{who}}",
+        "attention": "{{rejected}} row(s) were rejected · {{warnings}} warning(s) — open the step to review.",
+        "status": {
+          "success": "Imported cleanly",
+          "partial": "Already on file",
+          "needs_attention": "Needs attention"
+        }
+      },
+      "readiness": {
+        "ariaLabel": "Go-live readiness summary",
+        "noSignals": "No issues stand out. Everything looks calm and consistent.",
+        "tone": {
+          "fresh": "Just getting started",
+          "in_progress": "In progress",
+          "almost_ready": "Almost ready",
+          "ready": "Looks ready"
+        },
+        "headline": {
+          "fresh": "Welcome — let's set the foundations.",
+          "in_progress": "You're moving along.",
+          "almost_ready": "You're close. A couple of things still need attention.",
+          "ready": "You look ready to invite families."
+        },
+        "subtitle": {
+          "fresh": "Start with club basics and sport branches; the rest builds on top.",
+          "in_progress": "Finish the remaining required steps and the wizard will guide you to go-live.",
+          "almost_ready": "Required steps are done. The notes below are gentle nudges, not blockers.",
+          "ready": "Required steps are done and nothing concerning stands out."
+        },
+        "signals": {
+          "brandMissing": "Add a club name, primary colour, and (optional) logo so families recognise you.",
+          "athletesWithoutGroups": "Athletes are loaded but no training groups exist yet — families will see them without a cohort.",
+          "linksMissing": "Athletes and guardians are loaded, but no families are linked yet. Families won't see their athletes.",
+          "lowAthleteCount": "Only {{count}} athlete(s) on file — double-check that the import covered everyone.",
+          "rejectedRows": "{{count}} row(s) were rejected in the last import for this step. Re-open the step to review."
+        }
+      },
       "progress": {
         "fresh": "Just getting started",
         "in_progress": "In progress",
@@ -2166,6 +2229,18 @@
         "bulletReview": "Skim each section once to confirm what came in is what you expected.",
         "bulletInvite": "Invite the rest of your staff so the work isn't on one person.",
         "bulletCommunicate": "When you're ready, share the family portal link with your community.",
+        "requiredTitle": "Required steps",
+        "requiredEmpty": "Each required step contributes to a club families can use. Reopen any step that looks unsettled.",
+        "optionalTitle": "Optional steps",
+        "optionalEmpty": "Optional steps don't block go-live, but they save work later.",
+        "openStep": "Open step",
+        "lastImportedLine": "Last imported {{when}} by {{who}}",
+        "recordsOnFile_one": "{{count}} record on file",
+        "recordsOnFile_other": "{{count}} records on file",
+        "notTouchedYet": "Nothing imported here yet.",
+        "someone": "your team",
+        "nextStepsTitle": "When you're ready to invite families",
+        "nextStepsHint": "These are the safe next moves once required steps look settled.",
         "links": {
           "dashboard": "Open dashboard",
           "athletes": "Open athletes",

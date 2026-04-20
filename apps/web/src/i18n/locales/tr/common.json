@@ -2124,6 +2124,69 @@
       "greeting": "Hoş geldiniz, {{name}}.",
       "progressLabel": "Kuruluş ilerlemesi",
       "progressLine": "{{total}} zorunlu adımın {{done}} tanesi tamam.",
+      "rail": {
+        "lastImportedAt": "Son içe aktarım {{when}}"
+      },
+      "relative": {
+        "justNow": "az önce",
+        "minutesAgo_one": "{{count}} dakika önce",
+        "minutesAgo_other": "{{count}} dakika önce",
+        "hoursAgo_one": "{{count}} saat önce",
+        "hoursAgo_other": "{{count}} saat önce",
+        "daysAgo_one": "{{count}} gün önce",
+        "daysAgo_other": "{{count}} gün önce",
+        "weeksAgo_one": "{{count}} hafta önce",
+        "weeksAgo_other": "{{count}} hafta önce"
+      },
+      "lastImport": {
+        "title": "Bu adımın son içe aktarımı",
+        "line": "{{when}} · {{who}} · {{source}}",
+        "counts": "{{created}} oluşturuldu · {{updated}} güncellendi · {{skipped}} atlandı",
+        "attention": "{{rejected}} reddedildi · {{warnings}} uyarı — bu adıma güvenmeden önce gözden geçirin."
+      },
+      "history": {
+        "title": "Son içe aktarımlar",
+        "hint": "Kulübünüzün yakın zamanda neyi getirdiğine dair kısa, destekleyici bir hatırlatma.",
+        "empty": "Henüz içe aktarım yok. Bir adımı onayladığınızda burada görünecek.",
+        "line": "{{source}} — {{created}} oluşturuldu · {{updated}} güncellendi · {{skipped}} atlandı",
+        "sourceFallback": "Yapıştırılan CSV",
+        "triggeredBy": "{{who}} tarafından",
+        "attention": "{{rejected}} satır reddedildi · {{warnings}} uyarı — incelemek için adımı açın.",
+        "status": {
+          "success": "Sorunsuz aktarıldı",
+          "partial": "Zaten kayıtlı",
+          "needs_attention": "İlgi bekliyor"
+        }
+      },
+      "readiness": {
+        "ariaLabel": "Yayına hazırlık özeti",
+        "noSignals": "Dikkat çeken bir konu yok. Her şey sakin ve tutarlı görünüyor.",
+        "tone": {
+          "fresh": "Yeni başlıyor",
+          "in_progress": "Devam ediyor",
+          "almost_ready": "Neredeyse hazır",
+          "ready": "Hazır görünüyor"
+        },
+        "headline": {
+          "fresh": "Hoş geldiniz — temelleri birlikte atalım.",
+          "in_progress": "İlerliyorsunuz.",
+          "almost_ready": "Çok yaklaştınız. Birkaç şey hâlâ ilgi bekliyor.",
+          "ready": "Aileleri davet etmeye hazır görünüyorsunuz."
+        },
+        "subtitle": {
+          "fresh": "Kulüp temelleri ve spor branşlarıyla başlayın; gerisi bunların üstüne kurulur.",
+          "in_progress": "Kalan zorunlu adımları tamamlayın; sihirbaz sizi yayın aşamasına yönlendirecek.",
+          "almost_ready": "Zorunlu adımlar tamam. Aşağıdaki notlar engel değil, sakin hatırlatmalar.",
+          "ready": "Zorunlu adımlar tamam ve dikkat çeken bir şey görünmüyor."
+        },
+        "signals": {
+          "brandMissing": "Ailelerin sizi tanıyabilmesi için kulüp adı, ana renk ve (isteğe bağlı) logo ekleyin.",
+          "athletesWithoutGroups": "Sporcular yüklendi ama henüz hiç antrenman grubu yok — aileler grupsuz görecek.",
+          "linksMissing": "Sporcular ve veliler yüklendi, ancak henüz aile bağı kurulmadı. Aileler kendi sporcularını göremez.",
+          "lowAthleteCount": "Sadece {{count}} sporcu kayıtlı — içe aktarımın herkesi kapsadığından emin olun.",
+          "rejectedRows": "Bu adımın son içe aktarımında {{count}} satır reddedildi. Adımı yeniden açıp inceleyin."
+        }
+      },
       "progress": {
         "fresh": "Yeni başlıyor",
         "in_progress": "Devam ediyor",
@@ -2194,6 +2257,18 @@
         "bulletReview": "Her bölümü bir kez gözden geçirip içe alınanın beklediğiniz gibi olduğunu doğrulayın.",
         "bulletInvite": "Diğer ekip üyelerini davet edin; iş tek kişiye kalmasın.",
         "bulletCommunicate": "Hazır olduğunuzda aile portalı bağlantısını topluluğunuzla paylaşın.",
+        "requiredTitle": "Zorunlu adımlar",
+        "requiredEmpty": "Her zorunlu adım, ailelerin kullanabileceği bir kulübe katkı sağlar. Eksik görünen adımı yeniden açın.",
+        "optionalTitle": "İsteğe bağlı adımlar",
+        "optionalEmpty": "İsteğe bağlı adımlar yayını engellemez ama ileride iş çıkarmaz.",
+        "openStep": "Adımı aç",
+        "lastImportedLine": "Son içe aktarım {{when}} · {{who}}",
+        "recordsOnFile_one": "Kayıtta {{count}} kayıt",
+        "recordsOnFile_other": "Kayıtta {{count}} kayıt",
+        "notTouchedYet": "Henüz buraya bir şey aktarılmadı.",
+        "someone": "ekibiniz",
+        "nextStepsTitle": "Aileleri davet etmeye hazır olduğunuzda",
+        "nextStepsHint": "Zorunlu adımlar yerine oturduğunda atılabilecek güvenli sonraki adımlar.",
         "links": {
           "dashboard": "Paneli aç",
           "athletes": "Sporcuları aç",

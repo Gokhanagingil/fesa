@@ -96,6 +96,8 @@ export interface ImportPreviewPayload {
   columnMapping: Record<string, string>;
   rows: Array<{ rowNumber: number; cells: Record<string, string> }>;
   defaultSportBranchId?: string;
+  /** Optional source label (typically the original filename) recorded in server-side history. */
+  source?: string;
 }
 
 export async function fetchImportDefinitions(): Promise<ImportEntityDefinition[]> {
@@ -109,6 +111,22 @@ export type OnboardingStepStatus =
   | 'completed'
   | 'needs_attention';
 
+export type ImportBatchStatus = 'success' | 'partial' | 'needs_attention';
+
+export interface OnboardingStepLastImport {
+  batchId: string;
+  status: ImportBatchStatus;
+  committedAt: string;
+  source: string | null;
+  totalRows: number;
+  createdRows: number;
+  updatedRows: number;
+  skippedRows: number;
+  rejectedRows: number;
+  warningRows: number;
+  triggeredBy: string | null;
+}
+
 export interface OnboardingStepReport {
   key: string;
   titleKey: string;
@@ -119,6 +137,7 @@ export interface OnboardingStepReport {
   blocked: boolean;
   blockedBy: string[];
   optional: boolean;
+  lastImport: OnboardingStepLastImport | null;
 }
 
 export interface OnboardingProgress {
@@ -129,6 +148,39 @@ export interface OnboardingProgress {
   state: 'fresh' | 'in_progress' | 'ready';
 }
 
+export interface OnboardingReadinessSignal {
+  key: string;
+  tone: 'ok' | 'warning' | 'info';
+  messageKey: string;
+  values?: Record<string, string | number>;
+  stepKey?: string;
+}
+
+export interface OnboardingReadiness {
+  tone: 'fresh' | 'in_progress' | 'almost_ready' | 'ready';
+  headlineKey: string;
+  subtitleKey: string;
+  outstandingRequiredSteps: string[];
+  outstandingOptionalSteps: string[];
+  signals: OnboardingReadinessSignal[];
+}
+
+export interface OnboardingHistoryEntry {
+  id: string;
+  entity: string;
+  status: ImportBatchStatus;
+  committedAt: string;
+  source: string | null;
+  totalRows: number;
+  createdRows: number;
+  updatedRows: number;
+  skippedRows: number;
+  rejectedRows: number;
+  warningRows: number;
+  durationMs: number;
+  triggeredBy: string | null;
+}
+
 export interface OnboardingStateReport {
   tenantId: string;
   tenantName: string;
@@ -136,11 +188,21 @@ export interface OnboardingStateReport {
   steps: OnboardingStepReport[];
   progress: OnboardingProgress;
   nextStepKey: string | null;
+  readiness: OnboardingReadiness;
+  recentImports: OnboardingHistoryEntry[];
   generatedAt: string;
 }
 
 export async function fetchOnboardingState(): Promise<OnboardingStateReport> {
   return apiGet<OnboardingStateReport>('/api/onboarding/state');
+}
+
+export async function fetchOnboardingHistory(limit = 25): Promise<OnboardingHistoryEntry[]> {
+  const safe = Math.min(Math.max(Math.trunc(limit), 1), 100);
+  const res = await apiGet<{ items: OnboardingHistoryEntry[] }>(
+    `/api/onboarding/history?limit=${safe}`,
+  );
+  return res.items;
 }
 
 export async function previewImport(payload: ImportPreviewPayload): Promise<ImportPreviewReport> {

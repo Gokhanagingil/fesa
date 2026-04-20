@@ -7,6 +7,7 @@ import { ChargeItem } from '../../database/entities/charge-item.entity';
 import { ClubGroup } from '../../database/entities/club-group.entity';
 import { Coach } from '../../database/entities/coach.entity';
 import { Guardian } from '../../database/entities/guardian.entity';
+import { ImportBatch, ImportBatchStatus } from '../../database/entities/import-batch.entity';
 import { InventoryItem } from '../../database/entities/inventory-item.entity';
 import { SportBranch } from '../../database/entities/sport-branch.entity';
 import { Team } from '../../database/entities/team.entity';
@@ -17,6 +18,25 @@ export type OnboardingStepStatus =
   | 'in_progress'
   | 'completed'
   | 'needs_attention';
+
+/**
+ * A small, calm summary of the most recent import for an onboarding step.
+ * Nothing here describes raw rows or schemas — it answers "what landed last
+ * time, when, and did it look healthy?".
+ */
+export interface OnboardingStepLastImport {
+  batchId: string;
+  status: ImportBatchStatus;
+  committedAt: string;
+  source: string | null;
+  totalRows: number;
+  createdRows: number;
+  updatedRows: number;
+  skippedRows: number;
+  rejectedRows: number;
+  warningRows: number;
+  triggeredBy: string | null;
+}
 
 /**
  * One step on the guided club onboarding rail. Each step maps either to a
@@ -60,6 +80,12 @@ export interface OnboardingStepReport {
   blockedBy: string[];
   /** True when the wizard considers this step optional for go-live. */
   optional: boolean;
+  /**
+   * The most recent server-recorded import batch for this step's entity, if
+   * any. Null for non-import steps and for steps that have never been
+   * imported through the wizard / classic surface.
+   */
+  lastImport: OnboardingStepLastImport | null;
 }
 
 export interface OnboardingProgress {
@@ -73,6 +99,56 @@ export interface OnboardingProgress {
   state: 'fresh' | 'in_progress' | 'ready';
 }
 
+/**
+ * One readiness signal surfaced in the go-live review. Each signal has an
+ * obvious tone (`ok`, `warning`, `info`) and a short i18n key the UI
+ * resolves with optional placeholders.
+ */
+export interface OnboardingReadinessSignal {
+  key: string;
+  tone: 'ok' | 'warning' | 'info';
+  messageKey: string;
+  /** i18n placeholders. */
+  values?: Record<string, string | number>;
+  /** Optional wizard step the signal points back to. */
+  stepKey?: string;
+}
+
+export interface OnboardingReadiness {
+  /**
+   * Calm, scoped view of how confident the club should feel. We never say
+   * "ready to go live" without honest inspection — see `tone` mapping in
+   * `computeReadiness` below.
+   */
+  tone: 'fresh' | 'in_progress' | 'almost_ready' | 'ready';
+  /** Short i18n key for the headline (e.g. "You're close."). */
+  headlineKey: string;
+  /** Short i18n key for a one-line subtitle. */
+  subtitleKey: string;
+  /** Required steps that aren't completed yet. */
+  outstandingRequiredSteps: string[];
+  /** Optional steps the club could revisit before going live. */
+  outstandingOptionalSteps: string[];
+  signals: OnboardingReadinessSignal[];
+}
+
+/** Compact recent-history entry for the wizard's "Recent imports" strip. */
+export interface OnboardingHistoryEntry {
+  id: string;
+  entity: string;
+  status: ImportBatchStatus;
+  committedAt: string;
+  source: string | null;
+  totalRows: number;
+  createdRows: number;
+  updatedRows: number;
+  skippedRows: number;
+  rejectedRows: number;
+  warningRows: number;
+  durationMs: number;
+  triggeredBy: string | null;
+}
+
 export interface OnboardingStateReport {
   tenantId: string;
   tenantName: string;
@@ -81,7 +157,32 @@ export interface OnboardingStateReport {
   progress: OnboardingProgress;
   /** First step the wizard would invite the user to act on. */
   nextStepKey: string | null;
+  /** Calm go-live readiness summary, computed from the steps + signals. */
+  readiness: OnboardingReadiness;
+  /** Up to a handful of the most recent server-recorded import batches. */
+  recentImports: OnboardingHistoryEntry[];
   generatedAt: string;
+}
+
+const STEP_TO_ENTITY: Record<string, string> = {
+  sport_branches: 'sport_branches',
+  coaches: 'coaches',
+  groups: 'groups',
+  teams: 'teams',
+  athletes: 'athletes',
+  guardians: 'guardians',
+  athlete_guardians: 'athlete_guardians',
+  charge_items: 'charge_items',
+  inventory_items: 'inventory_items',
+};
+
+const ENTITY_TO_STEP: Record<string, string> = Object.fromEntries(
+  Object.entries(STEP_TO_ENTITY).map(([step, entity]) => [entity, step]),
+);
+
+/** A small, opinionated "this number feels suspiciously low" signal. */
+function isSuspiciouslyLowAthleteCount(count: number): boolean {
+  return count > 0 && count < 4;
 }
 
 @Injectable()
@@ -98,6 +199,7 @@ export class OnboardingService {
     private readonly athleteGuardians: Repository<AthleteGuardian>,
     @InjectRepository(ChargeItem) private readonly chargeItems: Repository<ChargeItem>,
     @InjectRepository(InventoryItem) private readonly inventoryItems: Repository<InventoryItem>,
+    @InjectRepository(ImportBatch) private readonly importBatches: Repository<ImportBatch>,
   ) {}
 
   async getState(tenantId: string): Promise<OnboardingStateReport> {
@@ -117,6 +219,8 @@ export class OnboardingService {
       linkCount,
       chargeCount,
       inventoryCount,
+      lastBatchesPerEntity,
+      recentBatches,
     ] = await Promise.all([
       this.branches.count({ where }),
       this.coaches.count({ where }),
@@ -127,6 +231,8 @@ export class OnboardingService {
       this.athleteGuardians.count({ where }),
       this.chargeItems.count({ where }),
       this.inventoryItems.count({ where }),
+      this.fetchLastBatchesPerEntity(tenantId),
+      this.fetchRecentBatches(tenantId, 6),
     ]);
 
     const brandConfigured = Boolean(
@@ -139,6 +245,24 @@ export class OnboardingService {
 
     const blockedBy = (count: number, dep: string) => (count > 0 ? [] : [dep]);
 
+    const lastImportFor = (entity: string): OnboardingStepLastImport | null => {
+      const batch = lastBatchesPerEntity.get(entity);
+      if (!batch) return null;
+      return {
+        batchId: batch.id,
+        status: batch.status,
+        committedAt: batch.createdAt.toISOString(),
+        source: batch.source,
+        totalRows: batch.totalRows,
+        createdRows: batch.createdRows,
+        updatedRows: batch.updatedRows,
+        skippedRows: batch.skippedRows,
+        rejectedRows: batch.rejectedRows,
+        warningRows: batch.warningRows,
+        triggeredBy: batch.triggeredByDisplayName,
+      };
+    };
+
     const steps: OnboardingStepReport[] = [
       {
         key: 'club_basics',
@@ -150,6 +274,7 @@ export class OnboardingService {
         blocked: false,
         blockedBy: [],
         optional: false,
+        lastImport: null,
       },
       {
         key: 'sport_branches',
@@ -161,6 +286,7 @@ export class OnboardingService {
         blocked: false,
         blockedBy: [],
         optional: false,
+        lastImport: lastImportFor('sport_branches'),
       },
       {
         key: 'coaches',
@@ -172,6 +298,7 @@ export class OnboardingService {
         blocked: branchCount === 0,
         blockedBy: blockedBy(branchCount, 'sport_branches'),
         optional: false,
+        lastImport: lastImportFor('coaches'),
       },
       {
         key: 'groups',
@@ -183,6 +310,7 @@ export class OnboardingService {
         blocked: branchCount === 0,
         blockedBy: blockedBy(branchCount, 'sport_branches'),
         optional: false,
+        lastImport: lastImportFor('groups'),
       },
       {
         key: 'teams',
@@ -194,6 +322,7 @@ export class OnboardingService {
         blocked: branchCount === 0,
         blockedBy: blockedBy(branchCount, 'sport_branches'),
         optional: true,
+        lastImport: lastImportFor('teams'),
       },
       {
         key: 'athletes',
@@ -205,6 +334,7 @@ export class OnboardingService {
         blocked: branchCount === 0,
         blockedBy: blockedBy(branchCount, 'sport_branches'),
         optional: false,
+        lastImport: lastImportFor('athletes'),
       },
       {
         key: 'guardians',
@@ -216,6 +346,7 @@ export class OnboardingService {
         blocked: false,
         blockedBy: [],
         optional: false,
+        lastImport: lastImportFor('guardians'),
       },
       {
         key: 'athlete_guardians',
@@ -230,6 +361,7 @@ export class OnboardingService {
           ...blockedBy(guardianCount, 'guardians'),
         ],
         optional: false,
+        lastImport: lastImportFor('athlete_guardians'),
       },
       {
         key: 'charge_items',
@@ -241,6 +373,7 @@ export class OnboardingService {
         blocked: false,
         blockedBy: [],
         optional: true,
+        lastImport: lastImportFor('charge_items'),
       },
       {
         key: 'inventory_items',
@@ -252,6 +385,7 @@ export class OnboardingService {
         blocked: false,
         blockedBy: [],
         optional: true,
+        lastImport: lastImportFor('inventory_items'),
       },
       {
         key: 'go_live',
@@ -263,6 +397,7 @@ export class OnboardingService {
         blocked: false,
         blockedBy: [],
         optional: false,
+        lastImport: null,
       },
     ];
 
@@ -274,9 +409,18 @@ export class OnboardingService {
       goLive.status = 'in_progress';
     }
 
-    // Surface "needs_attention" when a step is blocked by a missing prereq.
+    // Surface "needs_attention" when a step is blocked by a missing prereq,
+    // or when its most recent server-recorded import landed with rejected /
+    // warning rows the operator hasn't revisited yet.
     for (const step of steps) {
       if (step.blocked && step.status === 'not_started') {
+        step.status = 'needs_attention';
+      }
+      if (
+        step.lastImport &&
+        (step.lastImport.rejectedRows > 0 || step.lastImport.warningRows > 0) &&
+        step.status === 'completed'
+      ) {
         step.status = 'needs_attention';
       }
     }
@@ -296,6 +440,33 @@ export class OnboardingService {
         !step.blocked,
     );
 
+    const readiness = this.computeReadiness({
+      steps,
+      requiredSteps,
+      requiredCompleted,
+      brandConfigured,
+      athleteCount,
+      guardianCount,
+      linkCount,
+      groupCount,
+    });
+
+    const recentImports: OnboardingHistoryEntry[] = recentBatches.map((batch) => ({
+      id: batch.id,
+      entity: batch.entity,
+      status: batch.status,
+      committedAt: batch.createdAt.toISOString(),
+      source: batch.source,
+      totalRows: batch.totalRows,
+      createdRows: batch.createdRows,
+      updatedRows: batch.updatedRows,
+      skippedRows: batch.skippedRows,
+      rejectedRows: batch.rejectedRows,
+      warningRows: batch.warningRows,
+      durationMs: batch.durationMs,
+      triggeredBy: batch.triggeredByDisplayName,
+    }));
+
     return {
       tenantId,
       tenantName: tenant.name,
@@ -309,7 +480,174 @@ export class OnboardingService {
         state: overallState,
       },
       nextStepKey: nextStep?.key ?? 'go_live',
+      readiness,
+      recentImports,
       generatedAt: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Returns the most recent N server-recorded import batches for this
+   * tenant, newest first. This is the data source behind the wizard's
+   * "Recent imports" strip and the dedicated history endpoint.
+   */
+  async getHistory(tenantId: string, limit = 25): Promise<OnboardingHistoryEntry[]> {
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const batches = await this.fetchRecentBatches(tenantId, safeLimit);
+    return batches.map((batch) => ({
+      id: batch.id,
+      entity: batch.entity,
+      status: batch.status,
+      committedAt: batch.createdAt.toISOString(),
+      source: batch.source,
+      totalRows: batch.totalRows,
+      createdRows: batch.createdRows,
+      updatedRows: batch.updatedRows,
+      skippedRows: batch.skippedRows,
+      rejectedRows: batch.rejectedRows,
+      warningRows: batch.warningRows,
+      durationMs: batch.durationMs,
+      triggeredBy: batch.triggeredByDisplayName,
+    }));
+  }
+
+  private async fetchRecentBatches(tenantId: string, limit: number): Promise<ImportBatch[]> {
+    return this.importBatches.find({
+      where: { tenantId },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+  }
+
+  private async fetchLastBatchesPerEntity(tenantId: string): Promise<Map<string, ImportBatch>> {
+    // The dataset is small (capped recent history) so a per-entity scan is
+    // fine here — we'd reach for window functions only if it ever grew.
+    const recent = await this.importBatches.find({
+      where: { tenantId },
+      order: { createdAt: 'DESC' },
+      take: 60,
+    });
+    const map = new Map<string, ImportBatch>();
+    for (const batch of recent) {
+      if (!map.has(batch.entity)) {
+        map.set(batch.entity, batch);
+      }
+    }
+    return map;
+  }
+
+  /**
+   * Honest, supportive readiness summary. We deliberately distinguish:
+   *
+   *   - `fresh`:        nothing required is done — calm "let's get started".
+   *   - `in_progress`:  some required steps remain.
+   *   - `almost_ready`: required steps done, but soft signals raised
+   *                      attention-worthy concerns (very small athlete
+   *                      count, missing brand, no athlete↔guardian links
+   *                      with athletes present, etc.).
+   *   - `ready`:        required steps done and no soft signals raised.
+   */
+  private computeReadiness(input: {
+    steps: OnboardingStepReport[];
+    requiredSteps: OnboardingStepReport[];
+    requiredCompleted: number;
+    brandConfigured: boolean;
+    athleteCount: number;
+    guardianCount: number;
+    linkCount: number;
+    groupCount: number;
+  }): OnboardingReadiness {
+    const {
+      steps,
+      requiredSteps,
+      requiredCompleted,
+      brandConfigured,
+      athleteCount,
+      guardianCount,
+      linkCount,
+      groupCount,
+    } = input;
+
+    const outstandingRequiredSteps = requiredSteps
+      .filter((step) => step.status !== 'completed')
+      .map((step) => step.key);
+    const outstandingOptionalSteps = steps
+      .filter((step) => step.optional && step.status !== 'completed')
+      .map((step) => step.key);
+
+    const signals: OnboardingReadinessSignal[] = [];
+
+    // Soft signals — calmly worded, never alarming.
+    if (!brandConfigured) {
+      signals.push({
+        key: 'brand_missing',
+        tone: 'info',
+        messageKey: 'pages.onboarding.readiness.signals.brandMissing',
+        stepKey: 'club_basics',
+      });
+    }
+    if (athleteCount > 0 && groupCount === 0) {
+      signals.push({
+        key: 'athletes_without_groups',
+        tone: 'warning',
+        messageKey: 'pages.onboarding.readiness.signals.athletesWithoutGroups',
+        stepKey: 'groups',
+      });
+    }
+    if (athleteCount > 0 && guardianCount > 0 && linkCount === 0) {
+      signals.push({
+        key: 'links_missing',
+        tone: 'warning',
+        messageKey: 'pages.onboarding.readiness.signals.linksMissing',
+        stepKey: 'athlete_guardians',
+      });
+    }
+    if (isSuspiciouslyLowAthleteCount(athleteCount)) {
+      signals.push({
+        key: 'low_athlete_count',
+        tone: 'info',
+        messageKey: 'pages.onboarding.readiness.signals.lowAthleteCount',
+        values: { count: athleteCount },
+        stepKey: 'athletes',
+      });
+    }
+    for (const step of steps) {
+      if (step.lastImport && step.lastImport.rejectedRows > 0) {
+        signals.push({
+          key: `rejected_rows_${step.key}`,
+          tone: 'warning',
+          messageKey: 'pages.onboarding.readiness.signals.rejectedRows',
+          values: { count: step.lastImport.rejectedRows },
+          stepKey: step.key,
+        });
+      }
+    }
+
+    const requiredAllDone = requiredCompleted === requiredSteps.length;
+    const hasWarning = signals.some((signal) => signal.tone === 'warning');
+    const tone: OnboardingReadiness['tone'] = !requiredAllDone
+      ? requiredCompleted === 0
+        ? 'fresh'
+        : 'in_progress'
+      : hasWarning
+        ? 'almost_ready'
+        : 'ready';
+
+    const headlineKey = `pages.onboarding.readiness.headline.${tone}`;
+    const subtitleKey = `pages.onboarding.readiness.subtitle.${tone}`;
+
+    return {
+      tone,
+      headlineKey,
+      subtitleKey,
+      outstandingRequiredSteps,
+      outstandingOptionalSteps,
+      signals,
+    };
+  }
+
+  /** Convenience: maps a stored entity key back to its onboarding step. */
+  static stepKeyForEntity(entity: string): string | null {
+    return ENTITY_TO_STEP[entity] ?? null;
   }
 }

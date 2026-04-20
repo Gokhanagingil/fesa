@@ -82,6 +82,9 @@ jobs:
       - name: Onboarding import templates contract smoke
         run: npm run onboarding:imports:test
 
+      - name: Onboarding go-live readiness contract smoke
+        run: npm run onboarding:readiness:test
+
       - name: Migration readiness (disposable PostgreSQL)
         run: npm run migration:run -w @amateur/api
 

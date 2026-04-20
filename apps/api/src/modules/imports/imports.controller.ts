@@ -45,6 +45,6 @@ export class ImportsController {
   @Post('commit')
   @HttpCode(200)
   commit(@Req() req: Request, @Body() dto: ImportCommitDto) {
-    return this.imports.commit(req.tenantId!, dto);
+    return this.imports.commit(req.tenantId!, dto, req.staffUserId ?? null);
   }
 }

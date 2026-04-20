@@ -72,6 +72,16 @@ export class ImportPreviewDto {
   @IsOptional()
   @IsBoolean()
   skipUnknownReferences?: boolean;
+
+  /**
+   * Optional human-readable label of the import source — typically the
+   * original filename, otherwise a calm default ("Pasted CSV"). Surfaced in
+   * the onboarding history strip and the per-step "last import" reminder.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  source?: string;
 }
 
 export class ImportCommitDto extends ImportPreviewDto {}
