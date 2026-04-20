@@ -22,6 +22,7 @@
     "club:updates:test": "node scripts/club-updates.test.mjs",
     "family:activation:test": "node scripts/family-activation.test.mjs",
     "parent:portal:v1.3:test": "node scripts/parent-portal-v1-3.test.mjs",
+    "stabilization:gate:test": "node scripts/stabilization-gate.test.mjs",
     "onboarding:imports:test": "node scripts/onboarding-import-definitions.test.mjs",
     "onboarding:readiness:test": "node scripts/onboarding-readiness.test.mjs",
     "lint": "eslint apps/api/src packages/*/src apps/web/src --max-warnings 0",

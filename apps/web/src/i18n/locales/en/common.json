@@ -976,6 +976,8 @@
       "deactivated": "Charge item deactivated.",
       "saveSuccess": "Charge item saved.",
       "delete": "Delete",
+      "deleted": "Charge item deleted.",
+      "deleteConfirm": "Delete the charge item \"{{name}}\"? This cannot be undone. Charge items already used on athlete charges should be deactivated instead.",
       "toggleActive": "Set active",
       "cannotDelete": "Charge items in use should be deactivated instead of deleted."
     },
@@ -1588,6 +1590,7 @@
       "issueCount": "Signals",
       "openItem": "Open item",
       "openCommunication": "Open communications",
+      "selectItemAria": "Select this work-queue item",
       "itemTitle": "{{type}} · {{subject}}",
       "categories": {
         "finance": "Finance",
@@ -2508,6 +2511,8 @@
       "submit": "Activate my access",
       "submitting": "Setting up…",
       "invalidLink": "This invite link is no longer valid. Please ask your club for a fresh one.",
+      "invalidRecoverLink": "Recover an existing account",
+      "invalidLoginLink": "Sign in",
       "errorTooShort": "Please use at least 8 characters.",
       "errorMismatch": "The two passwords don't match yet.",
       "safetyNote": "Only the family invited by your club can use this link."
@@ -2545,6 +2550,8 @@
       "nextLesson": "Next private lesson",
       "allRequestsTitle": "All requests",
       "allRequestsHint": "Everything the club has shared with your family, in one place.",
+      "pastRequestsTitle": "Past requests",
+      "pastRequestsHint": "Requests your family has already responded to, kept here for reference.",
       "updatesTitle": "From the club",
       "updatesPlaceholder": "When your club posts a new announcement, it will appear quietly right here.",
       "clubUpdatesTitle": "From the club",

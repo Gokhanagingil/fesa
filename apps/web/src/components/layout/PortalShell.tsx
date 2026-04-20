@@ -110,10 +110,13 @@ function PortalChrome() {
         </main>
       </div>
 
-      {/* Mobile-first bottom navigation. We deliberately keep this to two
-          large, comfortable tap targets so the parent never has to think
-          about navigation; “Home” covers the calm utility surface and
-          “My family” is a quick scroll anchor on the same page. */}
+      {/* Mobile-first bottom navigation.
+          We deliberately keep this to a small, calm row of large tap
+          targets so the parent never has to think about navigation.
+          The "Family" and "Updates" anchors only exist on the portal
+          home; on other routes (for example /portal/actions/:id) the
+          shortcuts navigate back to home with a hash, so a tap is
+          never a dead gesture. */}
       <nav
         className="fixed inset-x-0 bottom-0 z-30 border-t border-amateur-border bg-amateur-surface/95 backdrop-blur sm:hidden"
         aria-label={t('portal.aria.bottomNav')}
@@ -128,26 +131,66 @@ function PortalChrome() {
                   : 'text-amateur-muted hover:text-amateur-ink'
               }`
             }
+            end
           >
             <span aria-hidden="true">●</span>
             {t('portal.nav.home')}
           </NavLink>
-          <a
-            href="#family"
-            className="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 text-[11px] font-medium text-amateur-muted hover:text-amateur-ink"
-          >
-            <span aria-hidden="true">○</span>
-            {t('portal.nav.family')}
-          </a>
-          <a
-            href="#updates"
-            className="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 text-[11px] font-medium text-amateur-muted hover:text-amateur-ink"
-          >
-            <span aria-hidden="true">◇</span>
-            {t('portal.nav.updates')}
-          </a>
+          <PortalBottomNavAnchor
+            sectionId="family"
+            isHome={isHome}
+            label={t('portal.nav.family')}
+            symbol="○"
+          />
+          <PortalBottomNavAnchor
+            sectionId="updates"
+            isHome={isHome}
+            label={t('portal.nav.updates')}
+            symbol="◇"
+          />
         </div>
       </nav>
     </div>
+  );
+}
+
+/**
+ * Bottom-nav shortcut to a hash-anchored section on the portal home.
+ * If the user is already on home, behave as a same-page scroll
+ * (window.location.hash). If they are on another portal route, route
+ * back to /portal/home with the hash so the page mounts and scrolls
+ * to the right section instead of doing nothing.
+ */
+function PortalBottomNavAnchor({
+  sectionId,
+  isHome,
+  label,
+  symbol,
+}: {
+  sectionId: string;
+  isHome: boolean;
+  label: string;
+  symbol: string;
+}) {
+  const navigate = useNavigate();
+  const className =
+    'flex flex-1 flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 text-[11px] font-medium text-amateur-muted hover:text-amateur-ink';
+  if (isHome) {
+    return (
+      <a href={`#${sectionId}`} className={className}>
+        <span aria-hidden="true">{symbol}</span>
+        {label}
+      </a>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => navigate(`/portal/home#${sectionId}`)}
+      className={className}
+    >
+      <span aria-hidden="true">{symbol}</span>
+      {label}
+    </button>
   );
 }

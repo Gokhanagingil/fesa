@@ -85,6 +85,9 @@ jobs:
       - name: Onboarding go-live readiness contract smoke
         run: npm run onboarding:readiness:test
 
+      - name: Stabilization & productization gate validator smoke
+        run: npm run stabilization:gate:test
+
       - name: Migration readiness (disposable PostgreSQL)
         run: npm run migration:run -w @amateur/api
 

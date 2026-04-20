@@ -404,7 +404,9 @@ export function AthletesPage() {
         {!tenantId && !tenantLoading ? (
           <p className="text-sm text-amateur-muted">{t('app.errors.needTenant')}</p>
         ) : error ? (
-          <p className="text-sm text-red-700">{error}</p>
+          <InlineAlert tone="error" className="mb-4">
+            {error}
+          </InlineAlert>
         ) : loading ? (
           <p className="text-sm text-amateur-muted">{t('app.states.loading')}</p>
         ) : items.length === 0 ? (

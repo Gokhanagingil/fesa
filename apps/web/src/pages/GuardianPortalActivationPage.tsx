@@ -116,6 +116,29 @@ export function GuardianPortalActivationPage() {
             </InlineAlert>
           ) : null}
 
+          {/* When the activation token cannot be resolved (expired, already
+              used, malformed, or simply missing from the link), we used
+              to leave the parent at a dead-end card whose only escape was
+              the brand link in the header. We now offer two explicit
+              calmer paths: ask the club for a fresh invite, or recover
+              an existing account if they already activated before. */}
+          {!loading && !status ? (
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              <Link
+                to="/portal/recover"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-amateur-border bg-amateur-canvas text-sm font-medium text-amateur-ink hover:bg-amateur-surface"
+              >
+                {t('portal.activate.invalidRecoverLink')}
+              </Link>
+              <Link
+                to="/portal/login"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-amateur-border bg-amateur-canvas text-sm font-medium text-amateur-ink hover:bg-amateur-surface"
+              >
+                {t('portal.activate.invalidLoginLink')}
+              </Link>
+            </div>
+          ) : null}
+
           {loading ? (
             <p className="mt-4 text-sm text-amateur-muted">{t('app.states.loading')}</p>
           ) : status ? (

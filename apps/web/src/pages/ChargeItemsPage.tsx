@@ -115,6 +115,12 @@ export function ChargeItemsPage() {
   }
 
   async function removeItem(item: ChargeItem) {
+    // Charge items are referenced by historical athlete charges; deleting
+    // one is a low-frequency, high-impact action. We mirror the confirm
+    // pattern already used by inventory deletion so finance admins do not
+    // remove a billable line by accident.
+    const confirmed = window.confirm(t('pages.chargeItems.deleteConfirm', { name: item.name }));
+    if (!confirmed) return;
     try {
       await apiDelete(`/api/charge-items/${item.id}`);
       setMessage(t('pages.chargeItems.deleted'));

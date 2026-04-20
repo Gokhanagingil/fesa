@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -16,6 +17,7 @@ export function SettingsPage() {
   const { t, i18n } = useTranslation();
   const { session, staffUser } = useAuth();
   const { tenants, tenantId, setTenantId } = useTenant();
+  const [searchParams] = useSearchParams();
   const activeTenant = useMemo(
     () => tenants.find((tenant) => tenant.id === tenantId) ?? null,
     [tenantId, tenants],
@@ -26,6 +28,24 @@ export function SettingsPage() {
   const [clubOverview, setClubOverview] = useState<ClubOverviewResponse | null>(null);
   const [loadingOverview, setLoadingOverview] = useState(false);
   const [overviewError, setOverviewError] = useState<string | null>(null);
+
+  // The staff Header links to `/app/settings?section=platform|club` and we
+  // also accept `brand` and `delivery` as deep-link anchors. Previously
+  // the query string was ignored, so the link looked navigational but did
+  // not move the user anywhere. We honor it on mount/change by scrolling
+  // the matching section into view; we do not change visibility, so the
+  // page still behaves as a single calm settings surface.
+  useEffect(() => {
+    const section = searchParams.get('section');
+    if (!section) return;
+    const id = `settings-section-${section}`;
+    const target = document.getElementById(id);
+    if (!target) return;
+    const timer = window.setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
 
   const loadOverview = useCallback(async () => {
     if (!session) {
@@ -120,7 +140,10 @@ export function SettingsPage() {
           </section>
         ) : null}
 
-        <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
+        <section
+          id="settings-section-club"
+          className="scroll-mt-24 rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm"
+        >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="font-display text-lg font-semibold text-amateur-ink">
@@ -258,7 +281,10 @@ export function SettingsPage() {
         </section>
 
         {platformAdmin && (platformOverview?.items.length ?? 0) > 0 ? (
-          <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
+          <section
+            id="settings-section-platform"
+            className="scroll-mt-24 rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm"
+          >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="font-display text-lg font-semibold text-amateur-ink">
@@ -366,9 +392,13 @@ export function SettingsPage() {
           </section>
         ) : null}
 
-        <BrandAdminPanel tenantId={tenantId} />
+        <div id="settings-section-brand" className="scroll-mt-24">
+          <BrandAdminPanel tenantId={tenantId} />
+        </div>
 
-        <CommunicationDeliveryReadinessPanel tenantId={tenantId} languageTag={i18n.language} />
+        <div id="settings-section-delivery" className="scroll-mt-24">
+          <CommunicationDeliveryReadinessPanel tenantId={tenantId} languageTag={i18n.language} />
+        </div>
 
         <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-6 shadow-sm">
           <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">

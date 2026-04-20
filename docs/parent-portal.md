@@ -694,3 +694,54 @@ and never include staff-only metadata.
   staff already see the underlying club updates and family-action
   requests on their own surfaces and we deliberately don't double
   the data here.
+
+## Stabilization & Productization Gate updates
+
+Between v1.3 and the next major capability wave, the
+[Stabilization & Productization Gate](./stabilization-gate.md) sprint
+hardened the portal's trust surfaces without adding new sections:
+
+- **Refresh-on-focus**: `GuardianPortalHomePage` now refetches
+  `/api/guardian-portal/me` whenever the tab becomes visible again,
+  so a parent returning from `/portal/actions/:id` after submitting
+  sees up-to-date attention counts and continuity strip without a
+  hard refresh. The page also honours an incoming `#family` /
+  `#updates` / `#payment` / `#continuity` / `#this-week` hash on
+  landing so the bottom-nav shortcut from a non-home route always
+  scrolls to the right section.
+- **Past requests, not duplicate requests**: the lower section of
+  the home is now `portal.home.pastRequestsTitle` ("Past requests")
+  and only renders resolved / closed / submitted history. Active
+  items (`open`, `pending_family_action`, `rejected`) are left
+  exclusively to "What needs your attention" so the page stops
+  repeating the same CTA.
+- **Calm club-updates empty state**: the empty `ClubUpdatesStrip`
+  no longer echoes the branding welcome copy. The hero card at the
+  top of the page already carries that message; repeating it inside
+  an "Updates from the club" surface made the page feel pasted.
+- **Action page no longer auto-redirects**: submitting a request
+  keeps the parent on the request, refetches it so the status badge
+  and history reflect what they just sent, and shows a clear success
+  alert. The explicit "Back to home" link is the exit. The previous
+  700ms auto-redirect threw the parent at a stale home before they
+  could read the confirmation.
+- **Activation invalid-link recovery**: `GuardianPortalActivationPage`
+  now offers an explicit `Recover an existing account` /
+  `Sign in` pair when the invite token can't be resolved (expired,
+  used, malformed, or missing). Previously the parent was left at a
+  card whose only escape was the brand link in the header.
+- **PortalShell bottom-nav off-home navigation**: the **Family** and
+  **Updates** mobile shortcuts now navigate to `/portal/home#…`
+  when the parent is on a non-home route (`/portal/actions/:id`),
+  instead of relying on a `#…` href that did nothing.
+
+New regression protection:
+
+- `apps/web/src/pages/GuardianPortalActivationPage.smoke.test.tsx`
+  covers the calm activation form, the new Recover / Sign-in
+  escapes, and a successful password submission.
+- `npm run stabilization:gate:test` is a pure-Node validator that
+  fails if any of the above contracts regresses (action-center
+  error surfacing, charge-item delete confirm, portal past-requests
+  separation, activation recovery escape, settings deep-link
+  anchors, portal bottom-nav off-home navigation).

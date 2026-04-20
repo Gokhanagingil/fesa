@@ -17,6 +17,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 | [onboarding.md](./onboarding.md) | Club Onboarding Wizard + Import Templates Foundation v1 — guided club setup with templated imports per step |
 | [media.md](./media.md) | Athlete Photo & Media Foundation v1 — profile photo upload / replace / remove, tenant-isolated storage |
 | [parent-portal.md](./parent-portal.md) | Parent Access & Portal Foundation + Tenant Branding Foundation v1 — invitation-based guardian access, calm mobile-first parent home, controlled tenant branding |
+| [stabilization-gate.md](./stabilization-gate.md) | FESA Stabilization & Productization Gate — cross-module hardening pass between feature waves (action-center reliability, portal trust, settings deep-links, mobile polish, validator) |
 | [bootstrap.md](./bootstrap.md) | Demo seed, idempotency, demo tenant id, staff login fixtures |
 | [staging-deploy.md](./staging-deploy.md) | Manual GitHub Actions deploy to Ubuntu staging (SSH troubleshooting, PM2, Nginx) |
 | [release-operations.md](./release-operations.md) | Pre-deploy gates, troubleshooting flow, and branch/hotfix discipline |
@@ -31,6 +32,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 - **Wave eight (current)**: release-quality hardening plus staff/admin login, explicit tenant membership, global vs club admin semantics, and a lightweight admin/settings console.
 - **Wave eleven (current)**: post-login bootstrap recovery, reliable tenant-context restoration, athlete lifecycle controls, and safer bulk club operations across roster, finance, and communications surfaces.
 - **Wave seventeen (current)**: Parent Access & Portal Foundation + Tenant Branding Foundation v1 — invitation-based guardian access, a calm mobile-first parent home distinct from admin surfaces, and a controlled per-tenant brand surface (logo, display name, primary/accent color, welcome copy) under the "branded shell, controlled product core" model.
+- **Stabilization & Productization Gate (current)**: explicit hardening sprint between feature waves — cross-module friction removed, action-center reliability strengthened, parent-portal trust improved (refetch-on-focus, calm past-requests archive, no dead bottom-nav anchors, recovery escape from dead invites), settings deep-links honoured, mobile polish on the highest-traffic surfaces, plus a pure-Node `stabilization:gate:test` validator that protects every contract this sprint introduced. Details: [stabilization-gate.md](./stabilization-gate.md).
 
 ## Repository map
 
