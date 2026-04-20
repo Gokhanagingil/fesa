@@ -81,6 +81,8 @@ type AudienceFilterSnapshot = {
   trainingSessionId?: string;
   portalEnabledOnly?: boolean;
   portalPendingOnly?: boolean;
+  portalNotActivatedOnly?: boolean;
+  portalRecoveryOnly?: boolean;
   familyReadiness?: FamilyReadinessStatus;
   needsFollowUp?: boolean;
   primaryContactsOnly?: boolean;
@@ -208,6 +210,12 @@ export function CommunicationsPage() {
   const [trainingSessionId, setTrainingSessionId] = useState(searchParams.get('trainingSessionId') ?? '');
   const [portalEnabledOnly, setPortalEnabledOnly] = useState(searchParams.get('portalEnabledOnly') === 'true');
   const [portalPendingOnly, setPortalPendingOnly] = useState(searchParams.get('portalPendingOnly') === 'true');
+  const [portalNotActivatedOnly, setPortalNotActivatedOnly] = useState(
+    searchParams.get('portalNotActivatedOnly') === 'true',
+  );
+  const [portalRecoveryOnly, setPortalRecoveryOnly] = useState(
+    searchParams.get('portalRecoveryOnly') === 'true',
+  );
   const [familyReadiness, setFamilyReadiness] = useState<FamilyReadinessStatus | ''>(
     (searchParams.get('familyReadiness') as FamilyReadinessStatus | null) ?? '',
   );
@@ -276,6 +284,8 @@ export function CommunicationsPage() {
     setTrainingSessionId(searchParams.get('trainingSessionId') ?? '');
     setPortalEnabledOnly(searchParams.get('portalEnabledOnly') === 'true');
     setPortalPendingOnly(searchParams.get('portalPendingOnly') === 'true');
+    setPortalNotActivatedOnly(searchParams.get('portalNotActivatedOnly') === 'true');
+    setPortalRecoveryOnly(searchParams.get('portalRecoveryOnly') === 'true');
     setFamilyReadiness((searchParams.get('familyReadiness') as FamilyReadinessStatus | null) ?? '');
     setNeedsFollowUp(searchParams.get('needsFollowUp') === 'true');
     setPrimaryContactsOnly(searchParams.get('primaryContactsOnly') === 'true');
@@ -307,6 +317,8 @@ export function CommunicationsPage() {
     if (trainingSessionId) next.set('trainingSessionId', trainingSessionId);
     if (portalEnabledOnly) next.set('portalEnabledOnly', 'true');
     if (portalPendingOnly) next.set('portalPendingOnly', 'true');
+    if (portalNotActivatedOnly) next.set('portalNotActivatedOnly', 'true');
+    if (portalRecoveryOnly) next.set('portalRecoveryOnly', 'true');
     if (familyReadiness) next.set('familyReadiness', familyReadiness);
     if (needsFollowUp) next.set('needsFollowUp', 'true');
     if (primaryContactsOnly) next.set('primaryContactsOnly', 'true');
@@ -333,6 +345,8 @@ export function CommunicationsPage() {
     needsFollowUp,
     portalEnabledOnly,
     portalPendingOnly,
+    portalNotActivatedOnly,
+    portalRecoveryOnly,
     primaryContactsOnly,
     privateLessonStatus,
     query,
@@ -444,6 +458,8 @@ export function CommunicationsPage() {
       if (trainingSessionId) params.set('trainingSessionId', trainingSessionId);
       if (portalEnabledOnly) params.set('portalEnabledOnly', 'true');
       if (portalPendingOnly) params.set('portalPendingOnly', 'true');
+      if (portalNotActivatedOnly) params.set('portalNotActivatedOnly', 'true');
+      if (portalRecoveryOnly) params.set('portalRecoveryOnly', 'true');
       if (familyReadiness) params.set('familyReadiness', familyReadiness);
       if (needsFollowUp) params.set('needsFollowUp', 'true');
       if (primaryContactsOnly) params.set('primaryContactsOnly', 'true');
@@ -469,6 +485,8 @@ export function CommunicationsPage() {
     needsFollowUp,
     portalEnabledOnly,
     portalPendingOnly,
+    portalNotActivatedOnly,
+    portalRecoveryOnly,
     primaryContactsOnly,
     privateLessonStatus,
     query,
@@ -676,6 +694,8 @@ export function CommunicationsPage() {
       setTrainingSessionId(scenario.filters.trainingSessionId ?? '');
       setPortalEnabledOnly(scenario.filters.portalEnabledOnly === 'true');
       setPortalPendingOnly(scenario.filters.portalPendingOnly === 'true');
+      setPortalNotActivatedOnly(scenario.filters.portalNotActivatedOnly === 'true');
+      setPortalRecoveryOnly(scenario.filters.portalRecoveryOnly === 'true');
       setFamilyReadiness((scenario.filters.familyReadiness as FamilyReadinessStatus | undefined) ?? '');
       setNeedsFollowUp(scenario.filters.needsFollowUp === 'true');
       setPrimaryContactsOnly(scenario.filters.primaryContactsOnly !== 'false');
@@ -701,6 +721,8 @@ export function CommunicationsPage() {
     setTrainingSessionId('');
     setPortalEnabledOnly(false);
     setPortalPendingOnly(false);
+    setPortalNotActivatedOnly(false);
+    setPortalRecoveryOnly(false);
     setFamilyReadiness('');
     setNeedsFollowUp(false);
     setPrimaryContactsOnly(false);
@@ -721,6 +743,8 @@ export function CommunicationsPage() {
       ...(trainingSessionId ? { trainingSessionId } : {}),
       ...(portalEnabledOnly ? { portalEnabledOnly: true } : {}),
       ...(portalPendingOnly ? { portalPendingOnly: true } : {}),
+      ...(portalNotActivatedOnly ? { portalNotActivatedOnly: true } : {}),
+      ...(portalRecoveryOnly ? { portalRecoveryOnly: true } : {}),
       ...(familyReadiness ? { familyReadiness } : {}),
       ...(needsFollowUp ? { needsFollowUp: true } : {}),
       ...(primaryContactsOnly ? { primaryContactsOnly: true } : {}),
@@ -738,6 +762,8 @@ export function CommunicationsPage() {
       needsFollowUp,
       portalEnabledOnly,
       portalPendingOnly,
+      portalNotActivatedOnly,
+      portalRecoveryOnly,
       primaryContactsOnly,
       privateLessonStatus,
       query,
@@ -956,6 +982,8 @@ export function CommunicationsPage() {
         setTrainingSessionId(savedFilters?.trainingSessionId ?? '');
         setPortalEnabledOnly(savedFilters?.portalEnabledOnly === true);
         setPortalPendingOnly(savedFilters?.portalPendingOnly === true);
+        setPortalNotActivatedOnly(savedFilters?.portalNotActivatedOnly === true);
+        setPortalRecoveryOnly(savedFilters?.portalRecoveryOnly === true);
         setFamilyReadiness(savedFilters?.familyReadiness ?? '');
         setNeedsFollowUp(savedFilters?.needsFollowUp === true);
         setPrimaryContactsOnly(savedFilters?.primaryContactsOnly === true);
@@ -1128,6 +1156,8 @@ export function CommunicationsPage() {
               needsFollowUp={needsFollowUp}
               portalEnabledOnly={portalEnabledOnly}
               portalPendingOnly={portalPendingOnly}
+              portalNotActivatedOnly={portalNotActivatedOnly}
+              portalRecoveryOnly={portalRecoveryOnly}
               primaryContactsOnly={primaryContactsOnly}
               privateLessonStatus={privateLessonStatus}
               sessions={sessions}
@@ -1142,6 +1172,8 @@ export function CommunicationsPage() {
               setNeedsFollowUp={setNeedsFollowUp}
               setPortalEnabledOnly={setPortalEnabledOnly}
               setPortalPendingOnly={setPortalPendingOnly}
+              setPortalNotActivatedOnly={setPortalNotActivatedOnly}
+              setPortalRecoveryOnly={setPortalRecoveryOnly}
               setPrimaryContactsOnly={setPrimaryContactsOnly}
               setPrivateLessonStatus={setPrivateLessonStatus}
               setTeamId={setTeamId}
@@ -1664,6 +1696,8 @@ function FiltersPanel(props: {
   needsFollowUp: boolean;
   portalEnabledOnly: boolean;
   portalPendingOnly: boolean;
+  portalNotActivatedOnly: boolean;
+  portalRecoveryOnly: boolean;
   primaryContactsOnly: boolean;
   privateLessonStatus: string;
   sessions: TrainingSession[];
@@ -1675,6 +1709,8 @@ function FiltersPanel(props: {
   setNeedsFollowUp: (value: boolean) => void;
   setPortalEnabledOnly: (value: boolean) => void;
   setPortalPendingOnly: (value: boolean) => void;
+  setPortalNotActivatedOnly: (value: boolean) => void;
+  setPortalRecoveryOnly: (value: boolean) => void;
   setPrimaryContactsOnly: (value: boolean) => void;
   setPrivateLessonStatus: (value: string) => void;
   setTeamId: (value: string) => void;
@@ -1836,6 +1872,22 @@ function FiltersPanel(props: {
           onChange={(e) => props.setPortalPendingOnly(e.target.checked)}
         />
         <span>{t('pages.communications.portalPendingOnly')}</span>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <input
+          type="checkbox"
+          checked={props.portalNotActivatedOnly}
+          onChange={(e) => props.setPortalNotActivatedOnly(e.target.checked)}
+        />
+        <span>{t('pages.communications.portalNotActivatedOnly')}</span>
+      </label>
+      <label className="flex items-center gap-2 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-muted">
+        <input
+          type="checkbox"
+          checked={props.portalRecoveryOnly}
+          onChange={(e) => props.setPortalRecoveryOnly(e.target.checked)}
+        />
+        <span>{t('pages.communications.portalRecoveryOnly')}</span>
       </label>
     </div>
   );

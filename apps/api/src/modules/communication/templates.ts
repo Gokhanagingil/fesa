@@ -80,6 +80,23 @@ export const COMMUNICATION_TEMPLATES: CommunicationTemplate[] = [
     subjectKey: 'pages.communications.templates.familyFollowUp.subject',
     hintKey: 'pages.communications.templates.familyFollowUp.hint',
   },
+  /**
+   * Family Activation & Landing Pack v1 — gentle activation nudge.
+   *
+   * Used by the staff-side activation overview when staff want to ask
+   * non-activated families to open the link the club already sent. The
+   * copy is intentionally warm and honest; it never threatens removal,
+   * never invents urgency, and never claims the family "must" act.
+   */
+  {
+    key: 'activation_reminder',
+    defaultChannel: 'whatsapp',
+    category: 'general',
+    titleKey: 'pages.communications.templates.activationReminder.title',
+    bodyKey: 'pages.communications.templates.activationReminder.body',
+    subjectKey: 'pages.communications.templates.activationReminder.subject',
+    hintKey: 'pages.communications.templates.activationReminder.hint',
+  },
 ];
 
 export function getTemplateByKey(key: string | null | undefined): CommunicationTemplate | null {

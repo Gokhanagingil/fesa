@@ -585,6 +585,66 @@
       "bulkDelete": "Delete selected",
       "bulkDeleteConfirm": "Delete the selected guardians? Linked guardians stay in place.",
       "bulkPrepareMessage": "Prepare follow-up",
+      "activationViewToggle": "Activation",
+      "activation": {
+        "badge": "Family activation",
+        "title": "Where do families stand right now?",
+        "subtitle": "A calm view of who is inside the portal, who is on the way, and who could use a gentle nudge from your club.",
+        "calmReassurance": "Families that haven't been seen in {{dormant}} days are listed as quiet, not lapsed. We never email or message anyone on your behalf — the follow-up button just helps you prepare a warm draft.",
+        "prepareReminder": "Prepare reminder for {{count}}",
+        "statActiveLabel": "Inside the portal",
+        "statActiveHelper": "{{percent}}% of invited families have activated.",
+        "statInvitedLabel": "Invited, not yet inside",
+        "statInvitedHelper": "{{count}} of these have been waiting more than {{days}} days.",
+        "statInvitedFresh": "All open invites are still fresh.",
+        "statNotInvitedLabel": "Ready to invite",
+        "statNotInvitedHelper": "Guardians on file with an email but no portal access yet.",
+        "statRecoveryLabel": "Asked for help",
+        "statRecoveryHelper": "Families who used the public 'lost access' form recently.",
+        "bucketTitle": "Where families stand",
+        "bucketHint": "Pick a group to see the families inside it.",
+        "bucket": {
+          "recovery": "Asked for help",
+          "invited": "Invited",
+          "notInvited": "Ready to invite",
+          "dormant": "Quiet",
+          "active": "Inside the portal",
+          "disabled": "Paused"
+        },
+        "empty": {
+          "recovery": "No families are waiting for help right now.",
+          "invited": "Every invited family has activated. Lovely.",
+          "notInvited": "Every guardian with an email has already been invited.",
+          "dormant": "No quiet families to worry about.",
+          "active": "No active families landed in this view.",
+          "disabled": "No paused accounts right now."
+        },
+        "emptyHint": {
+          "recovery": "When a family uses the 'lost access' form, they will appear here.",
+          "invited": "Open invites that haven't been used yet will appear here.",
+          "notInvited": "Add an email on a guardian profile to be able to invite them.",
+          "dormant": "We mark a family as quiet when we haven't seen them in a while.",
+          "active": "Families seen recently will appear here.",
+          "disabled": "Paused accounts will appear here so you can re-enable them when ready."
+        },
+        "row": {
+          "open": "Open profile",
+          "noEmail": "No email on file",
+          "linkedAthletes": "{{count}} linked",
+          "linkedAthletes_one": "{{count}} linked",
+          "linkedAthletes_other": "{{count}} linked",
+          "invitedAge": "Invited {{count}} days ago",
+          "invitedAge_one": "Invited {{count}} day ago",
+          "invitedAge_other": "Invited {{count}} days ago",
+          "lastSeenAge": "Last seen {{count}} days ago",
+          "lastSeenAge_one": "Last seen {{count}} day ago",
+          "lastSeenAge_other": "Last seen {{count}} days ago",
+          "readyToInvite": "Has an email on file",
+          "disabledHint": "Access paused — re-enable when ready",
+          "recoveryAt": "Asked for help on {{when}} ({{count}} request(s))"
+        },
+        "truncatedHint": "Showing {{shown}} of {{total}} — open the Guardians list for the rest."
+      },
       "familyReadiness": {
         "title": "Family readiness",
         "subtitle": "See whether this guardian still owes information, has athlete actions pending, or needs staff review.",
@@ -843,6 +903,8 @@
       "reasonManual": "Manual selection",
       "portalEnabledOnly": "Portal access enabled",
       "portalPendingOnly": "Pending portal follow-up",
+      "portalNotActivatedOnly": "Not activated yet (invited or no invite)",
+      "portalRecoveryOnly": "Asked for help signing in",
       "needsFollowUpOnly": "Needs follow-up only",
       "pendingFamilyActionsBadge_one": "{{count}} family action pending",
       "pendingFamilyActionsBadge_other": "{{count}} family actions pending",
@@ -2498,6 +2560,34 @@
         "sport_branch": "For {{label}}",
         "group": "For {{label}}",
         "team": "For {{label}}"
+      },
+      "landingBadge": "Welcome",
+      "landingTitle": "You're in, {{name}}.",
+      "landingTitleClub": "You're in, {{name}} — welcome to {{club}}.",
+      "landingBody": "Take a calm look around. We've grouped everything your family needs into a few simple cards below.",
+      "essentialsTitle": "A gentle start",
+      "essentialsHint": "A small handful of helpful next steps",
+      "essentials": {
+        "confirm_phone": {
+          "title": "Confirm a phone number",
+          "body": "Add a phone number so your club can reach you when something is time-sensitive.",
+          "done": "Your phone number is on file. Thank you."
+        },
+        "review_children": {
+          "title": "Review your linked children",
+          "body": "We don't see any athletes linked to your account yet — your club will add them shortly.",
+          "done": "We can see your linked children below."
+        },
+        "open_pending_action": {
+          "title": "Open requests from the club",
+          "body": "Your club has a small request that needs a quick answer from you.",
+          "done": "No requests are waiting on you."
+        },
+        "check_balance": {
+          "title": "Take a look at your open balance",
+          "body": "There's an open balance for your family. Your club can answer any questions.",
+          "done": "Your balance is clear right now."
+        }
       }
     }
   }

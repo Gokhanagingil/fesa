@@ -194,6 +194,38 @@ describe('GuardianPortalHomePage', () => {
     expect(screen.getByText(/For U14 Girls/)).toBeInTheDocument();
   });
 
+  it('renders the first-landing welcome and essentials when freshly activated', async () => {
+    mockApiGet.mockResolvedValueOnce(
+      makeHome({
+        guardian: {
+          id: 'g-2',
+          name: 'Mert Yıldız',
+          email: 'mert@example.com',
+          phone: null,
+        },
+        landing: {
+          firstLanding: true,
+          windowDays: 14,
+          essentialsAttentionCount: 1,
+          essentials: [
+            { key: 'confirm_phone', severity: 'attention', done: false },
+            { key: 'review_children', severity: 'info', done: true },
+            { key: 'open_pending_action', severity: 'info', done: true },
+            { key: 'check_balance', severity: 'info', done: true },
+          ],
+        },
+      }),
+    );
+
+    renderWithRoute(<GuardianPortalHomePage />, { path: '/portal' });
+
+    await waitFor(() =>
+      expect(screen.getByText(/You're in, Mert/)).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/A gentle start/)).toBeInTheDocument();
+    expect(screen.getByText('Confirm a phone number')).toBeInTheDocument();
+  });
+
   it('renders the family this-week digest and inventory-in-hand when present', async () => {
     mockApiGet.mockResolvedValueOnce(
       makeHome({

@@ -663,6 +663,34 @@ export type GuardianPortalWeekItem = {
   coachName: string | null;
 };
 
+export type GuardianPortalEssentialKey =
+  | 'confirm_phone'
+  | 'review_children'
+  | 'open_pending_action'
+  | 'check_balance';
+
+export type GuardianPortalEssential = {
+  key: GuardianPortalEssentialKey;
+  severity: 'info' | 'attention';
+  done: boolean;
+};
+
+/**
+ * Family Activation & Landing Pack v1 — calm landing payload.
+ *
+ * The portal home renders a warm "first landing" welcome card on the
+ * first session after activation, plus a tiny essentials strip that
+ * surfaces the few high-value next actions for the family. Both fields
+ * are entirely optional; the home hides them whenever they have nothing
+ * meaningful to show, so returning families stay on the calm shell.
+ */
+export type GuardianPortalLandingSummary = {
+  firstLanding: boolean;
+  windowDays: number;
+  essentials: GuardianPortalEssential[];
+  essentialsAttentionCount: number;
+};
+
 export type GuardianPortalHome = {
   guardian: {
     id: string;
@@ -691,6 +719,7 @@ export type GuardianPortalHome = {
     items: GuardianPortalWeekItem[];
   };
   clubUpdates?: ClubUpdateParentSummary[];
+  landing?: GuardianPortalLandingSummary;
 };
 
 export type FamilyActionEvent = {

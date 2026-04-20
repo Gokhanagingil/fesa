@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { apiGet } from '../lib/api';
-import type { ClubUpdateParentSummary, GuardianPortalHome } from '../lib/domain-types';
+import type {
+  ClubUpdateParentSummary,
+  GuardianPortalEssential,
+  GuardianPortalHome,
+  GuardianPortalLandingSummary,
+} from '../lib/domain-types';
 import {
   formatDateTime,
   getFamilyActionStatusLabel,
@@ -124,6 +129,18 @@ export function GuardianPortalHomePage() {
       </section>
 
       {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+
+      <FirstLandingWelcome
+        landing={data.landing ?? null}
+        guardianFirstName={greetingFirstName}
+        clubDisplayName={branding?.displayName ?? null}
+      />
+
+      <FamilyEssentialsStrip
+        landing={data.landing ?? null}
+        hasOutstanding={hasOutstanding}
+        pendingCount={pendingActions.length}
+      />
 
       {pendingActions.length > 0 || awaitingReview.length > 0 || hasOutstanding ? (
         <section
@@ -425,6 +442,161 @@ export function GuardianPortalHomePage() {
       />
     </div>
   );
+}
+
+/**
+ * Family Activation & Landing Pack v1 — calm first-landing welcome.
+ *
+ * Rendered for ~14 days after activation, on the very first session
+ * after a parent activates their account. We deliberately keep this
+ * tiny: a warm one-line welcome, the family's first name, and the
+ * club's display name so the parent feels recognised. There is no
+ * onboarding wizard, no progress bar, and no "you have N steps to
+ * complete" gauntlet — just a soft, confident "you're in the right
+ * place" message that disappears on its own once the family settles in.
+ */
+function FirstLandingWelcome({
+  landing,
+  guardianFirstName,
+  clubDisplayName,
+}: {
+  landing: GuardianPortalLandingSummary | null;
+  guardianFirstName: string;
+  clubDisplayName: string | null;
+}) {
+  const { t } = useTranslation();
+  if (!landing || !landing.firstLanding) return null;
+  return (
+    <section
+      id="welcome"
+      className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm sm:p-6 scroll-mt-24"
+      style={{
+        backgroundImage:
+          'linear-gradient(135deg, var(--portal-accent-soft, transparent) 0%, transparent 80%)',
+      }}
+    >
+      <p
+        className="text-xs font-semibold uppercase tracking-wide"
+        style={{ color: 'var(--portal-primary, #0d4a3c)' }}
+      >
+        {t('portal.home.landingBadge')}
+      </p>
+      <h2 className="mt-1 font-display text-lg font-semibold text-amateur-ink">
+        {clubDisplayName
+          ? t('portal.home.landingTitleClub', {
+              name: guardianFirstName,
+              club: clubDisplayName,
+            })
+          : t('portal.home.landingTitle', { name: guardianFirstName })}
+      </h2>
+      <p className="mt-2 max-w-prose text-sm text-amateur-muted">
+        {t('portal.home.landingBody')}
+      </p>
+    </section>
+  );
+}
+
+/**
+ * Family Activation & Landing Pack v1 — calm essentials strip.
+ *
+ * Surfaces the few things that genuinely matter to a freshly-landed
+ * family, with clear "done" / "needs attention" affordances. The strip
+ * hides itself entirely when nothing needs attention AND the parent is
+ * past their first-landing window — that's the calm path for returning
+ * families. No checklist scoring, no progress percentages, no nagging.
+ */
+function FamilyEssentialsStrip({
+  landing,
+  hasOutstanding,
+  pendingCount,
+}: {
+  landing: GuardianPortalLandingSummary | null;
+  hasOutstanding: boolean;
+  pendingCount: number;
+}) {
+  const { t } = useTranslation();
+  if (!landing) return null;
+  const attentionEntries = landing.essentials.filter((entry) => entry.severity === 'attention');
+  // Returning, settled families never see this surface.
+  const visible = landing.firstLanding || attentionEntries.length > 0;
+  if (!visible) return null;
+  // Cap the rendered list to the highest-signal three entries so we
+  // never present the family with a long checklist.
+  const renderable = pickEssentialsForRender(landing.essentials, hasOutstanding, pendingCount);
+  if (renderable.length === 0) return null;
+  return (
+    <section
+      id="essentials"
+      className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm scroll-mt-24"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-display text-base font-semibold text-amateur-ink">
+          {t('portal.home.essentialsTitle')}
+        </h2>
+        <span className="text-xs text-amateur-muted">{t('portal.home.essentialsHint')}</span>
+      </div>
+      <ul className="mt-3 space-y-2">
+        {renderable.map((entry) => (
+          <li
+            key={entry.key}
+            className="flex items-start gap-3 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3"
+          >
+            <span
+              aria-hidden="true"
+              className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                entry.done
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : entry.severity === 'attention'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-amateur-canvas text-amateur-muted'
+              }`}
+            >
+              {entry.done ? '✓' : '·'}
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-amateur-ink">
+                {t(`portal.home.essentials.${entry.key}.title`)}
+              </p>
+              <p className="mt-0.5 text-xs text-amateur-muted">
+                {entry.done
+                  ? t(`portal.home.essentials.${entry.key}.done`)
+                  : t(`portal.home.essentials.${entry.key}.body`)}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function pickEssentialsForRender(
+  essentials: GuardianPortalEssential[],
+  hasOutstanding: boolean,
+  pendingCount: number,
+): GuardianPortalEssential[] {
+  const attention = essentials.filter((entry) => entry.severity === 'attention');
+  const done = essentials.filter((entry) => entry.severity === 'info');
+  // Honor product principle: 1–3 clear next actions, never a long list.
+  // We surface every attention item (capped at three) plus a single
+  // soft "done" entry so the parent feels acknowledged when they have
+  // already completed the essentials. The "check_balance" entry is only
+  // rendered when there is actually an open balance OR a pending action
+  // worth flagging — we never invent a finance hint where there isn't
+  // one to act on.
+  const filteredAttention = attention.filter((entry) => {
+    if (entry.key === 'check_balance' && !hasOutstanding) return false;
+    if (entry.key === 'open_pending_action' && pendingCount === 0) return false;
+    return true;
+  });
+  if (filteredAttention.length > 0) {
+    return filteredAttention.slice(0, 3);
+  }
+  // No attention entries — show a single calm "all set" hint to
+  // acknowledge the family. Prefer the "review children" line since it
+  // is the most universally meaningful.
+  const firstDone = done.find((entry) => entry.key === 'review_children') ?? done[0];
+  return firstDone ? [firstDone] : [];
 }
 
 /**

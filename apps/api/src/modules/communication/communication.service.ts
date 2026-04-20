@@ -92,11 +92,26 @@ export class CommunicationService {
     return Array.from(new Set(values.filter(Boolean)));
   }
 
-  private async safeListPortalAccesses(tenantId: string): Promise<Array<Pick<GuardianPortalAccess, 'guardianId' | 'status'>>> {
+  private async safeListPortalAccesses(
+    tenantId: string,
+  ): Promise<
+    Array<
+      Pick<
+        GuardianPortalAccess,
+        'guardianId' | 'status' | 'recoveryRequestedAt' | 'lastLoginAt' | 'invitedAt'
+      >
+    >
+  > {
     try {
       return await this.guardianPortalAccesses.find({
         where: { tenantId },
-        select: { guardianId: true, status: true },
+        select: {
+          guardianId: true,
+          status: true,
+          recoveryRequestedAt: true,
+          lastLoginAt: true,
+          invitedAt: true,
+        },
       });
     } catch (error) {
       if (isRelationTableMissingError(error)) {
@@ -223,6 +238,52 @@ export class CommunicationService {
             : row.status === 'invited',
         )
         .map((row) => row.guardianId);
+      if (guardianIds.length === 0) {
+        return [];
+      }
+      const links = await this.athleteGuardians.find({
+        where: { tenantId, guardianId: In(guardianIds) },
+        select: { athleteId: true },
+      });
+      links.forEach((link) => ids.add(link.athleteId));
+    }
+
+    if (query.portalRecoveryOnly) {
+      const accessRows = await this.safeListPortalAccesses(tenantId);
+      const guardianIds = accessRows
+        .filter((row) => Boolean(row.recoveryRequestedAt) && row.status !== 'disabled')
+        .map((row) => row.guardianId);
+      if (guardianIds.length === 0) {
+        return [];
+      }
+      const links = await this.athleteGuardians.find({
+        where: { tenantId, guardianId: In(guardianIds) },
+        select: { athleteId: true },
+      });
+      links.forEach((link) => ids.add(link.athleteId));
+    }
+
+    if (query.portalNotActivatedOnly) {
+      // Two cohorts qualify as "not yet inside the portal":
+      //   1. Guardians whose access row is still in `invited` (or
+      //      recovered into `invited`).
+      //   2. Guardians who have an email on file but no access row at
+      //      all yet.
+      // We include both so staff can warmly nudge any family that
+      // hasn't crossed the activation threshold.
+      const accessRows = await this.safeListPortalAccesses(tenantId);
+      const invitedGuardianIds = accessRows
+        .filter((row) => row.status === 'invited')
+        .map((row) => row.guardianId);
+      const accessGuardianIdSet = new Set(accessRows.map((row) => row.guardianId));
+      const guardiansWithoutAccess = await this.guardians.find({
+        where: { tenantId },
+        select: { id: true, email: true },
+      });
+      const noAccessGuardianIds = guardiansWithoutAccess
+        .filter((row) => Boolean(row.email) && !accessGuardianIdSet.has(row.id))
+        .map((row) => row.id);
+      const guardianIds = Array.from(new Set([...invitedGuardianIds, ...noAccessGuardianIds]));
       if (guardianIds.length === 0) {
         return [];
       }
@@ -469,6 +530,26 @@ export class CommunicationService {
     if (query.portalPendingOnly) {
       items = items.filter((item) =>
         item.guardians.some((guardian) => portalStatusByGuardian.get(guardian.guardianId) === 'invited'),
+      );
+    }
+    if (query.portalRecoveryOnly) {
+      const recoveryGuardianIds = new Set(
+        portalAccesses
+          .filter((row) => Boolean(row.recoveryRequestedAt) && row.status !== 'disabled')
+          .map((row) => row.guardianId),
+      );
+      items = items.filter((item) =>
+        item.guardians.some((guardian) => recoveryGuardianIds.has(guardian.guardianId)),
+      );
+    }
+    if (query.portalNotActivatedOnly) {
+      // A family qualifies if any of its guardians has either an
+      // outstanding invite (`invited`) or no access row at all yet.
+      items = items.filter((item) =>
+        item.guardians.some((guardian) => {
+          const status = portalStatusByGuardian.get(guardian.guardianId);
+          return status === 'invited' || status === undefined || status === null;
+        }),
       );
     }
 

@@ -381,3 +381,136 @@ and `recoveryRequestCount = 0`, so the schema upgrade is non-breaking.
   updates.
 - A separate parent-side notification feed — announcements still live
   inside the home strip on purpose.
+
+## v1.3 — Family Activation & Landing Pack (Wave 21)
+
+Wave 21 closes the gap between "the club has migrated into the
+platform" and "families are actually inside the platform and using it".
+The product principle is intentionally narrow: this is **not** a CRM
+funnel and not a marketing surface. It is a calm, operational adoption
+layer that helps clubs land families confidently and helps families
+find their feet in the first session after activation.
+
+### Staff-side activation visibility
+
+A new `Activation` view sits on the existing **Guardians** page (next
+to the `List` and `Advanced` views). The view answers two operational
+questions at a glance:
+
+1. _Where do families stand right now?_ — a calm totals strip with the
+   activation rate, the count of open invites (and how many have sat
+   for more than a week), the count of guardians who are ready to
+   invite, and the count of families that recently asked for help.
+2. _Who should I follow up with next?_ — a segmented bucket list that
+   never lists more than 25 families per bucket and links each row
+   straight back to the existing Guardian detail surface.
+
+| Bucket | Means |
+|--------|-------|
+| `recovery` | The family used the public "I lost access" form and a fresh invite hasn't been sent yet. Sorted by most recent request. |
+| `invited` | The invite has been sent but the family has not yet activated. Sorted oldest-invite-first so stale invites surface naturally. |
+| `notInvited` | A guardian record exists with at least one linked athlete and an email on file, but no portal access row yet. |
+| `dormant` | Activated, but not seen in the last **60 days**. Surfaced as "quiet", never as "lapsed". |
+| `active` | Activated and seen recently — counted in the totals, listed only briefly. |
+| `disabled` | Staff has paused this access on purpose. |
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `GET /api/guardian-portal/staff/activation-overview` | staff (`TenantGuard`) | Returns the calm bucketed overview. Tenant isolation flows through the same `where: { tenantId }` clauses as the existing access summary. |
+
+The view also surfaces a **Prepare reminder** button that hands the
+selected follow-up cohort (recovery + invited + notInvited + dormant)
+to the existing communications surface as a deep link, with the new
+`activation_reminder` template pre-selected. No message is ever sent
+on the club's behalf.
+
+### Audience slices for activation follow-up
+
+`ListCommunicationAudienceQueryDto` picks up two new optional booleans:
+
+| Filter | Means |
+|--------|-------|
+| `portalNotActivatedOnly` | Keep the families that have either no access row or an outstanding `invited` row. |
+| `portalRecoveryOnly` | Keep the families that recently used the public "I lost access" form (and whose access is not disabled). |
+
+Both flags are honoured server-side in `getCandidateAthleteIds` and
+in the per-item filter, so they compose naturally with the existing
+group / team / financial / readiness filters. The same flags are
+plumbed through the **Communications** UI as two new calm checkboxes
+in the filters panel.
+
+A new **`activation_reminder`** template sits in the existing template
+library next to the family follow-up template. The copy is
+deliberately warm and honest: it never threatens removal, never invents
+urgency, and never pretends the family "must" act. The default channel
+is WhatsApp, matching the rest of the v1 catalog.
+
+### Parent first-landing & calm essentials
+
+`GET /api/guardian-portal/me` now also returns a small `landing` block:
+
+| Field | Purpose |
+|-------|---------|
+| `firstLanding` | True for the first session after activation, inside a 14-day window. |
+| `windowDays` | The first-landing window length (14). |
+| `essentials` | A bounded list of the few things that genuinely matter to a freshly-landed family (`confirm_phone`, `review_children`, `open_pending_action`, `check_balance`). Each entry carries a `severity` (`info` / `attention`) and a `done` flag. |
+| `essentialsAttentionCount` | The number of attention entries — useful for telemetry and tests. |
+
+The parent home renders two new calm surfaces from this block:
+
+- **First-landing welcome.** A warm "you're in, &lt;name&gt; — welcome
+  to &lt;club&gt;" card sits between the greeting and the attention
+  card on the very first session after activation, then quietly stops
+  rendering once the parent has come back at least once.
+- **Calm essentials strip.** A tiny strip with **at most three**
+  attention entries, or a single soft acknowledgement when the family
+  has nothing pending. The strip is ruthless about hiding entries
+  that aren't actionable: `check_balance` only shows when there is
+  actually an open balance, and `open_pending_action` only shows when
+  the family genuinely has a pending request from the club.
+
+There is no progress bar, no checklist scoring, and no nagging.
+Returning, settled families never see this surface at all.
+
+### Mobile-first details
+
+- The Activation view on the Guardians page uses card-first layouts
+  with comfortable tap targets, an overflow-scroll bucket-pill row
+  that fits any screen width, and a single primary action at the top
+  ("Prepare reminder for N").
+- The first-landing welcome and essentials strip both anchor with
+  scroll targets (`#welcome`, `#essentials`) so the existing bottom
+  nav can route to them on mobile without inventing new shell
+  scaffolding.
+- The essentials strip uses round status pills (✓ for done, · for
+  attention) sized for touch and never shows more than three rows.
+
+### Validation additions
+
+- `npm run family:activation:test` is a new pure-Node validator smoke
+  for the bucketing rules in `getActivationOverview` and the calm
+  essentials picker in the parent home.
+- `npm run i18n:check` parity is extended to cover
+  `pages.guardians.activationViewToggle`, the entire
+  `pages.guardians.activation` block, the new
+  `pages.communications.portalNotActivatedOnly` /
+  `pages.communications.portalRecoveryOnly` checkboxes, and the new
+  `portal.home.landingBadge` / `portal.home.landingTitle` /
+  `portal.home.landingTitleClub` / `portal.home.landingBody` /
+  `portal.home.essentialsTitle` / `portal.home.essentialsHint` /
+  `portal.home.essentials` keys.
+- `apps/web` smokes pick up a new
+  `FamilyActivationOverview.smoke.test.tsx` and an extended
+  `GuardianPortalHomePage.smoke.test.tsx` case for the first-landing
+  welcome and the calm essentials strip.
+
+### What is intentionally still out of scope (v1.3)
+
+- An automated "send a reminder for me" workflow — the platform helps
+  staff prepare the message; sending stays a human action.
+- A growth-funnel dashboard with conversion charts, cohort analysis,
+  or marketing analytics.
+- A long parent profile-completion gauntlet — essentials stay capped
+  at three attention rows on purpose.
+- Self-serve password reset on the public surface — recovery still
+  flows through the staff resend-invite path, the same as in v1.2.

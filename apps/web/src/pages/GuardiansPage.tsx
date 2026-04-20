@@ -8,6 +8,7 @@ import { InlineAlert } from '../components/ui/InlineAlert';
 import { ListPageFrame } from '../components/ui/ListPageFrame';
 import { PageHeader } from '../components/ui/PageHeader';
 import { DataExplorer } from '../components/reporting/DataExplorer';
+import { FamilyActivationOverview } from '../components/guardian/FamilyActivationOverview';
 import { apiGet, apiPost } from '../lib/api';
 import { downloadCsv, renderCsvFromRows } from '../lib/imports';
 import { getPersonName } from '../lib/display';
@@ -174,13 +175,13 @@ export function GuardiansPage() {
   }, [exportSelection, handlePrepareMessage, t]);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const view = (searchParams.get('view') as 'list' | 'advanced') ?? 'list';
+  const view = (searchParams.get('view') as 'list' | 'advanced' | 'activation') ?? 'list';
 
   return (
     <div>
       <PageHeader title={t('pages.guardians.title')} subtitle={t('pages.guardians.subtitle')} />
       <div className="mb-3 inline-flex overflow-hidden rounded-xl border border-amateur-border bg-amateur-surface text-xs">
-        {(['list', 'advanced'] as const).map((option) => (
+        {(['list', 'activation', 'advanced'] as const).map((option) => (
           <button
             key={option}
             type="button"
@@ -194,11 +195,17 @@ export function GuardiansPage() {
               view === option ? 'bg-amateur-accent text-white' : 'text-amateur-muted hover:text-amateur-ink'
             }`}
           >
-            {t(`pages.reports.viewToggle.${option}`)}
+            {option === 'activation'
+              ? t('pages.guardians.activationViewToggle')
+              : t(`pages.reports.viewToggle.${option}`)}
           </button>
         ))}
       </div>
-      {view === 'advanced' ? (
+      {view === 'activation' ? (
+        <ListPageFrame>
+          <FamilyActivationOverview />
+        </ListPageFrame>
+      ) : view === 'advanced' ? (
         <ListPageFrame>
           {!tenantId && !tenantLoading ? (
             <p className="text-sm text-amateur-muted">{t('app.errors.needTenant')}</p>

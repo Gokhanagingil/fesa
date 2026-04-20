@@ -619,6 +619,66 @@
       "bulkDelete": "Seçilenleri sil",
       "bulkDeleteConfirm": "Seçili veliler silinsin mi? Sporcuya bağlı veliler korunur.",
       "bulkPrepareMessage": "Takip mesajı hazırla",
+      "activationViewToggle": "Aktivasyon",
+      "activation": {
+        "badge": "Aile aktivasyonu",
+        "title": "Aileler şu anda nerede duruyor?",
+        "subtitle": "Portala kim girdi, kim yolda ve kim sakin bir hatırlatmadan faydalanır — sade bir görünüm.",
+        "calmReassurance": "{{dormant}} gündür görülmeyen aileleri 'sessiz' olarak işaretliyoruz, vazgeçmiş olarak değil. Adınıza hiç kimseye e-posta veya mesaj göndermiyoruz — hatırlatma düğmesi yalnızca sıcak bir taslak hazırlamanıza yardım eder.",
+        "prepareReminder": "{{count}} aile için hatırlatma hazırla",
+        "statActiveLabel": "Portalın içinde",
+        "statActiveHelper": "Davet edilen ailelerin %{{percent}} aktivasyonunu tamamladı.",
+        "statInvitedLabel": "Davet edildi, henüz girmedi",
+        "statInvitedHelper": "Bunlardan {{count}} tanesi {{days}} günden fazladır bekliyor.",
+        "statInvitedFresh": "Açık tüm davetler hâlâ taze.",
+        "statNotInvitedLabel": "Davet edilebilir",
+        "statNotInvitedHelper": "Sistemde e-postası olan ama henüz davet edilmemiş veliler.",
+        "statRecoveryLabel": "Yardım istedi",
+        "statRecoveryHelper": "Yakın zamanda 'erişimi kaybettim' formunu kullanan aileler.",
+        "bucketTitle": "Aileler hangi durumda?",
+        "bucketHint": "Bir grup seçerek içindeki aileleri görün.",
+        "bucket": {
+          "recovery": "Yardım istedi",
+          "invited": "Davet edildi",
+          "notInvited": "Davet edilebilir",
+          "dormant": "Sessiz",
+          "active": "Portalın içinde",
+          "disabled": "Duraklatıldı"
+        },
+        "empty": {
+          "recovery": "Şu anda yardım bekleyen bir aile yok.",
+          "invited": "Davet edilen tüm aileler aktivasyonu tamamladı. Harika.",
+          "notInvited": "E-postası olan tüm veliler zaten davet edildi.",
+          "dormant": "Endişelenecek sessiz bir aile yok.",
+          "active": "Bu görünümde aktif aile bulunamadı.",
+          "disabled": "Duraklatılmış hesap yok."
+        },
+        "emptyHint": {
+          "recovery": "Bir aile 'erişimi kaybettim' formunu kullandığında burada görünecek.",
+          "invited": "Henüz kullanılmamış açık davetler burada görünecek.",
+          "notInvited": "Veli profiline e-posta ekleyerek davet edebilirsiniz.",
+          "dormant": "Bir süredir görmediğimiz aileleri sessiz olarak işaretleriz.",
+          "active": "Yakın zamanda görülen aileler burada listelenir.",
+          "disabled": "Duraklatılmış hesaplar hazır olduğunuzda yeniden açabilmek için burada görünür."
+        },
+        "row": {
+          "open": "Profili aç",
+          "noEmail": "Sistemde e-posta yok",
+          "linkedAthletes": "{{count}} sporcu",
+          "linkedAthletes_one": "{{count}} sporcu",
+          "linkedAthletes_other": "{{count}} sporcu",
+          "invitedAge": "{{count}} gün önce davet edildi",
+          "invitedAge_one": "{{count}} gün önce davet edildi",
+          "invitedAge_other": "{{count}} gün önce davet edildi",
+          "lastSeenAge": "Son görülme {{count}} gün önce",
+          "lastSeenAge_one": "Son görülme {{count}} gün önce",
+          "lastSeenAge_other": "Son görülme {{count}} gün önce",
+          "readyToInvite": "Sistemde e-postası var",
+          "disabledHint": "Erişim duraklatıldı — hazır olduğunuzda açabilirsiniz",
+          "recoveryAt": "{{when}} tarihinde yardım istedi ({{count}} talep)"
+        },
+        "truncatedHint": "{{total}} kayıttan {{shown}} tanesi gösteriliyor — geri kalanı için Veliler listesini açın."
+      },
       "familyReadiness": {
         "title": "Aile hazırlığı",
         "subtitle": "Bu velinin eksik bilgi, bekleyen sporcu aksiyonu veya personel incelemesi gerektirip gerektirmediğini görün.",
@@ -1706,6 +1766,8 @@
       "reasonManual": "Manuel seçim",
       "portalEnabledOnly": "Portal erişimi açık olanlar",
       "portalPendingOnly": "Portal takibi bekleyenler",
+      "portalNotActivatedOnly": "Henüz aktivasyonu olmayanlar (davetli ya da davetsiz)",
+      "portalRecoveryOnly": "Giriş için yardım isteyenler",
       "needsFollowUpOnly": "Yalnız takip gerekenler",
       "emptyFilteredHint": "Mevcut filtreler hedef kitleyi sıfıra indirdi. Takip, finans, portal veya takım filtrelerini gevşetip tekrar deneyin.",
       "pendingFamilyActionsBadge_one": "{{count}} aile aksiyonu bekliyor",
@@ -2528,6 +2590,34 @@
         "sport_branch": "Hedef: {{label}}",
         "group": "Hedef: {{label}}",
         "team": "Hedef: {{label}}"
+      },
+      "landingBadge": "Hoş geldiniz",
+      "landingTitle": "İçeridesiniz, {{name}}.",
+      "landingTitleClub": "İçeridesiniz, {{name}} — {{club}} ailesine hoş geldiniz.",
+      "landingBody": "Sakin bir şekilde göz atın. Ailenizin ihtiyacı olan her şeyi aşağıda birkaç sade kartta topladık.",
+      "essentialsTitle": "Sakin bir başlangıç",
+      "essentialsHint": "Faydalı olabilecek küçük birkaç adım",
+      "essentials": {
+        "confirm_phone": {
+          "title": "Bir telefon numarası ekleyin",
+          "body": "Kulübünüz size acil bir konuda ulaşabilsin diye bir telefon numarası ekleyin.",
+          "done": "Telefon numaranız sistemimizde kayıtlı. Teşekkürler."
+        },
+        "review_children": {
+          "title": "Bağlı çocuklarınızı kontrol edin",
+          "body": "Hesabınıza bağlı sporcu görünmüyor — kulübünüz kısa süre içinde ekleyecek.",
+          "done": "Bağlı çocuklarınızı aşağıda görebilirsiniz."
+        },
+        "open_pending_action": {
+          "title": "Kulüpten gelen talepler",
+          "body": "Kulübünüzün sizden hızlıca yanıtlamanızı istediği küçük bir talebi var.",
+          "done": "Sizden bekleyen bir talep yok."
+        },
+        "check_balance": {
+          "title": "Açık bakiyenize bir göz atın",
+          "body": "Aileniz için açık bir bakiye var. Sorularınız için kulübünüz yardımcı olur.",
+          "done": "Bakiyeniz şu anda sıfır."
+        }
       }
     }
   }

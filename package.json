@@ -20,6 +20,7 @@
     "media:isolation:test": "node scripts/media-storage-isolation.test.mjs",
     "tenant:branding:test": "node scripts/tenant-branding.test.mjs",
     "club:updates:test": "node scripts/club-updates.test.mjs",
+    "family:activation:test": "node scripts/family-activation.test.mjs",
     "onboarding:imports:test": "node scripts/onboarding-import-definitions.test.mjs",
     "onboarding:readiness:test": "node scripts/onboarding-readiness.test.mjs",
     "lint": "eslint apps/api/src packages/*/src apps/web/src --max-warnings 0",
