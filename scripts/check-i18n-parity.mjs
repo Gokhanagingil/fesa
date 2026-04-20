@@ -126,6 +126,27 @@ const scopedPrefixes = [
   // staff editor, recovery surface, and refined home never silently drift.
   'pages.clubUpdates.audience',
   'pages.guardians.portalAccess.recoveryRequested',
+  // Parent Invite Delivery & Access Reliability Pack — truthful invite
+  // delivery state, manual share fallback, and provider readiness chip.
+  // Protect every staff-facing key set across both locales so the
+  // calmer staff invite UX never silently regresses to raw key copy.
+  'pages.guardians.portalAccess.inviteIssued',
+  'pages.guardians.portalAccess.deliverySent',
+  'pages.guardians.portalAccess.deliveryFailed',
+  'pages.guardians.portalAccess.deliveryUnavailable',
+  'pages.guardians.portalAccess.deliveryShared',
+  'pages.guardians.portalAccess.deliveryVerifyOk',
+  'pages.guardians.portalAccess.deliveryVerifyFailed',
+  'pages.guardians.portalAccess.shareTitle',
+  'pages.guardians.portalAccess.shareHint',
+  'pages.guardians.portalAccess.copyLink',
+  'pages.guardians.portalAccess.copyAck',
+  'pages.guardians.portalAccess.copyMissing',
+  'pages.guardians.portalAccess.copyFailed',
+  'pages.guardians.portalAccess.markShared',
+  'pages.guardians.portalAccess.deliveryStateLabel',
+  'pages.guardians.portalAccess.deliveryTone',
+  'pages.guardians.portalAccess.deliveryReadiness',
   'portal.home.thisWeekTitle',
   'portal.home.thisWeekHint',
   'portal.home.inventoryTitle',

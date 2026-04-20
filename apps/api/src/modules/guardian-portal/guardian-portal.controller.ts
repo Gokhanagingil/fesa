@@ -53,6 +53,47 @@ export class GuardianPortalController {
   }
 
   /**
+   * Parent Invite Delivery & Access Reliability Pack — readiness chip.
+   *
+   * Returns the truthful "can the platform actually deliver invite
+   * emails right now?" answer. The staff UX uses this to render either
+   * the calm "delivery is configured" badge or the "delivery
+   * unavailable, share manually" guidance — never a fake confidence
+   * state.
+   */
+  @Get('staff/invite-delivery/readiness')
+  @UseGuards(TenantGuard)
+  inviteDeliveryReadiness() {
+    return this.portal.getInviteDeliveryReadiness();
+  }
+
+  /**
+   * Parent Invite Delivery & Access Reliability Pack — opt-in live
+   * verify(). Performs a single SMTP roundtrip so staff can confirm
+   * the configured provider is actually reachable. Failures are
+   * reported truthfully; the readiness chip never auto-promotes.
+   */
+  @Post('staff/invite-delivery/verify')
+  @UseGuards(TenantGuard)
+  inviteDeliveryVerify() {
+    return this.portal.verifyInviteDelivery();
+  }
+
+  /**
+   * Parent Invite Delivery & Access Reliability Pack — manual fallback.
+   *
+   * Stamp the access row when staff have already shared the activation
+   * link themselves (copied to clipboard, sent over WhatsApp, etc.).
+   * The existing invite token continues to be the activation source of
+   * truth; no second token is minted.
+   */
+  @Patch('staff/access/:accessId/mark-shared')
+  @UseGuards(TenantGuard)
+  markInviteShared(@Req() req: Request, @Param('accessId') accessId: string) {
+    return this.portal.markInviteShared(req.tenantId!, accessId);
+  }
+
+  /**
    * Family Activation & Landing Pack v1 — calm staff overview.
    *
    * Buckets each guardian into "where do they stand right now?" so club

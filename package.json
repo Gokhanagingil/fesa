@@ -22,6 +22,7 @@
     "club:updates:test": "node scripts/club-updates.test.mjs",
     "family:activation:test": "node scripts/family-activation.test.mjs",
     "parent:portal:v1.3:test": "node scripts/parent-portal-v1-3.test.mjs",
+    "parent:invite:delivery:test": "node scripts/parent-invite-delivery.test.mjs",
     "stabilization:gate:test": "node scripts/stabilization-gate.test.mjs",
     "finance:clarity:test": "node scripts/finance-clarity-pack.test.mjs",
     "onboarding:imports:test": "node scripts/onboarding-import-definitions.test.mjs",

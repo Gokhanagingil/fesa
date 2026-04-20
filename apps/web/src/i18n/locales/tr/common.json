@@ -707,7 +707,45 @@
         "resendInvite": "Daveti yeniden gönder",
         "notEnabled": "Veli portal erişimi henüz açılmadı.",
         "invite": "Portala davet et",
-        "recoveryRequested": "Bu aile {{when}} tarihinde giriş için yardım istedi ({{count}} talep). Daveti yeniden göndermek onlara taze bir aktivasyon bağlantısı sağlar."
+        "recoveryRequested": "Bu aile {{when}} tarihinde giriş için yardım istedi ({{count}} talep). Daveti yeniden göndermek onlara taze bir aktivasyon bağlantısı sağlar.",
+        "inviteIssued": "Davet hazır. Aşağıdaki teslimat durumunu kontrol edin.",
+        "deliverySent": "Davet e-postası sağlayıcıya iletildi — aile kısa süre içinde almalı.",
+        "deliveryFailed": "Sağlayıcı davet e-postasını teslim edemedi. Teslimat tekrar kontrol edilene kadar bağlantıyı aşağıdan elle paylaşın.",
+        "deliveryUnavailable": "E-posta gönderimi henüz yapılandırılmamış. Aktivasyon bağlantısını aşağıdan elle paylaşın — aile yine aynı sakin aktivasyon sayfasına gelir.",
+        "deliveryShared": "Aileye paylaşıldı olarak işaretlendi. Aktivasyon bağlantısı, giriş yapana kadar geçerli kalır.",
+        "deliveryVerifyOk": "Teslimat sağlayıcısı doğru yanıt verdi.",
+        "deliveryVerifyFailed": "Teslimat sağlayıcısı yanıt vermedi. Sorun çözülene kadar elle paylaşım bağlantısını kullanın.",
+        "shareTitle": "Aktivasyon bağlantısı",
+        "shareHint": "Kulüp izolasyonludur ve tek kullanımlıktır. Ailenin güvendiği bir kanaldan paylaşın (yüz yüze, WhatsApp, kulüp uygulaması), ardından paylaşıldı olarak işaretleyin.",
+        "copyLink": "Bağlantıyı kopyala",
+        "copyAck": "Kopyalandı",
+        "copyMissing": "Yeni bir bağlantı oluşturmak için daveti yeniden gönderin.",
+        "copyFailed": "Bağlantı kopyalanamadı. Elle kopyalamak için uzun basın.",
+        "markShared": "Aileye paylaşıldı olarak işaretle",
+        "deliveryStateLabel": {
+          "pending": "Hazırlanıyor",
+          "sent": "E-posta gönderildi",
+          "failed": "E-posta başarısız",
+          "unavailable": "E-posta kullanılamıyor",
+          "shared_manually": "Elle paylaşıldı"
+        },
+        "deliveryTone": {
+          "pending": "Davet bağlantısı hazırlandı.",
+          "sent": "Davet e-postası sağlayıcı tarafından kabul edildi.",
+          "failed": "Sağlayıcı davet e-postasını reddetti.",
+          "unavailable": "Bu kulüp için e-posta gönderimi henüz yapılandırılmadı.",
+          "sharedManually": "Bir personel aktivasyon bağlantısını aileyle doğrudan paylaştı."
+        },
+        "deliveryReadiness": {
+          "configured": "E-posta gönderimi yapılandırıldı",
+          "verified": "E-posta gönderimi doğrulandı",
+          "unavailable": "E-posta gönderimi kullanılamıyor",
+          "error": "E-posta gönderim hatası",
+          "configuredHint": "Davet gönderdiğinizde platform e-postayı yapılandırılmış sağlayıcıya iletir ve gerçek sonucu gösterir.",
+          "unavailableHint": "E-posta sağlayıcısı yapılandırılmadı. Platform yine de elle paylaşabileceğiniz bir aktivasyon bağlantısı oluşturur.",
+          "errorHint": "Yapılandırılmış sağlayıcı yanıt vermedi. Aktivasyon bağlantısı elle paylaşım yoluyla çalışmaya devam eder.",
+          "verify": "Teslimatı test et"
+        }
       }
     },
     "groups": {

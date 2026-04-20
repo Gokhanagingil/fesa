@@ -673,7 +673,45 @@
         "resendInvite": "Resend invite",
         "notEnabled": "Guardian portal access has not been enabled yet.",
         "invite": "Invite to portal",
-        "recoveryRequested": "This family asked for help signing in on {{when}} ({{count}} request(s)). Resending the invite will give them a fresh activation link."
+        "recoveryRequested": "This family asked for help signing in on {{when}} ({{count}} request(s)). Resending the invite will give them a fresh activation link.",
+        "inviteIssued": "Invite is ready. Check the delivery state below.",
+        "deliverySent": "Invitation email handed off to the provider — the family should receive it shortly.",
+        "deliveryFailed": "The provider could not deliver the invitation email. Share the link manually below until you have re-checked delivery.",
+        "deliveryUnavailable": "Email delivery is not configured yet. Share the activation link manually below — the family will still land on the same calm activation page.",
+        "deliveryShared": "Marked as shared with the family. The activation link stays valid until they sign in.",
+        "deliveryVerifyOk": "Delivery provider answered correctly.",
+        "deliveryVerifyFailed": "The delivery provider did not answer. Use the manual share link until this is resolved.",
+        "shareTitle": "Activation link",
+        "shareHint": "Tenant-isolated and single-use. Share over a channel the family already trusts (in person, WhatsApp, the club app), then mark as shared.",
+        "copyLink": "Copy link",
+        "copyAck": "Copied",
+        "copyMissing": "Issue or resend the invite to generate a fresh link.",
+        "copyFailed": "Could not copy the link. Long-press to copy it manually.",
+        "markShared": "Mark as shared with family",
+        "deliveryStateLabel": {
+          "pending": "Preparing",
+          "sent": "Email sent",
+          "failed": "Email failed",
+          "unavailable": "Email unavailable",
+          "shared_manually": "Shared manually"
+        },
+        "deliveryTone": {
+          "pending": "An invite link has been prepared.",
+          "sent": "The invitation email was accepted by the provider.",
+          "failed": "The provider rejected the invitation email.",
+          "unavailable": "Email delivery is not configured for this club yet.",
+          "sharedManually": "A staff member shared the activation link with the family directly."
+        },
+        "deliveryReadiness": {
+          "configured": "Email delivery configured",
+          "verified": "Email delivery verified",
+          "unavailable": "Email delivery unavailable",
+          "error": "Email delivery error",
+          "configuredHint": "When you send an invite, the platform will hand the email to your configured provider and report the truthful outcome.",
+          "unavailableHint": "No email provider is configured. The platform will still mint an activation link you can share with the family manually.",
+          "errorHint": "The configured provider did not respond. The activation link still works through the manual share path.",
+          "verify": "Test delivery"
+        }
       }
     },
     "groups": {
