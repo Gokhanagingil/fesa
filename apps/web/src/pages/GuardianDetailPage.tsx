@@ -263,6 +263,14 @@ export function GuardianDetailPage() {
             </div>
           ) : portalAccess ? (
             <div className="mt-4 space-y-4">
+              {portalAccess.recoveryRequestedAt ? (
+                <InlineAlert tone="warning">
+                  {t('pages.guardians.portalAccess.recoveryRequested', {
+                    when: formatDateTime(portalAccess.recoveryRequestedAt, i18n.language),
+                    count: portalAccess.recoveryRequestCount ?? 1,
+                  })}
+                </InlineAlert>
+              ) : null}
               <div className="grid gap-3 sm:grid-cols-3">
                 <StatCard label={t('pages.guardians.portalAccess.pendingActions')} value={portalAccess.pendingActions} compact />
                 <StatCard label={t('pages.guardians.portalAccess.awaitingReview')} value={portalAccess.awaitingReview} compact />

@@ -47,5 +47,11 @@ describe('GuardianPortalLoginPage', () => {
     expect(screen.getByText('Hoş geldiniz, Kadıköy ailesi')).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Kadıköy Gençlik Spor' })).toBeInTheDocument();
     expect(screen.getByText(/no public sign-up/)).toBeInTheDocument();
+    // Parent Portal v1.2 — calm "lost access?" link must be present so a
+    // parent that lost their password is never stranded on this surface.
+    expect(screen.getByRole('link', { name: /Lost access/ })).toHaveAttribute(
+      'href',
+      '/portal/recover',
+    );
   });
 });

@@ -92,6 +92,8 @@ export function GuardianPortalHomePage() {
   const todayLessons = data.today?.privateLessons ?? [];
   const hasToday = todayTraining.length + todayLessons.length > 0;
   const hasOutstanding = data.finance.outstandingAthletes > 0 || data.finance.overdueAthletes > 0;
+  const weekItems = data.thisWeek?.items ?? [];
+  const hasWeek = weekItems.length > 0;
 
   return (
     <div className="space-y-6">
@@ -188,7 +190,7 @@ export function GuardianPortalHomePage() {
       )}
 
       {hasToday ? (
-        <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <section className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm scroll-mt-24" id="today">
           <h2 className="font-display text-base font-semibold text-amateur-ink">
             {t('portal.home.todayTitle')}
           </h2>
@@ -237,6 +239,49 @@ export function GuardianPortalHomePage() {
                 </div>
                 <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
                   {t('portal.home.todayBadgeLesson')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {hasWeek ? (
+        <section
+          id="this-week"
+          className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm scroll-mt-24"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-display text-base font-semibold text-amateur-ink">
+              {t('portal.home.thisWeekTitle')}
+            </h2>
+            <span className="text-xs text-amateur-muted">{t('portal.home.thisWeekHint')}</span>
+          </div>
+          <ul className="mt-3 space-y-2">
+            {weekItems.map((item) => (
+              <li
+                key={`${item.kind}-${item.id}`}
+                className="flex items-start justify-between gap-3 rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-amateur-ink">
+                    {item.kind === 'training'
+                      ? item.title ?? t('portal.home.trainingDefault')
+                      : item.athleteName ?? t('portal.home.privateLessonDefault')}
+                  </p>
+                  <p className="mt-1 text-xs text-amateur-muted">
+                    {[
+                      formatDateTime(item.scheduledStart, i18n.language),
+                      item.kind === 'training' ? item.location : item.coachName,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
+                  {item.kind === 'training'
+                    ? t('portal.home.todayBadgeTraining')
+                    : t('portal.home.todayBadgeLesson')}
                 </span>
               </li>
             ))}
@@ -314,6 +359,30 @@ export function GuardianPortalHomePage() {
                       .filter(Boolean)
                       .join(' · ')}
                   </p>
+                ) : null}
+                {athlete.inventoryInHand && athlete.inventoryInHand.length > 0 ? (
+                  <div className="mt-3 rounded-xl border border-dashed border-amateur-border bg-amateur-surface/60 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
+                      {t('portal.home.inventoryTitle')}
+                    </p>
+                    <ul className="mt-1 space-y-0.5 text-xs text-amateur-ink">
+                      {athlete.inventoryInHand.map((row) => (
+                        <li key={row.id} className="flex items-baseline justify-between gap-3">
+                          <span className="truncate">
+                            {row.itemName}
+                            {row.variantLabel && row.variantLabel !== 'Default'
+                              ? ` · ${row.variantLabel}`
+                              : ''}
+                          </span>
+                          {row.quantity > 1 ? (
+                            <span className="shrink-0 text-amateur-muted">
+                              {t('portal.home.inventoryQuantity', { count: row.quantity })}
+                            </span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ) : null}
               </li>
             ))}
@@ -427,6 +496,13 @@ function ClubUpdatesStrip({
               {item.pinned ? (
                 <span className="text-[11px] font-medium text-amateur-muted">
                   {t('portal.home.clubUpdatePinned')}
+                </span>
+              ) : null}
+              {item.audience && item.audience.scope !== 'all' && item.audience.label ? (
+                <span className="rounded-full border border-amateur-border bg-amateur-canvas px-2 py-0.5 text-[11px] font-medium text-amateur-muted">
+                  {t(`portal.home.clubUpdateAudienceFor.${item.audience.scope}`, {
+                    label: item.audience.label,
+                  })}
                 </span>
               ) : null}
               {item.publishedAt ? (
