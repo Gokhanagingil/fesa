@@ -11,6 +11,8 @@ import { ChargeItem } from '../../database/entities/charge-item.entity';
 import { InventoryItem } from '../../database/entities/inventory-item.entity';
 import { InventoryVariant } from '../../database/entities/inventory-variant.entity';
 import { InventoryMovement } from '../../database/entities/inventory-movement.entity';
+import { ImportBatch } from '../../database/entities/import-batch.entity';
+import { StaffUser } from '../../database/entities/staff-user.entity';
 import { ImportsController } from './imports.controller';
 import { ImportsService } from './imports.service';
 import { OnboardingController } from './onboarding.controller';
@@ -43,6 +45,8 @@ import { OnboardingService } from './onboarding.service';
       InventoryItem,
       InventoryVariant,
       InventoryMovement,
+      ImportBatch,
+      StaffUser,
     ]),
   ],
   controllers: [ImportsController, OnboardingController],

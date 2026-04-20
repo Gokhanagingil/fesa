@@ -128,6 +128,46 @@ async function main() {
     assert.ok(onboarding.progress?.[state], `Missing onboarding progress copy for ${state}`);
   }
 
+  // v1.1 Go-Live Confidence Pack — readiness, history, last-import surfaces.
+  assert.ok(onboarding.readiness, 'pages.onboarding.readiness must exist');
+  for (const tone of ['fresh', 'in_progress', 'almost_ready', 'ready']) {
+    assert.ok(
+      onboarding.readiness.tone?.[tone],
+      `Missing readiness tone copy for ${tone}`,
+    );
+    assert.ok(
+      onboarding.readiness.headline?.[tone],
+      `Missing readiness headline copy for ${tone}`,
+    );
+    assert.ok(
+      onboarding.readiness.subtitle?.[tone],
+      `Missing readiness subtitle copy for ${tone}`,
+    );
+  }
+  for (const signal of [
+    'brandMissing',
+    'athletesWithoutGroups',
+    'linksMissing',
+    'lowAthleteCount',
+    'rejectedRows',
+  ]) {
+    assert.ok(
+      onboarding.readiness.signals?.[signal],
+      `Missing readiness signal copy for ${signal}`,
+    );
+  }
+
+  assert.ok(onboarding.history, 'pages.onboarding.history must exist');
+  for (const status of ['success', 'partial', 'needs_attention']) {
+    assert.ok(
+      onboarding.history.status?.[status],
+      `Missing onboarding history status copy for ${status}`,
+    );
+  }
+  assert.ok(onboarding.lastImport?.title, 'Missing pages.onboarding.lastImport.title');
+  assert.ok(onboarding.goLive?.requiredTitle, 'Missing pages.onboarding.goLive.requiredTitle');
+  assert.ok(onboarding.goLive?.optionalTitle, 'Missing pages.onboarding.goLive.optionalTitle');
+
   for (const [entity, expected] of Object.entries(REQUIRED_FIELD_NUMBERS)) {
     const block = source.split(`entity: '${entity}'`)[1] ?? '';
     const matches = block

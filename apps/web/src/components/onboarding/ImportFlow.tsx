@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
 import { InlineAlert } from '../ui/InlineAlert';
@@ -48,6 +48,12 @@ interface ImportFlowProps {
   }) => void;
   /** Optional contextual sport-branch picker (athletes import default). */
   showDefaultBranchPicker?: boolean;
+  /**
+   * Optional calm reminder rendered above the upload card — e.g. "Last
+   * imported {{date}} by {{name}}". Lets the wizard surface server-side
+   * import history without ImportFlow itself fetching state.
+   */
+  lastImportSummary?: ReactNode;
 }
 
 /**
@@ -55,7 +61,12 @@ interface ImportFlowProps {
  * Club Onboarding Wizard mounts one of these per step so we never grow a
  * second, parallel import system.
  */
-export function ImportFlow({ definition, onCommitted, showDefaultBranchPicker }: ImportFlowProps) {
+export function ImportFlow({
+  definition,
+  onCommitted,
+  showDefaultBranchPicker,
+  lastImportSummary,
+}: ImportFlowProps) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -164,6 +175,7 @@ export function ImportFlow({ definition, onCommitted, showDefaultBranchPicker }:
         columnMapping: mapping,
         rows,
         defaultSportBranchId: defaultBranchId || undefined,
+        source: pickedFileName ?? undefined,
       });
       setPreview(result);
     } catch (e) {
@@ -183,6 +195,7 @@ export function ImportFlow({ definition, onCommitted, showDefaultBranchPicker }:
         columnMapping: mapping,
         rows,
         defaultSportBranchId: defaultBranchId || undefined,
+        source: pickedFileName ?? undefined,
       });
       setMessage(
         t('pages.imports.commitSuccess', {
@@ -215,6 +228,7 @@ export function ImportFlow({ definition, onCommitted, showDefaultBranchPicker }:
 
   return (
     <div className="space-y-5">
+      {lastImportSummary ? <>{lastImportSummary}</> : null}
       <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">

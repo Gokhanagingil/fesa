@@ -182,6 +182,7 @@ The current product wave extends the existing command center into a more complet
 - **Inventory & Assignment Pack v1:** clubs can manage physical stock (jerseys, sweatshirts, balls, cones, equipment) with optional size / number variants, assign items to athletes, return them, and read low-stock signals — all reusing the same reporting backbone. See [docs/inventory.md](docs/inventory.md).
 - **Import / Export & Bulk Operations Foundation v1:** clubs can import athletes, guardians, and athlete↔guardian relationships through a guided wizard with preview / validation / commit, run a small set of high-value bulk actions (lifecycle updates, guardian delete, inventory bulk return), and pull practical CSV exports without leaving the page. See [docs/import-export.md](docs/import-export.md).
 - **Club Onboarding Wizard + Import Templates Foundation v1:** new clubs can move from spreadsheet-driven operations into the platform through a guided wizard at `/app/onboarding` that walks a club through sport branches → coaches → groups → teams → athletes → guardians → links → finance starter → inventory → review, each step backed by a downloadable Excel-friendly CSV template and the same calm preview / validate / commit pipeline. See [docs/onboarding.md](docs/onboarding.md).
+- **Club Onboarding Wizard v1.1 — Go-Live Confidence Pack:** the wizard now keeps a small, trustworthy server-side memory of every committed import (`import_batches`), surfaces a per-step "last imported {{when}} by {{who}}" card, ships an honest go-live readiness summary with soft warning signals (athletes without groups, missing family links, suspiciously low athlete counts, recent rejected rows), and rewrites dependency / relationship error copy to point clubs back to the responsible step. See [docs/onboarding.md](docs/onboarding.md).
 - **Athlete Photo & Media Foundation v1:** athletes now have a calm profile photo capability — upload, replace, and remove are tenant-isolated and validated server-side, with avatars surfaced wherever recognition matters (athlete detail, athletes list). See [docs/media.md](docs/media.md).
 
 ## Domain: Group vs Team vs Athlete
@@ -200,7 +201,7 @@ The current product wave extends the existing command center into a more complet
 - [docs/communication.md](docs/communication.md) — Communication & Follow-up Pack v1 (WhatsApp-first follow-up)
 - [docs/inventory.md](docs/inventory.md) — Inventory & Assignment Pack v1 (stock, athlete assignments, movements)
 - [docs/import-export.md](docs/import-export.md) — Import / Export & Bulk Operations Foundation v1 (athlete / guardian / link imports, shared bulk bar, CSV exports)
-- [docs/onboarding.md](docs/onboarding.md) — Club Onboarding Wizard + Import Templates Foundation v1 (guided club setup, per-step templated imports, dependency-aware go-live)
+- [docs/onboarding.md](docs/onboarding.md) — Club Onboarding Wizard + Import Templates (guided club setup, per-step templated imports, dependency-aware go-live, Go-Live Confidence Pack v1.1: history, last-import per step, readiness signals)
 - [docs/media.md](docs/media.md) — Athlete Photo & Media Foundation v1 (profile photo upload / replace / remove, tenant-isolated storage)
 
 ## Security

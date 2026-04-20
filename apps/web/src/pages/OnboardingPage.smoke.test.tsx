@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OnboardingPage } from './OnboardingPage';
@@ -79,17 +79,31 @@ beforeEach(() => {
         blocked: false,
         blockedBy: [],
         optional: false,
+        lastImport: null,
       },
       {
         key: 'sport_branches',
         titleKey: 'pages.onboarding.steps.sport_branches.title',
         hintKey: 'pages.onboarding.steps.sport_branches.hint',
         importEntity: 'sport_branches',
-        count: 0,
-        status: 'not_started',
+        count: 2,
+        status: 'completed',
         blocked: false,
         blockedBy: [],
         optional: false,
+        lastImport: {
+          batchId: 'batch-1',
+          status: 'success',
+          committedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+          source: 'branches.csv',
+          totalRows: 2,
+          createdRows: 2,
+          updatedRows: 0,
+          skippedRows: 0,
+          rejectedRows: 0,
+          warningRows: 0,
+          triggeredBy: 'Demo Admin',
+        },
       },
       {
         key: 'go_live',
@@ -97,20 +111,53 @@ beforeEach(() => {
         hintKey: 'pages.onboarding.steps.go_live.hint',
         importEntity: null,
         count: 0,
-        status: 'not_started',
+        status: 'in_progress',
         blocked: false,
         blockedBy: [],
         optional: false,
+        lastImport: null,
       },
     ],
     progress: {
-      requiredCompleted: 0,
+      requiredCompleted: 1,
       requiredTotal: 2,
-      totalCompleted: 0,
+      totalCompleted: 1,
       totalSteps: 3,
-      state: 'fresh',
+      state: 'in_progress',
     },
     nextStepKey: 'club_basics',
+    readiness: {
+      tone: 'almost_ready',
+      headlineKey: 'pages.onboarding.readiness.headline.almost_ready',
+      subtitleKey: 'pages.onboarding.readiness.subtitle.almost_ready',
+      outstandingRequiredSteps: ['club_basics'],
+      outstandingOptionalSteps: [],
+      signals: [
+        {
+          key: 'brand_missing',
+          tone: 'info',
+          messageKey: 'pages.onboarding.readiness.signals.brandMissing',
+          stepKey: 'club_basics',
+        },
+      ],
+    },
+    recentImports: [
+      {
+        id: 'batch-1',
+        entity: 'sport_branches',
+        status: 'success',
+        committedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        source: 'branches.csv',
+        totalRows: 2,
+        createdRows: 2,
+        updatedRows: 0,
+        skippedRows: 0,
+        rejectedRows: 0,
+        warningRows: 0,
+        durationMs: 120,
+        triggeredBy: 'Demo Admin',
+      },
+    ],
     generatedAt: new Date().toISOString(),
   });
 });
@@ -125,7 +172,7 @@ describe('OnboardingPage smoke coverage', () => {
     expect(await screen.findByText(/Welcome, Demo Club/i)).toBeInTheDocument();
     expect(await screen.findByText(/Confirm your club identity/i)).toBeInTheDocument();
     expect(screen.getByText(/Sport branches/i)).toBeInTheDocument();
-    expect(screen.getByText(/Just getting started/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/In progress/i).length).toBeGreaterThan(0);
   });
 
   it('switches to a different step when the user clicks it', async () => {
@@ -142,5 +189,27 @@ describe('OnboardingPage smoke coverage', () => {
       expect(screen.getByText(/List the sports your club runs\./i)).toBeInTheDocument();
     });
     expect(screen.getByRole('link', { name: /Download CSV template/i })).toBeInTheDocument();
+    // Last import card should surface the source filename for confidence.
+    expect(screen.getByText(/Last import for this step/i)).toBeInTheDocument();
+    expect(screen.getByText(/branches\.csv/i)).toBeInTheDocument();
+  });
+
+  it('shows the go-live readiness summary, checklist and recent imports', async () => {
+    renderWithRoute(<OnboardingPage />, {
+      path: '/app/onboarding',
+      initialEntry: '/app/onboarding?step=go_live',
+    });
+
+    const readiness = await screen.findByLabelText(/Go-live readiness summary/i);
+    expect(within(readiness).getByText(/Almost ready/i)).toBeInTheDocument();
+    expect(
+      within(readiness).getByText(/A couple of things still need attention/i),
+    ).toBeInTheDocument();
+    expect(within(readiness).getByText(/Add a club name/i)).toBeInTheDocument();
+
+    expect(screen.getAllByText(/Required steps/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Recent imports/i)).toBeInTheDocument();
+    expect(screen.getByText(/branches\.csv/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Demo Admin/i).length).toBeGreaterThan(0);
   });
 });

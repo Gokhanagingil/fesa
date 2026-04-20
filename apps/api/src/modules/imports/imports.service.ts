@@ -12,6 +12,8 @@ import { ChargeItem } from '../../database/entities/charge-item.entity';
 import { InventoryItem } from '../../database/entities/inventory-item.entity';
 import { InventoryVariant } from '../../database/entities/inventory-variant.entity';
 import { InventoryMovement } from '../../database/entities/inventory-movement.entity';
+import { ImportBatch, ImportBatchStatus } from '../../database/entities/import-batch.entity';
+import { StaffUser } from '../../database/entities/staff-user.entity';
 import { AthleteStatus, InventoryCategory, InventoryMovementType } from '../../database/enums';
 import {
   IMPORT_DEFINITIONS,
@@ -97,6 +99,10 @@ export class ImportsService {
     @InjectRepository(ChargeItem) private readonly chargeItems: Repository<ChargeItem>,
     @InjectRepository(InventoryItem)
     private readonly inventoryItems: Repository<InventoryItem>,
+    @InjectRepository(ImportBatch)
+    private readonly importBatches: Repository<ImportBatch>,
+    @InjectRepository(StaffUser)
+    private readonly staffUsers: Repository<StaffUser>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -122,7 +128,11 @@ export class ImportsService {
     return this.runValidation(tenantId, dto);
   }
 
-  async commit(tenantId: string, dto: ImportCommitDto): Promise<ImportCommitReport> {
+  async commit(
+    tenantId: string,
+    dto: ImportCommitDto,
+    staffUserId?: string | null,
+  ): Promise<ImportCommitReport> {
     const start = Date.now();
     const validation = await this.runValidation(tenantId, dto);
     if (!validation.canCommit) {
@@ -175,6 +185,16 @@ export class ImportsService {
       skipped = result.skipped;
     });
 
+    const durationMs = Date.now() - start;
+    await this.recordBatch(
+      tenantId,
+      dto,
+      validation,
+      { created, updated, skipped },
+      durationMs,
+      staffUserId ?? null,
+    );
+
     return {
       entity: dto.entity,
       counts: {
@@ -184,8 +204,73 @@ export class ImportsService {
         skipped,
       },
       rows: validation.rows,
-      durationMs: Date.now() - start,
+      durationMs,
     };
+  }
+
+  /**
+   * Append a single calm row to `import_batches` for this commit.
+   *
+   * The batch row is intentionally derived from already-computed validation
+   * + commit counters — we do not re-run anything, and we never store the
+   * raw uploaded payload. Failures here are logged-but-swallowed so an
+   * incidental history-write hiccup never rolls back a legitimate import.
+   */
+  private async recordBatch(
+    tenantId: string,
+    dto: ImportCommitDto,
+    validation: ImportPreviewReport,
+    commitCounts: { created: number; updated: number; skipped: number },
+    durationMs: number,
+    staffUserId: string | null,
+  ): Promise<void> {
+    try {
+      const status: ImportBatchStatus =
+        validation.counts.rejected > 0 || validation.counts.warnings > 0
+          ? 'needs_attention'
+          : commitCounts.skipped > 0 && commitCounts.created + commitCounts.updated === 0
+            ? 'partial'
+            : 'success';
+
+      let triggeredByDisplayName: string | null = null;
+      if (staffUserId) {
+        const user = await this.staffUsers.findOne({ where: { id: staffUserId } });
+        if (user) {
+          const preferred = user.preferredName?.trim() ?? '';
+          triggeredByDisplayName = preferred
+            ? preferred
+            : `${user.firstName} ${user.lastName}`.trim() || user.email;
+        }
+      }
+
+      const summaryHints = (validation.hints ?? []).slice(0, 6);
+      const summary = JSON.stringify({ hints: summaryHints });
+      const source = (dto.source ?? '').trim().slice(0, 240) || null;
+
+      await this.importBatches.save(
+        this.importBatches.create({
+          tenantId,
+          entity: dto.entity,
+          status,
+          source,
+          totalRows: validation.counts.total,
+          createdRows: commitCounts.created,
+          updatedRows: commitCounts.updated,
+          skippedRows: commitCounts.skipped,
+          rejectedRows: validation.counts.rejected,
+          warningRows: validation.counts.warnings,
+          durationMs,
+          triggeredByStaffUserId: staffUserId,
+          triggeredByDisplayName,
+          summary,
+        }),
+      );
+    } catch (error) {
+      // History is supportive memory, not a blocker. Log to stderr so it
+      // shows up in operational logs without surfacing a scary error to a
+      // club admin who just successfully imported real records.
+      console.warn('[imports] failed to record onboarding history batch', error);
+    }
   }
 
   // —— Validation ——————————————————————————————————————————————————————
@@ -546,7 +631,7 @@ export class ImportsService {
         ctx.issues.push({
           field: 'sportBranch',
           severity: 'error',
-          message: `Sport branch "${branchValue}" was not found in this club. Import sport branches first.`,
+          message: `We couldn't find a sport branch called "${branchValue}". Open the Sport branches step and add it first, then re-import this row.`,
         });
       } else {
         branchId = branch.id;
@@ -597,7 +682,7 @@ export class ImportsService {
         ctx.issues.push({
           field: 'sportBranch',
           severity: 'error',
-          message: `Sport branch "${branchValue}" was not found. Import sport branches first.`,
+          message: `We couldn't find a sport branch called "${branchValue}". Open the Sport branches step and add it first, then re-import this row.`,
         });
       } else {
         branchId = branch.id;
@@ -618,7 +703,7 @@ export class ImportsService {
         ctx.issues.push({
           field: 'groupName',
           severity: 'warning',
-          message: `Group "${groupValue}" was not found in the chosen sport branch — the team will be created without a group link.`,
+          message: `We couldn't find a group named "${groupValue}" in this sport branch. The team will be created without a group link — add the group from the Groups step if you'd like to wire it up.`,
         });
       } else {
         groupId = group.id;
@@ -641,7 +726,7 @@ export class ImportsService {
         ctx.issues.push({
           field: 'headCoachName',
           severity: 'warning',
-          message: `Coach "${coachValue}" was not found in this branch — the team will be created without a head coach.`,
+          message: `We couldn't find a coach called "${coachValue}" in this sport branch. The team will be created without a head coach — add the coach from the Coaches step if you'd like to assign one.`,
         });
       } else {
         coachId = coach.id;
@@ -733,7 +818,7 @@ export class ImportsService {
         ctx.issues.push({
           field: 'sportBranch',
           severity: 'warning',
-          message: `Sport branch "${branchValue}" was not found — the item will be created without a branch link.`,
+          message: `We couldn't find a sport branch called "${branchValue}". The item will be created without a branch link — add the branch from the Sport branches step to connect it later.`,
         });
       } else {
         branchId = branch.id;
@@ -786,7 +871,7 @@ export class ImportsService {
         ctx.issues.push({
           field: 'sportBranch',
           severity: 'error',
-          message: `Sport branch "${branchValue}" was not found in this club.`,
+          message: `We couldn't find a sport branch called "${branchValue}". Open the Sport branches step and add it first, then re-import this row.`,
         });
       } else {
         branchId = branch.id;
@@ -814,7 +899,7 @@ export class ImportsService {
         ctx.issues.push({
           field: 'primaryGroup',
           severity: 'warning',
-          message: `Group "${groupValue}" was not found in the chosen sport branch — athlete will be created without a primary group.`,
+          message: `We couldn't find a group named "${groupValue}" in this sport branch. The athlete will be created without a primary group — add the group from the Groups step to wire it up later.`,
         });
       } else {
         groupId = group.id;
@@ -910,7 +995,7 @@ export class ImportsService {
       ctx.issues.push({
         field: 'athleteLastName',
         severity: 'error',
-        message: `No athlete called "${athleteFirst} ${athleteLast}" was found.`,
+        message: `We couldn't find an athlete called "${athleteFirst} ${athleteLast}" yet. Finish the Athletes step (or check the spelling) before linking this guardian.`,
       });
     } else {
       ctx.resolved.athleteId = athlete.id;
@@ -926,7 +1011,7 @@ export class ImportsService {
       ctx.issues.push({
         field: 'guardianLastName',
         severity: 'error',
-        message: `No guardian called "${guardianFirst} ${guardianLast}" was found.`,
+        message: `We couldn't find a guardian called "${guardianFirst} ${guardianLast}" yet. Finish the Guardians step (or check the spelling) before linking this athlete.`,
       });
     } else {
       ctx.resolved.guardianId = guardian.id;
@@ -970,7 +1055,7 @@ export class ImportsService {
         ctx.issues.push({
           field: 'sportBranch',
           severity: 'error',
-          message: `Sport branch "${branchValue}" was not found in this club.`,
+          message: `We couldn't find a sport branch called "${branchValue}". Open the Sport branches step and add it first, then re-import this row.`,
         });
       } else {
         branchId = branch.id;
@@ -992,7 +1077,7 @@ export class ImportsService {
         ctx.issues.push({
           field: 'headCoachName',
           severity: 'warning',
-          message: `Coach "${coachValue}" was not found — the group will be created without a head coach.`,
+          message: `We couldn't find a coach called "${coachValue}". The group will be created without a head coach — add the coach from the Coaches step to assign one later.`,
         });
       } else {
         coachId = coach.id;

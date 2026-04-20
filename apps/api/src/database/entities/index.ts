@@ -33,6 +33,7 @@ import { InventoryVariant } from './inventory-variant.entity';
 import { InventoryAssignment } from './inventory-assignment.entity';
 import { InventoryMovement } from './inventory-movement.entity';
 import { ClubUpdate } from './club-update.entity';
+import { ImportBatch } from './import-batch.entity';
 
 export const domainEntities = [
   Tenant,
@@ -70,6 +71,7 @@ export const domainEntities = [
   InventoryAssignment,
   InventoryMovement,
   ClubUpdate,
+  ImportBatch,
 ];
 
 export {
@@ -108,4 +110,5 @@ export {
   InventoryAssignment,
   InventoryMovement,
   ClubUpdate,
+  ImportBatch,
 };

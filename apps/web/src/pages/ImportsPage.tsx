@@ -183,6 +183,7 @@ export function ImportsPage() {
         columnMapping: mapping,
         rows,
         defaultSportBranchId: defaultBranchId || undefined,
+        source: pickedFileName ?? undefined,
       });
       setPreview(result);
     } catch (e) {
@@ -202,6 +203,7 @@ export function ImportsPage() {
         columnMapping: mapping,
         rows,
         defaultSportBranchId: defaultBranchId || undefined,
+        source: pickedFileName ?? undefined,
       });
       setMessage(
         t('pages.imports.commitSuccess', {
