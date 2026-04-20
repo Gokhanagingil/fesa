@@ -241,3 +241,143 @@ appears when the club has not published anything yet.
 
 The existing `npm run api:boot:smoke`, `npm run dashboard:smoke`, and
 `npm run reporting:smoke` checks remain unchanged and still gate the API.
+
+## v1.2 — Targeted Announcements, Family Utility Refinement, and Parent Recovery UX (Wave 20)
+
+Wave 20 keeps the v1.1 shape and adds three small, parent-facing
+improvements: club updates can be quietly targeted at the families
+they actually concern, the parent home becomes more useful in everyday
+family life, and a calm "I lost access" surface gives parents a way
+back in without inventing a brand new auth method.
+
+### Targeted announcements
+
+Club updates pick up a tiny audience model. The default scope is
+`all` — every linked guardian sees the card — and on top of that
+clubs can quietly target a single sport branch, group, or team. There
+is **no audience builder, no list of names, and no per-family
+targeting** — three controlled scopes are enough for the relevance asks
+clubs actually have ("just the U14 girls", "only volleyball families")
+without turning announcements into a CMS.
+
+| Audience scope | What it does |
+|----------------|--------------|
+| `all` | Every linked guardian sees the card. |
+| `sport_branch` | Only families with at least one athlete in the chosen sport branch see the card. |
+| `group` | Only families with at least one athlete whose primary group is the chosen group. |
+| `team` | Only families with at least one athlete on the chosen team's roster. |
+
+Three things keep this safe:
+
+1. **Server-side validation.** The targeting id (branch / group / team)
+   must belong to the resolving tenant; mismatched ids are rejected at
+   save time.
+2. **Server-side filtering.** Parents never receive the full list — the
+   guardian portal computes the parent's audience set (the union of
+   each linked athlete's branch, primary group, and open team
+   memberships) and intersects it against every card before deciding
+   what to render. Tenant isolation still flows through the existing
+   `where: { tenantId, status: 'published' }` clause.
+3. **No leaked audiences.** The parent UI shows a calm "For …" hint when
+   a card is targeted, but never the full list of families.
+
+A new tiny endpoint backs the staff editor:
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `GET /api/club-updates/audience-options` | staff (`TenantGuard`) | Lists the small in-tenant catalog of sport branches, groups, and teams the staff editor uses to pick a targeting handle. |
+
+Existing club-updates endpoints (`GET/POST/PATCH/DELETE /api/club-updates`,
+`POST /api/club-updates/:id/publish` and `…/archive`) are unchanged in
+shape and still hard-cap the parent-facing list at 5 cards.
+
+### Family utility refinement on the home
+
+The home gains two small surfaces, both designed to hide when empty so
+the page stays calm:
+
+- **"This week" digest.** A merged, time-sorted preview of the next
+  five training sessions and private lessons across the family. Built
+  from the same data sources as the per-athlete cards — no extra
+  permissions, no new aggregation table.
+- **"Kit in hand" per athlete.** When the inventory module records open
+  assignments for an athlete, the family card now shows the active
+  items the family currently has (item name + variant + quantity, up
+  to five entries per athlete). When the club doesn't track inventory
+  this section is invisible.
+
+The existing greeting → attention → today → family → all requests →
+from the club ordering is preserved on purpose. New surfaces slot in
+between "today" and "family" (this-week digest) and inside the family
+card (kit in hand), so parents aren't asked to learn a new layout.
+
+### Parent recovery UX
+
+Parents who forget their password or change devices now have a calm
+public surface to ask for help, without exposing a brand-new public
+reset flow:
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `POST /api/guardian-portal/recover` | public | Records that a family asked for help signing in. The response is intentionally identical for "match" and "no match" cases so we never leak account existence. |
+
+When the email matches an existing access row in the chosen tenant
+(or any tenant, if the parent skipped the club selector) we stamp two
+new columns on `guardian_portal_accesses` — `recoveryRequestedAt` and
+`recoveryRequestCount`. Staff see this on the existing
+**Guardians → portal access** surface as an amber hint with the
+exact wording "This family asked for help signing in on …".
+
+Resending the invite from that same surface clears the recovery flag
+and sends the family a fresh, time-bounded activation link. The reset
+itself still flows through the existing invite path — that keeps
+recovery safely under club control without forcing us to ship magic
+links or phone OTP in v1.2. The seam is in place: a future wave can
+swap the "ask the club" copy for a self-serve reset link without
+re-thinking the data model.
+
+### Mobile-first polish
+
+- The parent home explicitly anchors `today`, `this-week`, `family`,
+  and `updates` so the bottom nav scroll-targets always work.
+- The "Lost access?" link sits next to the calm `recoveryHint` on the
+  login surface so the parent never feels stranded.
+- Targeted-audience hints render as a single pill on the club update
+  card, never as a banner — no extra row, no shouted colours.
+- The recovery page reuses the login page chrome so the parent stays in
+  a familiar, branded surface.
+
+### Schema additions
+
+A new migration `Wave20ParentPortalV12` adds the small audience columns
+on `club_updates` (`audienceScope`, `audienceSportBranchId`,
+`audienceGroupId`, `audienceTeamId`) and the recovery observability
+columns on `guardian_portal_accesses` (`recoveryRequestedAt`,
+`recoveryRequestCount`). Existing rows default to `audienceScope = 'all'`
+and `recoveryRequestCount = 0`, so the schema upgrade is non-breaking.
+
+### Validation additions for v1.2
+
+- `npm run club:updates:test` now also covers the audience-matching
+  rule against an empty and a populated parent audience set.
+- `npm run i18n:check` parity is extended to `pages.clubUpdates.audience`,
+  `portal.home.thisWeekTitle`, `portal.home.inventoryTitle`,
+  `portal.home.clubUpdateAudienceFor`, `portal.login.forgotAccess`,
+  `portal.login.recoveryHint`, and the entire `portal.recovery` block.
+- `apps/web` smokes pick up a new
+  `GuardianPortalRecoveryPage.smoke.test.tsx`, an extended
+  `GuardianPortalHomePage.smoke.test.tsx` case for the targeted
+  audience pill, this-week digest, and kit-in-hand surface, and a
+  `GuardianPortalLoginPage.smoke.test.tsx` assertion that the calm
+  "Lost access?" link is present.
+
+### What is intentionally still out of scope (v1.2)
+
+- A full audience builder (multiple branches, multiple groups, age
+  bracket arithmetic, "everyone except…" scopes).
+- Magic-link or phone-OTP recovery — the recovery surface intentionally
+  keeps the loop inside the club's invite path.
+- Per-family overrides (mute, snooze, "don't show me this") on club
+  updates.
+- A separate parent-side notification feed — announcements still live
+  inside the home strip on purpose.
