@@ -66,6 +66,24 @@ export class GuardianPortalAccess {
   @Column({ type: 'timestamptz', nullable: true })
   disabledAt!: Date | null;
 
+  /**
+   * Parent Portal v1.2 — recovery UX.
+   *
+   * When a guardian opens the public "I lost access" form, the portal
+   * does not leak whether their email is on file (the response is calm
+   * and identical for both cases). Instead it stamps these fields on
+   * the matching access row so club staff can see, from the existing
+   * Guardians → portal access surface, that this family has asked for
+   * help and how recently / how often. The actual reset still happens
+   * through the staff resend-invite flow, which keeps recovery safely
+   * inside the club's control.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  recoveryRequestedAt!: Date | null;
+
+  @Column({ type: 'integer', default: 0 })
+  recoveryRequestCount!: number;
+
   @OneToMany(() => GuardianPortalSession, (session) => session.access)
   sessions?: GuardianPortalSession[];
 

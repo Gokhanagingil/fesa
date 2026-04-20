@@ -3,12 +3,15 @@ import {
   IsISO8601,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   MinLength,
 } from 'class-validator';
 import {
+  CLUB_UPDATE_AUDIENCE_SCOPES,
   CLUB_UPDATE_CATEGORIES,
   CLUB_UPDATE_STATUSES,
+  ClubUpdateAudienceScope,
   ClubUpdateCategory,
   ClubUpdateStatus,
 } from '../club-update.types';
@@ -62,4 +65,27 @@ export class UpsertClubUpdateDto {
   @IsOptional()
   @IsISO8601()
   pinnedUntil?: string | null;
+
+  /**
+   * Parent Portal v1.2 — Targeted announcements.
+   *
+   * Defaults to `all`; when a scope other than `all` is used exactly
+   * one matching id must be provided. The service validates that the
+   * id belongs to the resolved tenant before saving.
+   */
+  @IsOptional()
+  @IsIn(CLUB_UPDATE_AUDIENCE_SCOPES)
+  audienceScope?: ClubUpdateAudienceScope;
+
+  @IsOptional()
+  @IsUUID()
+  audienceSportBranchId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  audienceGroupId?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  audienceTeamId?: string | null;
 }
