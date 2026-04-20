@@ -79,6 +79,9 @@ jobs:
       - name: Tenant branding validator smoke
         run: npm run tenant:branding:test
 
+      - name: Onboarding import templates contract smoke
+        run: npm run onboarding:imports:test
+
       - name: Migration readiness (disposable PostgreSQL)
         run: npm run migration:run -w @amateur/api
 

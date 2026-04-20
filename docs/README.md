@@ -14,6 +14,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 | [communication.md](./communication.md) | Communication & Follow-up Pack v1 — WhatsApp-first follow-up surface |
 | [inventory.md](./inventory.md) | Inventory & Assignment Pack v1 — stock visibility, athlete assignments, movement history |
 | [import-export.md](./import-export.md) | Import / Export & Bulk Operations Foundation v1 — guided imports, bulk actions, CSV exports |
+| [onboarding.md](./onboarding.md) | Club Onboarding Wizard + Import Templates Foundation v1 — guided club setup with templated imports per step |
 | [media.md](./media.md) | Athlete Photo & Media Foundation v1 — profile photo upload / replace / remove, tenant-isolated storage |
 | [parent-portal.md](./parent-portal.md) | Parent Access & Portal Foundation + Tenant Branding Foundation v1 — invitation-based guardian access, calm mobile-first parent home, controlled tenant branding |
 | [bootstrap.md](./bootstrap.md) | Demo seed, idempotency, demo tenant id, staff login fixtures |
