@@ -59,6 +59,23 @@ type PeriodicTargetType = 'selected' | 'group' | 'team';
 type BulkChargeTargetType = 'selected' | 'group' | 'team';
 type BulkChargeStatusScope = 'default' | 'all' | AthleteStatus;
 
+/**
+ * Athlete Charges Flow Flattening — Collections Clarity Pack.
+ *
+ * The previous implementation showed three nested <details> action stacks
+ * simultaneously (bulk assign + periodic generation + record collection) plus
+ * a parallel selection panel and the charge list, which created competing
+ * primary actions and dense mobile rhythm. The flattened structure keeps the
+ * exact same backend behavior but presents one calm operational sequence:
+ *
+ *   summary → attention strip → drawer with one chosen action → list → recent.
+ *
+ * The drawer is closed by default; opening it reveals only the action the
+ * operator picked via a segmented control. Powerful flows stay discoverable
+ * but never compete for attention or stack on top of each other.
+ */
+type ActionDrawerKey = 'bulk' | 'periodic' | 'payment';
+
 function createPaymentFormState(): PaymentFormState {
   return {
     athleteId: '',
@@ -92,6 +109,8 @@ export function AthleteChargesPage() {
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // Single action drawer — null means the calm default state with no expanded form.
+  const [openAction, setOpenAction] = useState<ActionDrawerKey | null>(null);
   const [bulkChargeItemId, setBulkChargeItemId] = useState('');
   const [bulkAmount, setBulkAmount] = useState('');
   const [bulkDueDate, setBulkDueDate] = useState('');
@@ -222,6 +241,22 @@ export function AthleteChargesPage() {
     [athletes],
   );
 
+  // Collections clarity strip — small, honest list of athletes who currently
+  // need attention. We reuse the existing finance summary so there is no
+  // parallel collections data path. The strip stays calm by default: it shows
+  // only the top 4 entries and links into the existing communications
+  // follow-up surface, preserving source/context honesty.
+  const attentionAthletes = useMemo(() => {
+    if (!summary) return [];
+    return summary.athletes
+      .filter((entry) => entry.totalOutstanding > 0)
+      .slice(0, 4);
+  }, [summary]);
+  const attentionCount = useMemo(
+    () => (summary ? summary.athletes.filter((entry) => entry.totalOutstanding > 0).length : 0),
+    [summary],
+  );
+
   const exportCharges = useCallback(() => {
     if (items.length === 0) {
       setError(t('app.exportCsv.emptyHint'));
@@ -262,6 +297,10 @@ export function AthleteChargesPage() {
 
   function resetPaymentForm() {
     setPaymentForm(createPaymentFormState());
+  }
+
+  function chooseAction(next: ActionDrawerKey) {
+    setOpenAction((current) => (current === next ? null : next));
   }
 
   function normalizePeriodicPreview(response: PeriodicChargePreviewResponse): PeriodicGenerationPreview {
@@ -409,6 +448,7 @@ export function AthleteChargesPage() {
       setBulkStatusScope('default');
       setBulkTargetType('selected');
       setMessage(t('pages.athleteCharges.bulkSuccess', { count: assignedCount }));
+      setOpenAction(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
@@ -453,6 +493,7 @@ export function AthleteChargesPage() {
       });
       setMessage(t('pages.athleteCharges.paymentRecorded'));
       resetPaymentForm();
+      setOpenAction(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t('app.errors.saveFailed'));
@@ -460,6 +501,13 @@ export function AthleteChargesPage() {
       setPaymentSaving(false);
     }
   }
+
+  const summaryCurrency = summary?.charges[0]?.chargeItem?.currency ?? 'TRY';
+  const drawerActions: Array<{ key: ActionDrawerKey; labelKey: string; hintKey: string }> = [
+    { key: 'payment', labelKey: 'pages.athleteCharges.actions.recordPayment', hintKey: 'pages.athleteCharges.actions.recordPaymentHint' },
+    { key: 'bulk', labelKey: 'pages.athleteCharges.actions.bulkAssign', hintKey: 'pages.athleteCharges.actions.bulkAssignHint' },
+    { key: 'periodic', labelKey: 'pages.athleteCharges.actions.periodic', hintKey: 'pages.athleteCharges.actions.periodicHint' },
+  ];
 
   return (
     <div>
@@ -509,250 +557,492 @@ export function AthleteChargesPage() {
         ) : (
           <>
             {summary ? (
-              <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
                   label={t('pages.athleteCharges.summary.totalCharged')}
-                  value={`${summary.totals.totalCharged} ${summary.charges[0]?.chargeItem?.currency ?? 'TRY'}`}
+                  value={`${summary.totals.totalCharged} ${summaryCurrency}`}
+                  compact
                 />
                 <StatCard
                   label={t('pages.athleteCharges.summary.totalCollected')}
-                  value={`${summary.totals.totalCollected} ${summary.charges[0]?.chargeItem?.currency ?? 'TRY'}`}
+                  value={`${summary.totals.totalCollected} ${summaryCurrency}`}
+                  compact
                 />
                 <StatCard
                   label={t('pages.athleteCharges.summary.totalOutstanding')}
-                  value={`${summary.totals.totalOutstanding} ${summary.charges[0]?.chargeItem?.currency ?? 'TRY'}`}
+                  value={`${summary.totals.totalOutstanding} ${summaryCurrency}`}
+                  compact
                 />
                 <StatCard
                   label={t('pages.athleteCharges.summary.totalOverdue')}
-                  value={`${summary.totals.totalOverdue} ${summary.charges[0]?.chargeItem?.currency ?? 'TRY'}`}
+                  value={`${summary.totals.totalOverdue} ${summaryCurrency}`}
+                  helper={t('pages.athleteCharges.summary.totalOverdueHint')}
                   tone="danger"
+                  compact
                 />
               </div>
             ) : null}
 
-            <div className="mb-6 space-y-4">
-              <section className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h2 className="font-display text-base font-semibold text-amateur-ink">
-                      {t('pages.athleteCharges.bulkTitle')}
-                    </h2>
-                    <p className="mt-1 text-sm text-amateur-muted">{t('pages.athleteCharges.bulkHint')}</p>
-                  </div>
-                  <Link to="/app/athletes">
-                    <Button variant="ghost">{t('pages.athletes.title')}</Button>
-                  </Link>
+            {/* Collections clarity strip — calm operational view of who needs attention. */}
+            <section
+              aria-labelledby="charges-attention-title"
+              className="mb-6 rounded-2xl border border-amateur-border bg-amateur-surface p-4 shadow-sm"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 id="charges-attention-title" className="font-display text-base font-semibold text-amateur-ink">
+                    {t('pages.athleteCharges.attention.title')}
+                  </h2>
+                  <p className="mt-1 text-sm text-amateur-muted">
+                    {attentionCount > 0
+                      ? t('pages.athleteCharges.attention.summary', { count: attentionCount })
+                      : t('pages.athleteCharges.attention.empty')}
+                  </p>
                 </div>
-                <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                  <div className="rounded-xl border border-amateur-border bg-amateur-surface p-4">
-                    <p className="text-xs font-medium uppercase tracking-wide text-amateur-muted">
-                      {t('pages.athleteCharges.selectAthletes')}
-                    </p>
-                    <p className="mt-2 text-sm text-amateur-muted">
-                      {hasSelection
-                        ? t('pages.athleteCharges.selectedCount', { count: selectedAthletes.length })
-                        : t('pages.athleteCharges.bulkHint')}
-                    </p>
-                    {hasSelection ? (
-                      <ul className="mt-3 space-y-2">
-                        {selectedAthletePreview.map((athlete) => (
-                          <li
-                            key={athlete.id}
-                            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-3"
-                          >
-                            <p className="font-medium text-amateur-ink">{getPersonName(athlete)}</p>
-                            <p className="text-xs text-amateur-muted">
-                              {athlete.primaryGroupId
-                                ? groupMap.get(athlete.primaryGroupId) ?? '—'
-                                : t('pages.athletes.noGroup')}
-                            </p>
-                          </li>
-                        ))}
-                        {selectedAthletes.length > selectedAthletePreview.length ? (
-                          <li className="text-xs text-amateur-muted">
-                            +{selectedAthletes.length - selectedAthletePreview.length}
-                          </li>
-                        ) : null}
-                      </ul>
-                    ) : null}
-                    <details className="mt-4 rounded-xl border border-amateur-border bg-amateur-canvas px-4 py-3">
-                      <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
-                        {t('pages.athleteCharges.selectAthletes')}
-                      </summary>
-                      <div className="mt-3 grid gap-2 md:grid-cols-2">
-                        {athletes.map((athlete) => (
-                          <label
-                            key={athlete.id}
-                            className="flex items-start gap-3 rounded-xl border border-amateur-border px-3 py-2 text-sm"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedAthleteIds.includes(athlete.id)}
-                              onChange={() => toggleSelection(athlete)}
-                            />
-                            <span>
-                              <span className="block font-medium text-amateur-ink">{getPersonName(athlete)}</span>
-                              <span className="block text-xs text-amateur-muted">
-                                {athlete.primaryGroupId
-                                  ? groupMap.get(athlete.primaryGroupId) ?? '—'
-                                  : t('pages.athletes.noGroup')}
-                              </span>
-                            </span>
-                          </label>
-                        ))}
+                {attentionCount > 0 ? (
+                  <Link
+                    to="/app/communications?financialState=overdue&primaryContactsOnly=true&channel=whatsapp&template=overdue_payment_reminder&source=finance_overdue&sourceKey=athlete-charges"
+                    className="text-sm font-semibold text-amateur-accent hover:underline"
+                  >
+                    {t('pages.athleteCharges.attention.openFollowUp')} →
+                  </Link>
+                ) : null}
+              </div>
+              {attentionAthletes.length > 0 ? (
+                <ul className="mt-4 grid gap-2 md:grid-cols-2">
+                  {attentionAthletes.map((entry) => (
+                    <li
+                      key={entry.athlete.id}
+                      className="flex flex-col gap-2 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-amateur-ink">
+                          {entry.athlete.preferredName || `${entry.athlete.firstName} ${entry.athlete.lastName}`}
+                        </p>
+                        <p className="text-xs text-amateur-muted">
+                          {t('pages.finance.outstandingAmount', { amount: entry.totalOutstanding.toFixed(2) })}
+                          {entry.overdueCount > 0
+                            ? ` · ${t('pages.finance.overdueCount', { count: entry.overdueCount })}`
+                            : ''}
+                        </p>
                       </div>
-                    </details>
-                  </div>
-                  <div className="space-y-4">
-                    <details className="rounded-xl border border-amateur-border bg-amateur-surface p-4" open>
-                      <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
-                        {t('pages.athleteCharges.bulkTitle')}
-                      </summary>
-                      <div className="mt-3 space-y-3">
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span>{t('pages.athleteCharges.bulkTargetType')}</span>
-                        <select
-                          value={bulkTargetType}
-                          onChange={(e) => {
-                            const next = e.target.value as BulkChargeTargetType;
-                            setBulkTargetType(next);
-                            if (next !== 'group') setBulkGroupId('');
-                            if (next !== 'team') setBulkTeamId('');
-                          }}
-                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                      <div className="flex flex-wrap items-center gap-3 text-sm font-semibold">
+                        <button
+                          type="button"
+                          onClick={() => setAthleteId(entry.athlete.id)}
+                          className="text-amateur-accent hover:underline"
                         >
-                          <option value="selected">{t('pages.athleteCharges.bulkTargetSelected')}</option>
-                          <option value="group">{t('pages.athleteCharges.bulkTargetGroup')}</option>
-                          <option value="team">{t('pages.athleteCharges.bulkTargetTeam')}</option>
-                        </select>
-                      </label>
-                      {bulkTargetType === 'group' ? (
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span>{t('pages.athletes.primaryGroup')}</span>
-                          <select
-                            value={bulkGroupId}
-                            onChange={(e) => {
-                              setBulkGroupId(e.target.value);
-                              setBulkTeamId('');
-                            }}
-                            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
-                          >
-                            <option value="">{t('pages.athletes.allGroups')}</option>
-                            {groups.map((group) => (
-                              <option key={group.id} value={group.id}>
-                                {group.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      ) : null}
-                      {bulkTargetType === 'team' ? (
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span>{t('pages.teams.title')}</span>
-                          <select
-                            value={bulkTeamId}
-                            onChange={(e) => setBulkTeamId(e.target.value)}
-                            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
-                          >
-                            <option value="">{t('pages.athletes.allTeams')}</option>
-                            {visibleBulkTeams.map((team) => (
-                              <option key={team.id} value={team.id}>
-                                {team.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      ) : null}
-                      {bulkTargetType !== 'selected' ? (
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span>{t('pages.athleteCharges.bulkStatusScope')}</span>
-                          <select
-                            value={bulkStatusScope}
-                            onChange={(e) => setBulkStatusScope(e.target.value as BulkChargeStatusScope)}
-                            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
-                          >
-                            <option value="default">{t('pages.athleteCharges.bulkStatusScopeDefault')}</option>
-                            <option value="all">{t('pages.athleteCharges.bulkStatusScopeAll')}</option>
-                            {(['trial', 'active', 'paused', 'inactive', 'archived'] as AthleteStatus[]).map((athleteStatus) => (
-                              <option key={athleteStatus} value={athleteStatus}>
-                                {t('pages.athleteCharges.bulkStatusScopeSingle', {
-                                  status: getAthleteStatusLabel(t, athleteStatus),
-                                })}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      ) : null}
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span>{t('pages.athleteCharges.item')}</span>
-                        <select
-                          value={bulkChargeItemId}
-                          onChange={(e) => setBulkChargeItemId(e.target.value)}
-                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                          {t('pages.athleteCharges.attention.viewCharges')}
+                        </button>
+                        <Link
+                          to={`/app/communications?athleteIds=${entry.athlete.id}&primaryContactsOnly=true&channel=whatsapp&template=overdue_payment_reminder&source=finance_overdue&sourceKey=athlete-charges-${entry.athlete.id}`}
+                          className="text-emerald-700 hover:underline"
                         >
-                          <option value="">{t('pages.athleteCharges.chooseItem')}</option>
-                          {chargeItems.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.name} ({item.currency} {item.defaultAmount})
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span>{t('pages.athleteCharges.amount')}</span>
-                        <input
-                          value={bulkAmount}
-                          onChange={(e) => setBulkAmount(e.target.value)}
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder={t('pages.athleteCharges.useDefaultAmount')}
-                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span>{t('pages.athleteCharges.due')}</span>
-                        <input
-                          type="date"
-                          value={bulkDueDate}
-                          onChange={(e) => setBulkDueDate(e.target.value)}
-                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
-                        />
-                      </label>
-                      <div className="rounded-xl border border-dashed border-amateur-border px-3 py-2 text-sm text-amateur-muted">
-                        {bulkTargetType === 'selected'
-                          ? t('pages.athleteCharges.selectedCount', { count: selectedAthletes.length })
-                          : bulkTargetType === 'group'
-                            ? t('pages.athleteCharges.bulkTargetSummaryGroup', {
-                                group: groups.find((group) => group.id === bulkGroupId)?.name ?? '—',
-                              })
-                            : t('pages.athleteCharges.bulkTargetSummaryTeam', {
-                                team: teams.find((team) => team.id === bulkTeamId)?.name ?? '—',
-                              })}
+                          {t('pages.finance.priorityCollectionsPrepare')}
+                        </Link>
                       </div>
-                      <p className="text-xs text-amateur-muted">{t('pages.athleteCharges.bulkScopeHint')}</p>
-                      <Button
-                        type="button"
-                        onClick={() => void assignBulkCharges()}
-                        disabled={
-                          !bulkChargeItemId ||
-                          bulkSaving ||
-                          (bulkTargetType === 'selected' && selectedAthleteIds.length === 0) ||
-                          (bulkTargetType === 'group' && !bulkGroupId) ||
-                          (bulkTargetType === 'team' && !bulkTeamId)
-                        }
-                      >
-                        {t('pages.athleteCharges.assignBulk')}
-                      </Button>
-                      </div>
-                    </details>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
 
-                    <details className="rounded-xl border border-amateur-border bg-amateur-surface p-4">
-                      <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
-                        {t('pages.athleteCharges.periodicTitle')}
-                      </summary>
-                      <p className="mt-2 text-sm text-amateur-muted">{t('pages.athleteCharges.periodicHint')}</p>
-                      <div className="mt-4 space-y-3">
+            {/* Single action drawer. The segmented control keeps actions visible without
+                opening every form simultaneously. */}
+            <section
+              aria-labelledby="charges-actions-title"
+              className="mb-6 rounded-2xl border border-amateur-border bg-amateur-surface p-4 shadow-sm"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 id="charges-actions-title" className="font-display text-base font-semibold text-amateur-ink">
+                    {t('pages.athleteCharges.actions.title')}
+                  </h2>
+                  <p className="mt-1 text-sm text-amateur-muted">{t('pages.athleteCharges.actions.hint')}</p>
+                </div>
+                <Link to="/app/athletes" className="text-sm font-semibold text-amateur-accent hover:underline">
+                  {t('pages.athletes.title')} →
+                </Link>
+              </div>
+
+              <div
+                role="tablist"
+                aria-label={t('pages.athleteCharges.actions.title')}
+                className="mt-4 grid gap-2 sm:grid-cols-3"
+              >
+                {drawerActions.map(({ key, labelKey, hintKey }) => {
+                  const isOpen = openAction === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      role="tab"
+                      aria-selected={isOpen}
+                      aria-controls={`charge-action-panel-${key}`}
+                      id={`charge-action-tab-${key}`}
+                      onClick={() => chooseAction(key)}
+                      className={`group rounded-xl border px-3 py-3 text-left text-sm transition-colors ${
+                        isOpen
+                          ? 'border-amateur-accent bg-amateur-accent/5 text-amateur-ink shadow-sm'
+                          : 'border-amateur-border bg-amateur-canvas text-amateur-ink hover:border-amateur-accent/40'
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold">{t(labelKey)}</span>
+                      <span className="mt-1 block text-xs text-amateur-muted">{t(hintKey)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {openAction === 'payment' ? (
+                <div
+                  id="charge-action-panel-payment"
+                  role="tabpanel"
+                  aria-labelledby="charge-action-tab-payment"
+                  className="mt-4 space-y-3 rounded-xl border border-amateur-border bg-amateur-canvas p-4"
+                >
+                  <p className="text-sm text-amateur-muted">{t('pages.athleteCharges.paymentHint')}</p>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span>{t('pages.athleteCharges.athlete')}</span>
+                    <select
+                      value={paymentForm.athleteId}
+                      onChange={(e) => setPaymentForm((current) => ({ ...current, athleteId: e.target.value }))}
+                      className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                    >
+                      <option value="">{t('pages.athleteCharges.chooseAthlete')}</option>
+                      {athletes.map((athlete) => (
+                        <option key={athlete.id} value={athlete.id}>
+                          {getPersonName(athlete)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span>{t('pages.athleteCharges.currency')}</span>
+                      <input
+                        value={paymentForm.currency}
+                        onChange={(e) =>
+                          setPaymentForm((current) => ({ ...current, currency: e.target.value.toUpperCase() }))
+                        }
+                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span>{t('pages.athleteCharges.paymentDate')}</span>
+                      <input
+                        type="datetime-local"
+                        value={paymentForm.paidAt}
+                        onChange={(e) => setPaymentForm((current) => ({ ...current, paidAt: e.target.value }))}
+                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                      />
+                    </label>
+                  </div>
+                  <fieldset className="space-y-2 rounded-xl border border-amateur-border bg-amateur-surface p-3">
+                    <legend className="px-1 text-sm font-medium">
+                      {t('pages.athleteCharges.allocateCharges')}
+                    </legend>
+                    {chargeOptionsForPayment.length === 0 ? (
+                      <p className="text-sm text-amateur-muted">{t('pages.athleteCharges.noOpenCharges')}</p>
+                    ) : (
+                      chargeOptionsForPayment.map((charge) => (
+                        <div key={charge.id} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem] sm:items-center">
+                          <div>
+                            <p className="font-medium text-amateur-ink">
+                              {charge.chargeItem?.name ?? charge.chargeItemId}
+                            </p>
+                            <p className="text-xs text-amateur-muted">
+                              {t('pages.athleteCharges.remaining')}:{' '}
+                              {charge.chargeItem?.currency ?? paymentForm.currency} {charge.remainingAmount}
+                              {charge.isOverdue ? ` · ${t('pages.athleteCharges.overdue')}` : ''}
+                            </p>
+                          </div>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max={charge.remainingAmount}
+                            value={paymentForm.allocations[charge.id] ?? ''}
+                            onChange={(e) =>
+                              setPaymentForm((current) => ({
+                                ...current,
+                                allocations: {
+                                  ...current.allocations,
+                                  [charge.id]: e.target.value,
+                                },
+                              }))
+                            }
+                            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                          />
+                        </div>
+                      ))
+                    )}
+                  </fieldset>
+                  <details className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2">
+                    <summary className="cursor-pointer text-sm font-medium text-amateur-ink">
+                      {t('pages.athleteCharges.actions.advancedDetails')}
+                    </summary>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span>{t('pages.athleteCharges.paymentMethod')}</span>
+                        <input
+                          value={paymentForm.method}
+                          onChange={(e) => setPaymentForm((current) => ({ ...current, method: e.target.value }))}
+                          placeholder={t('pages.athleteCharges.paymentMethodPlaceholder')}
+                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span>{t('pages.athleteCharges.reference')}</span>
+                        <input
+                          value={paymentForm.reference}
+                          onChange={(e) => setPaymentForm((current) => ({ ...current, reference: e.target.value }))}
+                          placeholder={t('pages.athleteCharges.referencePlaceholder')}
+                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+                        <span>{t('pages.athleteCharges.notes')}</span>
+                        <textarea
+                          value={paymentForm.notes}
+                          onChange={(e) => setPaymentForm((current) => ({ ...current, notes: e.target.value }))}
+                          rows={2}
+                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                        />
+                      </label>
+                    </div>
+                  </details>
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-amateur-border px-3 py-2 text-sm text-amateur-muted">
+                    <span>
+                      {t('pages.athleteCharges.paymentTotal')}: {paymentForm.currency} {paymentTotal.toFixed(2)}
+                    </span>
+                    <Button
+                      type="button"
+                      onClick={() => void submitPayment()}
+                      disabled={!paymentForm.athleteId || paymentTotal <= 0 || paymentSaving}
+                    >
+                      {t('pages.athleteCharges.recordPayment')}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {openAction === 'bulk' ? (
+                <div
+                  id="charge-action-panel-bulk"
+                  role="tabpanel"
+                  aria-labelledby="charge-action-tab-bulk"
+                  className="mt-4 space-y-3 rounded-xl border border-amateur-border bg-amateur-canvas p-4"
+                >
+                  <p className="text-sm text-amateur-muted">{t('pages.athleteCharges.bulkHint')}</p>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span>{t('pages.athleteCharges.bulkTargetType')}</span>
+                    <select
+                      value={bulkTargetType}
+                      onChange={(e) => {
+                        const next = e.target.value as BulkChargeTargetType;
+                        setBulkTargetType(next);
+                        if (next !== 'group') setBulkGroupId('');
+                        if (next !== 'team') setBulkTeamId('');
+                      }}
+                      className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                    >
+                      <option value="selected">{t('pages.athleteCharges.bulkTargetSelected')}</option>
+                      <option value="group">{t('pages.athleteCharges.bulkTargetGroup')}</option>
+                      <option value="team">{t('pages.athleteCharges.bulkTargetTeam')}</option>
+                    </select>
+                  </label>
+                  {bulkTargetType === 'selected' ? (
+                    <div className="rounded-xl border border-amateur-border bg-amateur-surface p-3">
+                      <p className="text-sm text-amateur-muted">
+                        {hasSelection
+                          ? t('pages.athleteCharges.selectedCount', { count: selectedAthletes.length })
+                          : t('pages.athleteCharges.selectAthletesHint')}
+                      </p>
+                      {hasSelection ? (
+                        <ul className="mt-2 flex flex-wrap gap-2">
+                          {selectedAthletePreview.map((athlete) => (
+                            <li
+                              key={athlete.id}
+                              className="rounded-full border border-amateur-border bg-amateur-canvas px-3 py-1 text-xs text-amateur-ink"
+                            >
+                              {getPersonName(athlete)}
+                              {athlete.primaryGroupId
+                                ? ` · ${groupMap.get(athlete.primaryGroupId) ?? '—'}`
+                                : ''}
+                            </li>
+                          ))}
+                          {selectedAthletes.length > selectedAthletePreview.length ? (
+                            <li className="rounded-full border border-dashed border-amateur-border px-3 py-1 text-xs text-amateur-muted">
+                              +{selectedAthletes.length - selectedAthletePreview.length}
+                            </li>
+                          ) : null}
+                        </ul>
+                      ) : null}
+                      <details className="mt-3 rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2">
+                        <summary className="cursor-pointer text-sm font-medium text-amateur-ink">
+                          {t('pages.athleteCharges.selectAthletes')}
+                        </summary>
+                        <div className="mt-3 grid gap-2 md:grid-cols-2">
+                          {athletes.map((athlete) => (
+                            <label
+                              key={athlete.id}
+                              className="flex items-start gap-3 rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2 text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedAthleteIds.includes(athlete.id)}
+                                onChange={() => toggleSelection(athlete)}
+                              />
+                              <span>
+                                <span className="block font-medium text-amateur-ink">
+                                  {getPersonName(athlete)}
+                                </span>
+                                <span className="block text-xs text-amateur-muted">
+                                  {athlete.primaryGroupId
+                                    ? groupMap.get(athlete.primaryGroupId) ?? '—'
+                                    : t('pages.athletes.noGroup')}
+                                </span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </details>
+                    </div>
+                  ) : null}
+                  {bulkTargetType === 'group' ? (
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span>{t('pages.athletes.primaryGroup')}</span>
+                      <select
+                        value={bulkGroupId}
+                        onChange={(e) => {
+                          setBulkGroupId(e.target.value);
+                          setBulkTeamId('');
+                        }}
+                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                      >
+                        <option value="">{t('pages.athletes.allGroups')}</option>
+                        {groups.map((group) => (
+                          <option key={group.id} value={group.id}>
+                            {group.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  {bulkTargetType === 'team' ? (
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span>{t('pages.teams.title')}</span>
+                      <select
+                        value={bulkTeamId}
+                        onChange={(e) => setBulkTeamId(e.target.value)}
+                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                      >
+                        <option value="">{t('pages.athletes.allTeams')}</option>
+                        {visibleBulkTeams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  {bulkTargetType !== 'selected' ? (
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span>{t('pages.athleteCharges.bulkStatusScope')}</span>
+                      <select
+                        value={bulkStatusScope}
+                        onChange={(e) => setBulkStatusScope(e.target.value as BulkChargeStatusScope)}
+                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                      >
+                        <option value="default">{t('pages.athleteCharges.bulkStatusScopeDefault')}</option>
+                        <option value="all">{t('pages.athleteCharges.bulkStatusScopeAll')}</option>
+                        {(['trial', 'active', 'paused', 'inactive', 'archived'] as AthleteStatus[]).map((athleteStatus) => (
+                          <option key={athleteStatus} value={athleteStatus}>
+                            {t('pages.athleteCharges.bulkStatusScopeSingle', {
+                              status: getAthleteStatusLabel(t, athleteStatus),
+                            })}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span>{t('pages.athleteCharges.item')}</span>
+                    <select
+                      value={bulkChargeItemId}
+                      onChange={(e) => setBulkChargeItemId(e.target.value)}
+                      className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                    >
+                      <option value="">{t('pages.athleteCharges.chooseItem')}</option>
+                      {chargeItems.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name} ({item.currency} {item.defaultAmount})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span>{t('pages.athleteCharges.amount')}</span>
+                      <input
+                        value={bulkAmount}
+                        onChange={(e) => setBulkAmount(e.target.value)}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder={t('pages.athleteCharges.useDefaultAmount')}
+                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span>{t('pages.athleteCharges.due')}</span>
+                      <input
+                        type="date"
+                        value={bulkDueDate}
+                        onChange={(e) => setBulkDueDate(e.target.value)}
+                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                      />
+                    </label>
+                  </div>
+                  <div className="rounded-xl border border-dashed border-amateur-border px-3 py-2 text-sm text-amateur-muted">
+                    {bulkTargetType === 'selected'
+                      ? t('pages.athleteCharges.selectedCount', { count: selectedAthletes.length })
+                      : bulkTargetType === 'group'
+                        ? t('pages.athleteCharges.bulkTargetSummaryGroup', {
+                            group: groups.find((group) => group.id === bulkGroupId)?.name ?? '—',
+                          })
+                        : t('pages.athleteCharges.bulkTargetSummaryTeam', {
+                            team: teams.find((team) => team.id === bulkTeamId)?.name ?? '—',
+                          })}
+                  </div>
+                  <p className="text-xs text-amateur-muted">{t('pages.athleteCharges.bulkScopeHint')}</p>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      onClick={() => void assignBulkCharges()}
+                      disabled={
+                        !bulkChargeItemId ||
+                        bulkSaving ||
+                        (bulkTargetType === 'selected' && selectedAthleteIds.length === 0) ||
+                        (bulkTargetType === 'group' && !bulkGroupId) ||
+                        (bulkTargetType === 'team' && !bulkTeamId)
+                      }
+                    >
+                      {t('pages.athleteCharges.assignBulk')}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {openAction === 'periodic' ? (
+                <div
+                  id="charge-action-panel-periodic"
+                  role="tabpanel"
+                  aria-labelledby="charge-action-tab-periodic"
+                  className="mt-4 space-y-3 rounded-xl border border-amateur-border bg-amateur-canvas p-4"
+                >
+                  <p className="text-sm text-amateur-muted">{t('pages.athleteCharges.periodicHint')}</p>
                   <label className="flex flex-col gap-1 text-sm">
                     <span>{t('pages.athleteCharges.targetType')}</span>
                     <select
@@ -860,48 +1150,52 @@ export function AthleteChargesPage() {
                     </label>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span>{t('pages.athleteCharges.amount')}</span>
-                      <input
-                        value={periodicAmount}
-                        onChange={(e) => {
-                          setPeriodicAmount(e.target.value);
-                          setPeriodicPreview(null);
-                        }}
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder={t('pages.athleteCharges.useDefaultAmount')}
-                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span>{t('pages.athleteCharges.due')}</span>
-                      <input
-                        type="date"
-                        value={periodicDueDate}
-                        onChange={(e) => {
-                          setPeriodicDueDate(e.target.value);
-                          setPeriodicPreview(null);
-                        }}
-                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                      />
-                    </label>
-                  </div>
-
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span>{t('pages.athleteCharges.notes')}</span>
-                    <textarea
-                      value={periodicNotes}
-                      onChange={(e) => {
-                        setPeriodicNotes(e.target.value);
-                        setPeriodicPreview(null);
-                      }}
-                      rows={2}
-                      className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                    />
-                  </label>
+                  <details className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2">
+                    <summary className="cursor-pointer text-sm font-medium text-amateur-ink">
+                      {t('pages.athleteCharges.actions.advancedDetails')}
+                    </summary>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span>{t('pages.athleteCharges.amount')}</span>
+                        <input
+                          value={periodicAmount}
+                          onChange={(e) => {
+                            setPeriodicAmount(e.target.value);
+                            setPeriodicPreview(null);
+                          }}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder={t('pages.athleteCharges.useDefaultAmount')}
+                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span>{t('pages.athleteCharges.due')}</span>
+                        <input
+                          type="date"
+                          value={periodicDueDate}
+                          onChange={(e) => {
+                            setPeriodicDueDate(e.target.value);
+                            setPeriodicPreview(null);
+                          }}
+                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+                        <span>{t('pages.athleteCharges.notes')}</span>
+                        <textarea
+                          value={periodicNotes}
+                          onChange={(e) => {
+                            setPeriodicNotes(e.target.value);
+                            setPeriodicPreview(null);
+                          }}
+                          rows={2}
+                          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
+                        />
+                      </label>
+                    </div>
+                  </details>
 
                   <div className="rounded-xl border border-dashed border-amateur-border px-3 py-2 text-sm text-amateur-muted">
                     {periodicTargetType === 'selected'
@@ -938,169 +1232,42 @@ export function AthleteChargesPage() {
                     </div>
                   ) : null}
 
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => void previewPeriodicCharges()}
-                            disabled={
-                              periodicLoading ||
-                              !periodicChargeItemId ||
-                              !periodicKey.trim() ||
-                              !periodicLabel.trim() ||
-                              (periodicTargetType === 'selected' && selectedAthleteIds.length === 0) ||
-                              (periodicTargetType === 'group' && !periodicGroupId) ||
-                              (periodicTargetType === 'team' && !periodicTeamId)
-                            }
-                          >
-                            {t('pages.athleteCharges.previewPeriodic')}
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={() => void generatePeriodicCharges()}
-                            disabled={
-                              periodicSaving ||
-                              !periodicChargeItemId ||
-                              !periodicKey.trim() ||
-                              !periodicLabel.trim() ||
-                              (periodicTargetType === 'selected' && selectedAthleteIds.length === 0) ||
-                              (periodicTargetType === 'group' && !periodicGroupId) ||
-                              (periodicTargetType === 'team' && !periodicTeamId)
-                            }
-                          >
-                            {t('pages.athleteCharges.generatePeriodic')}
-                          </Button>
-                        </div>
-                      </div>
-                    </details>
-
-                    <details className="rounded-xl border border-amateur-border bg-amateur-surface p-4">
-                      <summary className="cursor-pointer text-sm font-semibold text-amateur-ink">
-                        {t('pages.athleteCharges.paymentTitle')}
-                      </summary>
-                      <p className="mt-2 text-sm text-amateur-muted">{t('pages.athleteCharges.paymentHint')}</p>
-                      <div className="mt-4 space-y-3">
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span>{t('pages.athleteCharges.athlete')}</span>
-                    <select
-                      value={paymentForm.athleteId}
-                      onChange={(e) => setPaymentForm((current) => ({ ...current, athleteId: e.target.value }))}
-                      className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => void previewPeriodicCharges()}
+                      disabled={
+                        periodicLoading ||
+                        !periodicChargeItemId ||
+                        !periodicKey.trim() ||
+                        !periodicLabel.trim() ||
+                        (periodicTargetType === 'selected' && selectedAthleteIds.length === 0) ||
+                        (periodicTargetType === 'group' && !periodicGroupId) ||
+                        (periodicTargetType === 'team' && !periodicTeamId)
+                      }
                     >
-                      <option value="">{t('pages.athleteCharges.chooseAthlete')}</option>
-                      {athletes.map((athlete) => (
-                        <option key={athlete.id} value={athlete.id}>
-                          {getPersonName(athlete)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span>{t('pages.athleteCharges.currency')}</span>
-                      <input
-                        value={paymentForm.currency}
-                        onChange={(e) =>
-                          setPaymentForm((current) => ({ ...current, currency: e.target.value.toUpperCase() }))
-                        }
-                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span>{t('pages.athleteCharges.paymentDate')}</span>
-                      <input
-                        type="datetime-local"
-                        value={paymentForm.paidAt}
-                        onChange={(e) => setPaymentForm((current) => ({ ...current, paidAt: e.target.value }))}
-                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                      />
-                    </label>
-                  </div>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span>{t('pages.athleteCharges.allocateCharges')}</span>
-                    <div className="space-y-2 rounded-xl border border-amateur-border bg-amateur-surface p-3">
-                      {chargeOptionsForPayment.length === 0 ? (
-                        <p className="text-sm text-amateur-muted">{t('pages.athleteCharges.noOpenCharges')}</p>
-                      ) : (
-                        chargeOptionsForPayment.map((charge) => (
-                          <div key={charge.id} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem] sm:items-center">
-                            <div>
-                              <p className="font-medium text-amateur-ink">
-                                {charge.chargeItem?.name ?? charge.chargeItemId}
-                              </p>
-                              <p className="text-xs text-amateur-muted">
-                                {t('pages.athleteCharges.remaining')}:{' '}
-                                {charge.chargeItem?.currency ?? paymentForm.currency} {charge.remainingAmount}
-                                {charge.isOverdue ? ` · ${t('pages.athleteCharges.overdue')}` : ''}
-                              </p>
-                            </div>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              max={charge.remainingAmount}
-                              value={paymentForm.allocations[charge.id] ?? ''}
-                              onChange={(e) =>
-                                setPaymentForm((current) => ({
-                                  ...current,
-                                  allocations: {
-                                    ...current.allocations,
-                                    [charge.id]: e.target.value,
-                                  },
-                                }))
-                              }
-                              className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2"
-                            />
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </label>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span>{t('pages.athleteCharges.paymentMethod')}</span>
-                      <input
-                        value={paymentForm.method}
-                        onChange={(e) => setPaymentForm((current) => ({ ...current, method: e.target.value }))}
-                        placeholder={t('pages.athleteCharges.paymentMethodPlaceholder')}
-                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span>{t('pages.athleteCharges.reference')}</span>
-                      <input
-                        value={paymentForm.reference}
-                        onChange={(e) => setPaymentForm((current) => ({ ...current, reference: e.target.value }))}
-                        placeholder={t('pages.athleteCharges.referencePlaceholder')}
-                        className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                      />
-                    </label>
-                  </div>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span>{t('pages.athleteCharges.notes')}</span>
-                    <textarea
-                      value={paymentForm.notes}
-                      onChange={(e) => setPaymentForm((current) => ({ ...current, notes: e.target.value }))}
-                      rows={2}
-                      className="rounded-xl border border-amateur-border bg-amateur-surface px-3 py-2"
-                    />
-                  </label>
-                  <div className="rounded-xl border border-dashed border-amateur-border px-3 py-2 text-sm text-amateur-muted">
-                    {t('pages.athleteCharges.paymentTotal')}: {paymentForm.currency} {paymentTotal.toFixed(2)}
-                  </div>
-                        <Button
-                          type="button"
-                          onClick={() => void submitPayment()}
-                          disabled={!paymentForm.athleteId || paymentTotal <= 0 || paymentSaving}
-                        >
-                          {t('pages.athleteCharges.recordPayment')}
-                        </Button>
-                      </div>
-                    </details>
+                      {t('pages.athleteCharges.previewPeriodic')}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => void generatePeriodicCharges()}
+                      disabled={
+                        periodicSaving ||
+                        !periodicChargeItemId ||
+                        !periodicKey.trim() ||
+                        !periodicLabel.trim() ||
+                        (periodicTargetType === 'selected' && selectedAthleteIds.length === 0) ||
+                        (periodicTargetType === 'group' && !periodicGroupId) ||
+                        (periodicTargetType === 'team' && !periodicTeamId)
+                      }
+                    >
+                      {t('pages.athleteCharges.generatePeriodic')}
+                    </Button>
                   </div>
                 </div>
-              </section>
-            </div>
+              ) : null}
+            </section>
           </>
         )}
 
@@ -1112,25 +1279,42 @@ export function AthleteChargesPage() {
         ) : loading ? (
           <p className="text-sm text-amateur-muted">{t('app.states.loading')}</p>
         ) : items.length === 0 ? (
-          <EmptyState title={t('pages.athleteCharges.empty')} hint={t('pages.finance.hubBody')} />
+          <EmptyState title={t('pages.athleteCharges.empty')} hint={t('pages.athleteCharges.emptyHint')} />
         ) : (
           <div className="space-y-6">
-            <section>
-              <div className="space-y-3 md:hidden">
+            <section aria-labelledby="charges-list-title">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 id="charges-list-title" className="font-display text-base font-semibold text-amateur-ink">
+                  {t('pages.athleteCharges.listTitle')}
+                </h2>
+                <p className="text-xs text-amateur-muted">{t('pages.athleteCharges.listCount', { count: items.length })}</p>
+              </div>
+              <div className="mt-3 space-y-3 md:hidden">
                 {items.map((charge) => (
                   <article key={charge.id} className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-amateur-ink">{charge.chargeItem?.name ?? charge.chargeItemId}</p>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-amateur-ink">
+                          {charge.chargeItem?.name ?? charge.chargeItemId}
+                        </p>
                         <p className="mt-1 text-sm text-amateur-muted">{getChargeCurrencyAmount(charge)}</p>
                       </div>
-                      <span className="text-xs font-medium text-amateur-muted">{formatDate(charge.dueDate, i18n.language)}</span>
+                      <span className="whitespace-nowrap text-xs font-medium text-amateur-muted">
+                        {formatDate(charge.dueDate, i18n.language)}
+                      </span>
                     </div>
                     <div className="mt-3 space-y-2 text-sm text-amateur-muted">
                       <p>
                         {t('pages.athleteCharges.remaining')}: {(charge.chargeItem?.currency ?? '')} {charge.remainingAmount}
                       </p>
-                      <p>{getChargeStatusLabel(t, charge.derivedStatus ?? charge.status)}</p>
+                      <p className="flex flex-wrap items-center gap-2">
+                        <span>{getChargeStatusLabel(t, charge.derivedStatus ?? charge.status)}</span>
+                        {charge.isOverdue ? (
+                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                            {t('pages.athleteCharges.overdue')}
+                          </span>
+                        ) : null}
+                      </p>
                       <Link
                         to={`/app/athletes/${charge.athleteId}`}
                         className="inline-flex font-medium text-amateur-accent hover:underline"
@@ -1142,6 +1326,7 @@ export function AthleteChargesPage() {
                       value={charge.status}
                       onChange={(e) => void updateChargeStatus(charge.id, e.target.value as AthleteChargeStatus)}
                       className="mt-3 w-full rounded-lg border border-amateur-border bg-amateur-surface px-3 py-2 text-sm"
+                      aria-label={t('pages.athleteCharges.status')}
                     >
                       {chargeStatuses.map((chargeStatus) => (
                         <option key={chargeStatus} value={chargeStatus}>
@@ -1152,7 +1337,7 @@ export function AthleteChargesPage() {
                   </article>
                 ))}
               </div>
-              <div className="hidden overflow-x-auto md:block">
+              <div className="mt-3 hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[760px] text-left text-sm">
                   <thead>
                     <tr className="border-b border-amateur-border text-amateur-muted">
@@ -1197,6 +1382,7 @@ export function AthleteChargesPage() {
                             value={c.status}
                             onChange={(e) => void updateChargeStatus(c.id, e.target.value as AthleteChargeStatus)}
                             className="rounded-lg border border-amateur-border bg-amateur-canvas px-2 py-1"
+                            aria-label={t('pages.athleteCharges.status')}
                           >
                             {chargeStatuses.map((chargeStatus) => (
                               <option key={chargeStatus} value={chargeStatus}>

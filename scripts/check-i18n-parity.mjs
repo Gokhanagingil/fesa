@@ -184,6 +184,34 @@ const scopedPrefixes = [
   'portal.home.pastRequestsHint',
   'portal.activate.invalidRecoverLink',
   'portal.activate.invalidLoginLink',
+  // Athlete Charges Flow Flattening & Collections Clarity Pack —
+  // protect the new calmer staff finance copy across both locales so
+  // the action drawer, attention strip, and finance hub primary surface
+  // never silently drift.
+  'pages.athleteCharges.subtitle',
+  'pages.athleteCharges.emptyHint',
+  'pages.athleteCharges.listTitle',
+  'pages.athleteCharges.listCount',
+  'pages.athleteCharges.actions.title',
+  'pages.athleteCharges.actions.hint',
+  'pages.athleteCharges.actions.advancedDetails',
+  'pages.athleteCharges.actions.recordPayment',
+  'pages.athleteCharges.actions.recordPaymentHint',
+  'pages.athleteCharges.actions.bulkAssign',
+  'pages.athleteCharges.actions.bulkAssignHint',
+  'pages.athleteCharges.actions.periodic',
+  'pages.athleteCharges.actions.periodicHint',
+  'pages.athleteCharges.attention.title',
+  'pages.athleteCharges.attention.summary',
+  'pages.athleteCharges.attention.empty',
+  'pages.athleteCharges.attention.openFollowUp',
+  'pages.athleteCharges.attention.viewCharges',
+  'pages.athleteCharges.selectAthletesHint',
+  'pages.athleteCharges.summary.totalOverdueHint',
+  'pages.finance.athleteChargesPrimaryHint',
+  'pages.finance.openAthleteCharges',
+  'pages.finance.moreToolsTitle',
+  'pages.finance.moreToolsHint',
 ];
 
 function flattenKeys(input, prefix = '') {
