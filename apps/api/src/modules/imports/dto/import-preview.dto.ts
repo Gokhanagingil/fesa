@@ -13,10 +13,15 @@ import {
 } from 'class-validator';
 
 export const IMPORT_ENTITY_KEYS = [
+  'sport_branches',
+  'coaches',
+  'groups',
+  'teams',
   'athletes',
   'guardians',
   'athlete_guardians',
-  'groups',
+  'charge_items',
+  'inventory_items',
 ] as const;
 export type ImportEntityKey = (typeof IMPORT_ENTITY_KEYS)[number];
 
