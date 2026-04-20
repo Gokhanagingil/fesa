@@ -1959,62 +1959,83 @@
     "entryGuardianBody": "Kulüpten gelen talepleri ve bağlı sporcu özetlerini görmek için aile portalını kullanın."
   },
   "portal": {
-    "brand": "Amateur aile portalı",
-    "subtitle": "Veli takibi için sakin ve güvenli görünüm.",
+    "brand": "Aile portalı",
+    "subtitle": "Aileniz için sakin, kulübe özel bir alan.",
     "nav": {
-      "home": "Ana sayfa"
+      "home": "Ana sayfa",
+      "family": "Aile",
+      "updates": "Güncellemeler"
+    },
+    "aria": {
+      "brandHome": "Aile portalı ana sayfasına git",
+      "bottomNav": "Aile portalı menüsü"
     },
     "actions": {
       "logout": "Çıkış yap",
-      "open": "Talebi aç",
-      "view": "Talebi görüntüle"
+      "signOut": "Çıkış yap",
+      "open": "Aç",
+      "view": "Görüntüle"
     },
     "login": {
-      "badge": "Veli erişimi",
-      "title": "Aile portalına giriş yapın",
-      "subtitle": "Veliler için sakin ve sınırlı görünüm.",
-      "hint": "Yalnız ailenize bağlı sporcuları ve talepleri görmek için kulüp davetindeki bilgileri kullanın.",
-      "club": "Kulüp",
+      "badge": "Aile girişi",
+      "title": "Aile alanınıza giriş yapın",
+      "subtitle": "Aileniz için sıcak ve özel bir görünüm.",
+      "hint": "Kulübünüzde kayıtlı e-postayı kullanın. Yalnızca ailenize bağlı sporcuları ve talepleri göstereceğiz.",
+      "club": "Kulübünüz",
       "selectClub": "Kulübünüzü seçin",
       "email": "E-posta",
       "password": "Şifre",
       "submit": "Giriş yap",
-      "submitting": "Giriş yapılıyor..."
+      "submitting": "Giriş yapılıyor…",
+      "invitationHint": "Yeni misiniz? Kulübünüz size e-posta ile bir aktivasyon bağlantısı gönderecek — açık bir kayıt sayfası yok.",
+      "signedOutHint": "Çıkış yaptınız. Bu görünüm kulüp sporcularının veli ve aileleri içindir."
     },
     "activate": {
-      "badge": "Portal daveti",
-      "title": "Veli erişiminizi etkinleştirin",
-      "subtitle": "Güvenli aile erişimi için kurulumu tamamlayın.",
-      "hint": "Bir kez şifre oluşturun; sonra sporcu güncellemeleri ve bekleyen talepleri görmek için buraya dönebilirsiniz.",
-      "password": "Şifre oluştur",
-      "submit": "Erişimi etkinleştir",
-      "submitting": "Etkinleştiriliyor...",
-      "invalidLink": "Bu davet bağlantısı geçersiz veya süresi dolmuş."
+      "badge": "Hoş geldiniz",
+      "title": "Aile erişiminizi kuralım",
+      "subtitle": "Yalnız size özel, tek seferlik bir kurulum.",
+      "hint": "Hatırlayacağınız bir şifre oluşturun. Bir sonraki girişte bu e-posta ve şifreyle ailenizin portalına ulaşırsınız.",
+      "password": "Şifre oluşturun",
+      "passwordHint": "En az 8 karakter. Yalnızca sizin bileceğiniz bir şey olsun.",
+      "confirmPassword": "Şifreyi doğrulayın",
+      "submit": "Erişimimi etkinleştir",
+      "submitting": "Kurulum yapılıyor…",
+      "invalidLink": "Bu davet bağlantısı artık geçerli değil. Lütfen kulübünüzden yeni bir bağlantı isteyin.",
+      "errorTooShort": "Lütfen en az 8 karakter kullanın.",
+      "errorMismatch": "İki şifre henüz aynı değil.",
+      "safetyNote": "Bu bağlantıyı yalnızca kulübün davet ettiği aile kullanabilir."
     },
     "home": {
       "title": "Aile portalı",
-      "subtitle": "Bağlı sporcuları, bekleyen talepleri ve kulübü bekleyen konuları görün.",
-      "greeting": "Hoş geldiniz, {{name}}",
-      "empty": "Henüz görünür portal verisi yok.",
-      "stats": {
-        "linkedAthletes": "Bağlı sporcular",
-        "pendingActions": "Bekleyen aksiyonlar",
-        "awaitingReview": "Personel bekleniyor",
-        "outstandingAthletes": "Bakiyesi olan sporcular"
-      },
-      "readinessBadge": "Aile durumu",
-      "readinessTitle": "Dikkat gerektirenler",
-      "readinessHint": "Güncel genel durum: {{status}}",
-      "actionsTitle": "Kulüpten gelen talepler",
-      "actionsHint": "Onayınız veya bilgi güncellemeniz gereken kayıtları açın.",
-      "noActions": "Şu anda açık aile talebi yok.",
-      "athletesTitle": "Bağlı sporcularınız",
-      "athletesHint": "Veli kaydınıza bağlı sporcuların sınırlı özeti.",
+      "subtitle": "Ailenizin kulübe sakin bir bakışı.",
+      "greeting": "Merhaba {{name}},",
+      "welcomeFallback": "Kulübünüzün bugün ailenizle paylaştıkları burada.",
+      "empty": "Henüz gösterilecek bir şey yok — lütfen daha sonra tekrar bakın.",
+      "attentionTitle": "Dikkatinizi bekleyenler",
+      "attentionHint": "Yalnızca sizden küçük bir adım bekleyen kayıtları gösteriyoruz.",
+      "actionOpen": "Aç",
+      "awaitingReviewLine": "{{count}} kayıt kulüp tarafından inceleniyor.",
+      "financeLine": "{{outstanding}} sporcunun açık bakiyesi var ({{overdue}} adet gecikmiş).",
+      "allClearTitle": "Her şey yolunda",
+      "allClearBody": "Şu anda sizden bekleyen bir şey yok. Yeni bir konu olduğunda burada haberdar ederiz.",
+      "todayTitle": "Bugün",
+      "todayHint": "Ailenizin bugünkü programı.",
+      "todayBadgeTraining": "Antrenman",
+      "todayBadgeLesson": "Ders",
+      "trainingDefault": "Antrenman",
+      "privateLessonDefault": "Özel ders",
+      "familyTitle": "Ailem",
+      "familyHint": "Hesabınıza bağlı her sporcu için kısa bir özet.",
+      "familyEmpty": "Hesabınıza henüz bir sporcu bağlanmamış — kulübünüz kısa süre içinde ekleyecek.",
       "primaryContact": "Birincil iletişim",
       "outstanding": "Açık bakiye",
-      "overdue": "Gecikmiş",
+      "overdue": "Gecikmiş:",
       "nextTraining": "Sıradaki antrenman",
-      "nextLesson": "Sıradaki özel ders"
+      "nextLesson": "Sıradaki özel ders",
+      "allRequestsTitle": "Tüm talepler",
+      "allRequestsHint": "Kulübün ailenizle paylaştığı her şey tek bir yerde.",
+      "updatesTitle": "Kulüpten",
+      "updatesPlaceholder": "Kulübünüz yeni bir duyuru paylaştığında burada sessizce görünecek."
     }
   }
 }

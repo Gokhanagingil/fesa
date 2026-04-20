@@ -67,6 +67,11 @@ export class GuardianPortalController {
     return this.portal.listTenants();
   }
 
+  @Get('branding/:tenantId')
+  branding(@Param('tenantId') tenantId: string) {
+    return this.portal.getTenantBranding(tenantId);
+  }
+
   @Post('activate/:token')
   async activate(
     @Param('token') token: string,

@@ -21,6 +21,7 @@ import { ClubGroup } from '../../database/entities/club-group.entity';
 import { FamilyActionService } from '../family-action/family-action.service';
 import { FinanceService } from '../finance/finance.service';
 import { TenantService } from '../tenant/tenant.service';
+import { TenantBrandingService } from '../tenant/tenant-branding.service';
 import { GUARDIAN_PORTAL_SESSION_COOKIE } from './guardian-portal.constants';
 
 type AccessStatus = GuardianPortalAccess['status'];
@@ -75,6 +76,7 @@ export class GuardianPortalService {
     private readonly familyActions: FamilyActionService,
     private readonly finance: FinanceService,
     private readonly tenants: TenantService,
+    private readonly branding: TenantBrandingService,
     private readonly config: ConfigService,
   ) {}
 
@@ -165,7 +167,11 @@ export class GuardianPortalService {
   }
 
   async listTenants() {
-    return this.tenants.findAll();
+    return this.branding.listPublicBranding();
+  }
+
+  async getTenantBranding(tenantId: string) {
+    return this.branding.getForTenant(tenantId);
   }
 
   private async assertGuardian(tenantId: string, guardianId: string): Promise<Guardian> {
@@ -330,6 +336,7 @@ export class GuardianPortalService {
       throw new UnauthorizedException('Portal access is disabled');
     }
 
+    const brand = await this.branding.getForTenant(access.tenantId);
     return {
       token,
       tenantId: access.tenantId,
@@ -338,6 +345,7 @@ export class GuardianPortalService {
       guardianName: access.guardian ? this.getGuardianName(access.guardian) : access.guardianId,
       email: access.email,
       expiresAt: access.inviteTokenExpiresAt,
+      branding: brand,
     };
   }
 
@@ -544,6 +552,37 @@ export class GuardianPortalService {
         }))[0] ?? null,
     }));
 
+    const brand = await this.branding.getForTenant(tenantId);
+
+    const todayBoundary = new Date();
+    todayBoundary.setHours(23, 59, 59, 999);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayTraining = visibleTraining
+      .filter((session) => session.scheduledStart >= todayStart && session.scheduledStart <= todayBoundary)
+      .slice(0, 3)
+      .map((session) => ({
+        id: session.id,
+        title: session.title,
+        scheduledStart: session.scheduledStart,
+        location: session.location,
+      }));
+    const todayLessons = upcomingLessons
+      .filter((lesson) => lesson.scheduledStart >= todayStart && lesson.scheduledStart <= todayBoundary)
+      .slice(0, 3)
+      .map((lesson) => ({
+        id: lesson.id,
+        scheduledStart: lesson.scheduledStart,
+        athleteId: lesson.athleteId,
+        athleteName: lesson.athlete
+          ? `${lesson.athlete.preferredName || lesson.athlete.firstName} ${lesson.athlete.lastName}`
+          : lesson.athleteId,
+        coachName: lesson.coach
+          ? `${lesson.coach.preferredName || lesson.coach.firstName} ${lesson.coach.lastName}`
+          : null,
+      }));
+
     return {
       guardian: {
         id: guardian.id,
@@ -556,12 +595,17 @@ export class GuardianPortalService {
         activatedAt: access.activatedAt,
         lastLoginAt: access.lastLoginAt,
       },
+      branding: brand,
       readiness,
       linkedAthletes,
       actions: readiness.actions,
       finance: {
         outstandingAthletes: linkedAthletes.filter((athlete) => Number(athlete.outstandingAmount) > 0).length,
         overdueAthletes: linkedAthletes.filter((athlete) => Number(athlete.overdueAmount) > 0).length,
+      },
+      today: {
+        training: todayTraining,
+        privateLessons: todayLessons,
       },
     };
   }

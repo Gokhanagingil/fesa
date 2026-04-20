@@ -1929,62 +1929,83 @@
     "guardianCardBody": "Use the separate family portal for invitations, family actions, and athlete-linked updates."
   },
   "portal": {
-    "brand": "Amateur family portal",
-    "subtitle": "A calm, secure view for guardian follow-through.",
+    "brand": "Family portal",
+    "subtitle": "A calm, club-branded space for your family.",
     "nav": {
-      "home": "Home"
+      "home": "Home",
+      "family": "Family",
+      "updates": "Updates"
+    },
+    "aria": {
+      "brandHome": "Go to family portal home",
+      "bottomNav": "Family portal navigation"
     },
     "actions": {
       "logout": "Sign out",
-      "open": "Open request",
-      "view": "View request"
+      "signOut": "Sign out",
+      "open": "Open",
+      "view": "View"
     },
     "login": {
-      "badge": "Guardian access",
-      "title": "Sign in to your family portal",
-      "subtitle": "A calm, limited view for guardians.",
-      "hint": "Use the club invitation details so you only see athletes and requests linked to your family.",
-      "club": "Club",
+      "badge": "Family sign in",
+      "title": "Sign in to your family space",
+      "subtitle": "A warm, private view for your family.",
+      "hint": "Use the email your club has on file. We will only show you the athletes and requests linked to your family.",
+      "club": "Your club",
       "selectClub": "Select your club",
       "email": "Email",
       "password": "Password",
       "submit": "Sign in",
-      "submitting": "Signing in..."
+      "submitting": "Signing in…",
+      "invitationHint": "New here? Your club will send you an activation link by email — there is no public sign-up.",
+      "signedOutHint": "You're signed out. This view is for parents and guardians of club athletes."
     },
     "activate": {
-      "badge": "Portal invitation",
-      "title": "Activate your guardian access",
-      "subtitle": "Finish setup for secure family access.",
-      "hint": "Create a password once, then return here any time to review athlete updates and pending requests.",
-      "password": "Create password",
-      "submit": "Activate access",
-      "submitting": "Activating...",
-      "invalidLink": "This invite link is invalid or expired."
+      "badge": "Welcome",
+      "title": "Set up your family access",
+      "subtitle": "A one-time setup, just for you.",
+      "hint": "Create a password you'll remember. Next time, sign in with this email and password to see your family's portal.",
+      "password": "Create a password",
+      "passwordHint": "At least 8 characters. Choose something only you would know.",
+      "confirmPassword": "Confirm password",
+      "submit": "Activate my access",
+      "submitting": "Setting up…",
+      "invalidLink": "This invite link is no longer valid. Please ask your club for a fresh one.",
+      "errorTooShort": "Please use at least 8 characters.",
+      "errorMismatch": "The two passwords don't match yet.",
+      "safetyNote": "Only the family invited by your club can use this link."
     },
     "home": {
       "title": "Family portal",
-      "subtitle": "See linked athletes, pending requests, and what is waiting on the club.",
-      "greeting": "Welcome, {{name}}",
-      "empty": "No guardian portal data is visible yet.",
-      "stats": {
-        "linkedAthletes": "Linked athletes",
-        "pendingActions": "Pending actions",
-        "awaitingReview": "Waiting on staff",
-        "outstandingAthletes": "Athletes with balance"
-      },
-      "readinessBadge": "Family status",
-      "readinessTitle": "What needs attention",
-      "readinessHint": "Current overall status: {{status}}",
-      "actionsTitle": "Requests from the club",
-      "actionsHint": "Open the items that still need your confirmation or updated information.",
-      "noActions": "No open family requests right now.",
-      "athletesTitle": "Your linked athletes",
-      "athletesHint": "A limited summary of the athletes connected to your guardian record.",
+      "subtitle": "Your family's calm view of the club.",
+      "greeting": "Hi {{name}},",
+      "welcomeFallback": "Here is what your club is sharing with your family today.",
+      "empty": "We don't have anything to show yet — please check back later.",
+      "attentionTitle": "What needs your attention",
+      "attentionHint": "We only show items that need a small action from you.",
+      "actionOpen": "Open",
+      "awaitingReviewLine": "{{count}} item(s) are being reviewed by the club.",
+      "financeLine": "{{outstanding}} child(ren) has an open balance ({{overdue}} overdue).",
+      "allClearTitle": "All caught up",
+      "allClearBody": "There is nothing waiting on you right now. We'll let you know if anything comes up.",
+      "todayTitle": "Today",
+      "todayHint": "What is on your family's schedule today.",
+      "todayBadgeTraining": "Training",
+      "todayBadgeLesson": "Lesson",
+      "trainingDefault": "Training session",
+      "privateLessonDefault": "Private lesson",
+      "familyTitle": "My family",
+      "familyHint": "A short summary for each athlete linked to your account.",
+      "familyEmpty": "No athletes are linked to your account yet — your club will add them soon.",
       "primaryContact": "Primary contact",
-      "outstanding": "Outstanding",
-      "overdue": "Overdue",
+      "outstanding": "Open balance",
+      "overdue": "Overdue:",
       "nextTraining": "Next training",
-      "nextLesson": "Next private lesson"
+      "nextLesson": "Next private lesson",
+      "allRequestsTitle": "All requests",
+      "allRequestsHint": "Everything the club has shared with your family, in one place.",
+      "updatesTitle": "From the club",
+      "updatesPlaceholder": "When your club posts a new announcement, it will appear quietly right here."
     }
   }
 }

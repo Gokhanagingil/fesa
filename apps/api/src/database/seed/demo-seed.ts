@@ -275,6 +275,59 @@ function stableId(...parts: string[]): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
+/**
+ * Static brand presets for the seeded demo clubs. The portal renders these
+ * via the controlled tenant-branding payload (logo, display name, colors,
+ * welcome copy). Layout and component structure stay identical across all
+ * tenants — only the marks below vary, which is the whole point of the
+ * branded-shell, controlled-product-core model in Wave 17.
+ */
+const DEMO_BRANDING: Record<string, {
+  brandDisplayName: string;
+  brandTagline: string;
+  brandPrimaryColor: string;
+  brandAccentColor: string;
+  brandWelcomeTitle: string;
+  brandWelcomeMessage: string;
+}> = {
+  'kadikoy-genc-spor': {
+    brandDisplayName: 'Kadıköy Gençlik Spor',
+    brandTagline: 'Aileye yakın, sporcuya odaklı.',
+    brandPrimaryColor: '#0d4a3c',
+    brandAccentColor: '#1f8f6b',
+    brandWelcomeTitle: 'Hoş geldiniz, Kadıköy ailesi',
+    brandWelcomeMessage:
+      'Bu hafta için planı, ailenizi ilgilendiren tüm güncellemeleri ve kulübümüzden gelen küçük hatırlatmaları burada bulabilirsiniz.',
+  },
+  'fesa-basketbol': {
+    brandDisplayName: 'Fesa Basketbol',
+    brandTagline: 'Basketbolla büyüyen aileler.',
+    brandPrimaryColor: '#1d3557',
+    brandAccentColor: '#e63946',
+    brandWelcomeTitle: 'Fesa ailesi, hoş geldiniz',
+    brandWelcomeMessage:
+      'Sporcunuzla ilgili önemli notları, ödeme hatırlatmalarını ve antrenman programını sakince burada izleyebilirsiniz.',
+  },
+  'moda-voleybol-akademi': {
+    brandDisplayName: 'Moda Voleybol Akademi',
+    brandTagline: 'Saygılı, disiplinli, sıcak.',
+    brandPrimaryColor: '#264653',
+    brandAccentColor: '#2a9d8f',
+    brandWelcomeTitle: 'Moda Voleybol ailesine özel',
+    brandWelcomeMessage:
+      'Bu alan ailenizin özel görünümüdür. Aklınıza takılan bir şey olduğunda kulüp ekibimize buradan kolayca yazabilirsiniz.',
+  },
+  'marmara-futbol-okulu': {
+    brandDisplayName: 'Marmara Futbol Okulu',
+    brandTagline: 'Sahanın dışında da yanında.',
+    brandPrimaryColor: '#283618',
+    brandAccentColor: '#bc6c25',
+    brandWelcomeTitle: 'Marmara Futbol ailesi, hoş geldiniz',
+    brandWelcomeMessage:
+      'Antrenman, maç ve aile bilgilerinizi tek bir sakin ekranda topladık.',
+  },
+};
+
 async function ensureTenant(tenants: Repository<Tenant>, seed: { id: string; name: string; slug: string }): Promise<Tenant> {
   const existing = await tenants.findOne({
     where: [{ id: seed.id }, { slug: seed.slug }],
@@ -282,6 +335,18 @@ async function ensureTenant(tenants: Repository<Tenant>, seed: { id: string; nam
   const row = existing ?? tenants.create({ id: seed.id });
   row.name = seed.name;
   row.slug = seed.slug;
+
+  const brand = DEMO_BRANDING[seed.slug];
+  if (brand) {
+    row.brandDisplayName = brand.brandDisplayName;
+    row.brandTagline = brand.brandTagline;
+    row.brandPrimaryColor = brand.brandPrimaryColor;
+    row.brandAccentColor = brand.brandAccentColor;
+    row.brandWelcomeTitle = brand.brandWelcomeTitle;
+    row.brandWelcomeMessage = brand.brandWelcomeMessage;
+    row.brandUpdatedAt = row.brandUpdatedAt ?? new Date();
+  }
+
   return tenants.save(row);
 }
 

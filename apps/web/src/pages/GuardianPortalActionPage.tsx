@@ -97,7 +97,11 @@ export function GuardianPortalActionPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link to="/portal" className="text-sm font-medium text-amateur-accent hover:underline">
+          <Link
+            to="/portal"
+            className="text-sm font-medium hover:underline"
+            style={{ color: 'var(--portal-primary, #0d4a3c)' }}
+          >
             {t('pages.guardianPortal.backHome')}
           </Link>
           <h1 className="mt-2 font-display text-2xl font-semibold text-amateur-ink">{action.title}</h1>
