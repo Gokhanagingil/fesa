@@ -178,6 +178,83 @@ async function main() {
     'ImportsService should record an import batch on commit',
   );
 
+  // Onboarding Completion Pack guards.
+  assert.ok(
+    source.includes('getBatch(') && source.includes('OnboardingBatchDetail'),
+    'OnboardingService should expose getBatch returning OnboardingBatchDetail',
+  );
+  assert.ok(
+    source.includes('buildRecommendedActions') && source.includes('recommendedActions'),
+    'OnboardingService should build recommendedActions for the go-live review',
+  );
+  assert.ok(
+    source.includes('buildFirstThirtyDays') && source.includes('firstThirtyDays'),
+    'OnboardingService should expose firstThirtyDays guidance on the state report',
+  );
+  assert.ok(
+    source.includes('buildReplayHint') &&
+      source.includes('retryRecommended') &&
+      source.includes('replayHintKey'),
+    'OnboardingService should attach a calm replay hint to every history entry',
+  );
+  assert.ok(
+    source.includes('parseSummaryHints'),
+    'OnboardingService should parse the summary hints blob for batch detail',
+  );
+
+  // The wizard contract: onboarding history accepts a per-step filter.
+  assert.ok(
+    source.includes('options.step') || source.includes('options: { limit?'),
+    'OnboardingService.getHistory should accept a step filter for per-step history',
+  );
+
+  // Decision-table coverage for the calm replay tone mapping.
+  function buildReplayKey(batch) {
+    if (batch.status === 'needs_attention' || batch.rejectedRows > 0) {
+      return { key: 'needsAttention', retryRecommended: true };
+    }
+    if (batch.warningRows > 0) return { key: 'warnings', retryRecommended: true };
+    if (batch.status === 'partial') return { key: 'partial', retryRecommended: false };
+    return { key: 'success', retryRecommended: false };
+  }
+  assert.deepEqual(
+    buildReplayKey({ status: 'success', rejectedRows: 0, warningRows: 0 }),
+    { key: 'success', retryRecommended: false },
+  );
+  assert.deepEqual(
+    buildReplayKey({ status: 'needs_attention', rejectedRows: 4, warningRows: 0 }),
+    { key: 'needsAttention', retryRecommended: true },
+  );
+  assert.deepEqual(
+    buildReplayKey({ status: 'success', rejectedRows: 0, warningRows: 3 }),
+    { key: 'warnings', retryRecommended: true },
+  );
+  assert.deepEqual(
+    buildReplayKey({ status: 'partial', rejectedRows: 0, warningRows: 0 }),
+    { key: 'partial', retryRecommended: false },
+  );
+
+  // Controller exposes the batch detail endpoint and per-step history filter.
+  const controllerPath = join(
+    root,
+    'apps',
+    'api',
+    'src',
+    'modules',
+    'imports',
+    'onboarding.controller.ts',
+  );
+  const controllerSource = await readFile(controllerPath, 'utf8');
+  assert.ok(
+    controllerSource.includes("@Get('batches/:id')") &&
+      controllerSource.includes('getBatch('),
+    'OnboardingController should expose GET /batches/:id',
+  );
+  assert.ok(
+    controllerSource.includes("@Query('step')") || controllerSource.includes("'step'"),
+    'OnboardingController history endpoint should accept a ?step= filter',
+  );
+
   console.log('onboarding-readiness: OK');
 }
 

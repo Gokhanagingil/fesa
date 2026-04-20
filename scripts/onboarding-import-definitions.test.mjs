@@ -168,6 +168,87 @@ async function main() {
   assert.ok(onboarding.goLive?.requiredTitle, 'Missing pages.onboarding.goLive.requiredTitle');
   assert.ok(onboarding.goLive?.optionalTitle, 'Missing pages.onboarding.goLive.optionalTitle');
 
+  // Onboarding Completion Pack — replay/retry, batch drawer, recommendations,
+  // first-30-days companion, and honest go-live completion framing.
+  for (const replayKey of ['success', 'partial', 'warnings', 'needsAttention']) {
+    assert.ok(
+      onboarding.history.replay?.[replayKey],
+      `Missing onboarding.history.replay.${replayKey} copy`,
+    );
+  }
+  for (const drawerKey of [
+    'drawerTitle',
+    'drawerSubtitle',
+    'drawerHints',
+    'drawerNoHints',
+    'drawerClose',
+    'openBatch',
+    'tryAgain',
+    'stepHistoryTitle',
+    'stepHistoryHint',
+    'stepHistoryEmpty',
+  ]) {
+    assert.ok(
+      onboarding.history?.[drawerKey],
+      `Missing onboarding.history.${drawerKey} copy`,
+    );
+  }
+  for (const lastKey of ['openResult', 'viewAll', 'tryAgain', 'tryAgainHint']) {
+    assert.ok(
+      onboarding.lastImport?.[lastKey],
+      `Missing onboarding.lastImport.${lastKey} copy`,
+    );
+  }
+  assert.ok(onboarding.recommendations, 'pages.onboarding.recommendations must exist');
+  for (const recKey of [
+    'reviewStep',
+    'configureBrand',
+    'linkFamilies',
+    'createGroup',
+    'revisitBatch',
+    'inviteStaff',
+    'sharePortal',
+  ]) {
+    assert.ok(
+      onboarding.recommendations?.[recKey]?.title &&
+        onboarding.recommendations?.[recKey]?.hint,
+      `Missing onboarding.recommendations.${recKey} title/hint copy`,
+    );
+  }
+  assert.ok(onboarding.firstThirtyDays, 'pages.onboarding.firstThirtyDays must exist');
+  for (const tone of ['dormant', 'active']) {
+    assert.ok(
+      onboarding.firstThirtyDays.headline?.[tone],
+      `Missing firstThirtyDays headline copy for ${tone}`,
+    );
+    assert.ok(
+      onboarding.firstThirtyDays.subtitle?.[tone],
+      `Missing firstThirtyDays subtitle copy for ${tone}`,
+    );
+  }
+  for (const itemKey of [
+    'checkDashboard',
+    'inviteFamilies',
+    'firstChargeRun',
+    'firstAnnouncement',
+    'attendanceRhythm',
+  ]) {
+    assert.ok(
+      onboarding.firstThirtyDays.items?.[itemKey]?.title,
+      `Missing firstThirtyDays.items.${itemKey}.title copy`,
+    );
+  }
+  for (const tone of ['needs_attention', 'almost_ready', 'ready']) {
+    assert.ok(
+      onboarding.goLive.completionState?.[tone],
+      `Missing goLive.completionState.${tone} copy`,
+    );
+    assert.ok(
+      onboarding.goLive.completionHint?.[tone],
+      `Missing goLive.completionHint.${tone} copy`,
+    );
+  }
+
   for (const [entity, expected] of Object.entries(REQUIRED_FIELD_NUMBERS)) {
     const block = source.split(`entity: '${entity}'`)[1] ?? '';
     const matches = block

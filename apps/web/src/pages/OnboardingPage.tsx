@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { InlineAlert } from '../components/ui/InlineAlert';
@@ -8,14 +8,19 @@ import { useTenant } from '../lib/tenant-hooks';
 import {
   ImportBatchStatus,
   ImportEntityDefinition,
+  OnboardingBatchDetail,
+  OnboardingFirstThirtyDays,
   OnboardingHistoryEntry,
   OnboardingReadiness,
   OnboardingReadinessSignal,
+  OnboardingRecommendedAction,
   OnboardingStateReport,
   OnboardingStepLastImport,
   OnboardingStepReport,
   OnboardingStepStatus,
   fetchImportDefinitions,
+  fetchOnboardingBatch,
+  fetchOnboardingHistory,
   fetchOnboardingState,
 } from '../lib/imports';
 
@@ -52,6 +57,14 @@ const SIGNAL_TONES: Record<OnboardingReadinessSignal['tone'], string> = {
   info: 'border-sky-200 bg-sky-50 text-sky-800',
 };
 
+type CompletionTone = 'needs_attention' | 'almost_ready' | 'ready';
+
+const COMPLETION_TONES: Record<CompletionTone, string> = {
+  needs_attention: 'border-amber-200 bg-amber-50 text-amber-900',
+  almost_ready: 'border-sky-200 bg-sky-50 text-sky-900',
+  ready: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+};
+
 const QUICK_LINKS = [
   { to: '/app/dashboard', key: 'dashboard' as const },
   { to: '/app/athletes', key: 'athletes' as const },
@@ -59,6 +72,30 @@ const QUICK_LINKS = [
   { to: '/app/finance', key: 'finance' as const },
   { to: '/app/settings', key: 'settings' as const },
 ];
+
+const ENTITY_TO_STEP_KEY: Record<string, string> = {
+  sport_branches: 'sport_branches',
+  coaches: 'coaches',
+  groups: 'groups',
+  teams: 'teams',
+  athletes: 'athletes',
+  guardians: 'guardians',
+  athlete_guardians: 'athlete_guardians',
+  charge_items: 'charge_items',
+  inventory_items: 'inventory_items',
+};
+
+function entityToStepKey(entity: string): string {
+  return ENTITY_TO_STEP_KEY[entity] ?? entity;
+}
+
+function deriveCompletionTone(state: OnboardingStateReport): CompletionTone {
+  const requiredSteps = state.steps.filter((step) => !step.optional && step.key !== 'go_live');
+  const requiredAllDone = requiredSteps.every((step) => step.status === 'completed');
+  const hasNeedsAttention = state.steps.some((step) => step.status === 'needs_attention');
+  if (!requiredAllDone || hasNeedsAttention) return 'needs_attention';
+  return state.readiness.tone === 'ready' ? 'ready' : 'almost_ready';
+}
 
 export function OnboardingPage() {
   const { t } = useTranslation();
@@ -68,6 +105,9 @@ export function OnboardingPage() {
   const [state, setState] = useState<OnboardingStateReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [drawerBatchId, setDrawerBatchId] = useState<string | null>(null);
+  const [stepHistoryFor, setStepHistoryFor] = useState<string | null>(null);
+  const tryAgainScrollRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!tenantId) return;
@@ -109,13 +149,28 @@ export function OnboardingPage() {
   }, [activeStep, definitions]);
 
   const setStep = useCallback(
-    (key: string) => {
+    (key: string, options: { tryAgain?: boolean } = {}) => {
       const next = new URLSearchParams(searchParams);
       next.set('step', key);
+      if (options.tryAgain) {
+        tryAgainScrollRef.current = true;
+      }
       setSearchParams(next, { replace: true });
     },
     [searchParams, setSearchParams],
   );
+
+  useEffect(() => {
+    if (!tryAgainScrollRef.current || !activeStep?.importEntity) return;
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById('onboarding-import-flow');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      tryAgainScrollRef.current = false;
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [activeStep?.importEntity, activeStepKey]);
 
   const handleCommitted = () => {
     void refresh();
@@ -154,7 +209,7 @@ export function OnboardingPage() {
       {state ? <ProgressBanner state={state} /> : null}
 
       <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="rounded-2xl border border-amateur-border bg-amateur-surface p-3 shadow-sm">
+        <aside className="rounded-2xl border border-amateur-border bg-amateur-surface p-3 shadow-sm lg:sticky lg:top-4 lg:self-start">
           <p className="px-2 py-2 font-display text-sm font-semibold text-amateur-ink">
             {t('pages.onboarding.stepsTitle')}
           </p>
@@ -212,10 +267,26 @@ export function OnboardingPage() {
               definition={activeDefinition}
               onCommitted={handleCommitted}
               onSelectStep={setStep}
+              onOpenBatch={(batchId) => setDrawerBatchId(batchId)}
+              onOpenStepHistory={(stepKey) => setStepHistoryFor(stepKey)}
             />
           ) : null}
         </div>
       </div>
+
+      {drawerBatchId ? (
+        <BatchDrawer batchId={drawerBatchId} onClose={() => setDrawerBatchId(null)} />
+      ) : null}
+      {stepHistoryFor ? (
+        <StepHistoryDrawer
+          stepKey={stepHistoryFor}
+          onClose={() => setStepHistoryFor(null)}
+          onOpenBatch={(batchId) => {
+            setStepHistoryFor(null);
+            setDrawerBatchId(batchId);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -266,10 +337,20 @@ interface StepPanelProps {
   step: OnboardingStepReport;
   definition: ImportEntityDefinition | null;
   onCommitted: () => void;
-  onSelectStep: (key: string) => void;
+  onSelectStep: (key: string, options?: { tryAgain?: boolean }) => void;
+  onOpenBatch: (batchId: string) => void;
+  onOpenStepHistory: (stepKey: string) => void;
 }
 
-function StepPanel({ state, step, definition, onCommitted, onSelectStep }: StepPanelProps) {
+function StepPanel({
+  state,
+  step,
+  definition,
+  onCommitted,
+  onSelectStep,
+  onOpenBatch,
+  onOpenStepHistory,
+}: StepPanelProps) {
   const { t } = useTranslation();
   const isClubBasics = step.key === 'club_basics';
   const isGoLive = step.key === 'go_live';
@@ -303,19 +384,33 @@ function StepPanel({ state, step, definition, onCommitted, onSelectStep }: StepP
       {isClubBasics ? <ClubBasicsPanel done={step.status === 'completed'} /> : null}
 
       {isGoLive ? (
-        <GoLiveReviewPanel state={state} onSelectStep={onSelectStep} />
+        <GoLiveReviewPanel
+          state={state}
+          onSelectStep={onSelectStep}
+          onOpenBatch={onOpenBatch}
+        />
       ) : null}
 
       {definition ? (
-        <ImportFlow
-          key={definition.entity}
-          definition={definition}
-          onCommitted={onCommitted}
-          showDefaultBranchPicker={definition.entity === 'athletes'}
-          lastImportSummary={
-            step.lastImport ? <LastImportCard lastImport={step.lastImport} /> : null
-          }
-        />
+        <div id="onboarding-import-flow">
+          <ImportFlow
+            key={definition.entity}
+            definition={definition}
+            onCommitted={onCommitted}
+            showDefaultBranchPicker={definition.entity === 'athletes'}
+            lastImportSummary={
+              step.lastImport ? (
+                <LastImportCard
+                  step={step}
+                  lastImport={step.lastImport}
+                  onOpenBatch={onOpenBatch}
+                  onTryAgain={() => onSelectStep(step.key, { tryAgain: true })}
+                  onViewAll={() => onOpenStepHistory(step.key)}
+                />
+              ) : null
+            }
+          />
+        </div>
       ) : null}
     </div>
   );
@@ -362,15 +457,25 @@ function ClubBasicsPanel({ done }: { done: boolean }) {
 function GoLiveReviewPanel({
   state,
   onSelectStep,
+  onOpenBatch,
 }: {
   state: OnboardingStateReport;
   onSelectStep: (key: string) => void;
+  onOpenBatch: (batchId: string) => void;
 }) {
   const { t } = useTranslation();
-  const { readiness } = state;
+  const { readiness, recommendedActions, firstThirtyDays } = state;
+  const completionTone = deriveCompletionTone(state);
   return (
     <div className="space-y-5">
+      <CompletionPanel state={state} tone={completionTone} />
+
       <ReadinessSummary readiness={readiness} />
+
+      <RecommendedActionsPanel
+        actions={recommendedActions}
+        onSelectStep={onSelectStep}
+      />
 
       <ReadinessChecklist
         title={t('pages.onboarding.goLive.requiredTitle')}
@@ -386,7 +491,9 @@ function GoLiveReviewPanel({
         onSelectStep={onSelectStep}
       />
 
-      <RecentImportsStrip recent={state.recentImports} />
+      <RecentImportsStrip recent={state.recentImports} onOpenBatch={onOpenBatch} />
+
+      <FirstThirtyDaysPanel first30={firstThirtyDays} onSelectStep={onSelectStep} />
 
       <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
         <p className="font-display text-sm font-semibold text-amateur-ink">
@@ -413,6 +520,167 @@ function GoLiveReviewPanel({
         </div>
       </section>
     </div>
+  );
+}
+
+function CompletionPanel({
+  state,
+  tone,
+}: {
+  state: OnboardingStateReport;
+  tone: CompletionTone;
+}) {
+  const { t } = useTranslation();
+  const pct = state.progress.requiredTotal
+    ? Math.round((state.progress.requiredCompleted / state.progress.requiredTotal) * 100)
+    : 0;
+  return (
+    <section
+      className={`rounded-2xl border p-5 shadow-sm ${COMPLETION_TONES[tone]}`}
+      aria-label={t('pages.onboarding.goLive.completionTitle')}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70">
+            {t('pages.onboarding.goLive.completionTitle')}
+          </p>
+          <h3 className="mt-1 font-display text-lg font-semibold">
+            {t(`pages.onboarding.goLive.completionState.${tone}`)}
+          </h3>
+          <p className="mt-1 max-w-3xl text-sm opacity-90">
+            {t(`pages.onboarding.goLive.completionHint.${tone}`)}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="font-display text-2xl font-semibold">
+            {state.progress.requiredCompleted}/{state.progress.requiredTotal}
+          </p>
+          <p className="text-[11px] uppercase tracking-wide opacity-70">{pct}%</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RecommendedActionsPanel({
+  actions,
+  onSelectStep,
+}: {
+  actions: OnboardingRecommendedAction[];
+  onSelectStep: (key: string) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+      <p className="font-display text-sm font-semibold text-amateur-ink">
+        {t('pages.onboarding.recommendations.title')}
+      </p>
+      <p className="mt-1 text-sm text-amateur-muted">
+        {t('pages.onboarding.recommendations.hint')}
+      </p>
+      {actions.length === 0 ? (
+        <p className="mt-3 rounded-xl border border-dashed border-amateur-border bg-amateur-canvas px-3 py-4 text-sm text-amateur-muted">
+          {t('pages.onboarding.recommendations.empty')}
+        </p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {actions.map((action) => (
+            <li
+              key={action.key}
+              className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-amateur-border/60 bg-amateur-canvas px-3 py-2"
+            >
+              <div className="min-w-0">
+                <p className="font-medium text-amateur-ink">{t(action.titleKey)}</p>
+                <p className="mt-0.5 text-xs text-amateur-muted">{t(action.hintKey)}</p>
+              </div>
+              {action.stepKey ? (
+                <button
+                  type="button"
+                  onClick={() => onSelectStep(action.stepKey!)}
+                  className="rounded-xl border border-amateur-border bg-white px-3 py-1 text-xs font-semibold text-amateur-ink hover:bg-amateur-surface"
+                >
+                  {t('pages.onboarding.recommendations.open')}
+                </button>
+              ) : action.to ? (
+                <Link
+                  to={action.to}
+                  className="rounded-xl border border-amateur-border bg-white px-3 py-1 text-xs font-semibold text-amateur-ink hover:bg-amateur-surface"
+                >
+                  {t('pages.onboarding.recommendations.open')}
+                </Link>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function FirstThirtyDaysPanel({
+  first30,
+  onSelectStep,
+}: {
+  first30: OnboardingFirstThirtyDays;
+  onSelectStep: (key: string) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <section
+      className={`rounded-2xl border p-5 shadow-sm ${
+        first30.state === 'active'
+          ? 'border-emerald-200 bg-emerald-50/60'
+          : 'border-amateur-border bg-amateur-surface'
+      }`}
+      aria-label={t('pages.onboarding.firstThirtyDays.title')}
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
+        {t('pages.onboarding.firstThirtyDays.title')}
+      </p>
+      <h3 className="mt-1 font-display text-base font-semibold text-amateur-ink">
+        {t(first30.headlineKey)}
+      </h3>
+      <p className="mt-1 text-sm text-amateur-muted">{t(first30.subtitleKey)}</p>
+      <ol className="mt-3 grid gap-2 sm:grid-cols-2">
+        {first30.items.map((item, index) => {
+          const content = (
+            <>
+              <span
+                aria-hidden
+                className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amateur-accent-soft text-[11px] font-semibold text-amateur-accent"
+              >
+                {index + 1}
+              </span>
+              <span className="min-w-0">
+                <span className="block font-medium text-amateur-ink">{t(item.titleKey)}</span>
+                <span className="mt-0.5 block text-xs text-amateur-muted">{t(item.hintKey)}</span>
+              </span>
+            </>
+          );
+          const className =
+            'flex items-start gap-3 rounded-xl border border-amateur-border/60 bg-white px-3 py-2 text-left transition-colors hover:bg-amateur-canvas';
+          return (
+            <li key={item.key}>
+              {item.stepKey ? (
+                <button
+                  type="button"
+                  className={`w-full ${className}`}
+                  onClick={() => onSelectStep(item.stepKey!)}
+                >
+                  {content}
+                </button>
+              ) : item.to ? (
+                <Link className={className} to={item.to}>
+                  {content}
+                </Link>
+              ) : (
+                <div className={className}>{content}</div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 
@@ -520,7 +788,13 @@ function ReadinessChecklist({
   );
 }
 
-function RecentImportsStrip({ recent }: { recent: OnboardingHistoryEntry[] }) {
+function RecentImportsStrip({
+  recent,
+  onOpenBatch,
+}: {
+  recent: OnboardingHistoryEntry[];
+  onOpenBatch: (batchId: string) => void;
+}) {
   const { t, i18n } = useTranslation();
   const fmt = useMemo(
     () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' }),
@@ -577,6 +851,7 @@ function RecentImportsStrip({ recent }: { recent: OnboardingHistoryEntry[] }) {
                   {t('pages.onboarding.history.triggeredBy', { who: entry.triggeredBy })}
                 </p>
               ) : null}
+              <p className="mt-1 text-[11px] text-amateur-muted">{t(entry.replayHintKey)}</p>
               {entry.rejectedRows > 0 || entry.warningRows > 0 ? (
                 <p className="mt-1 text-[11px] text-amber-700">
                   {t('pages.onboarding.history.attention', {
@@ -585,6 +860,15 @@ function RecentImportsStrip({ recent }: { recent: OnboardingHistoryEntry[] }) {
                   })}
                 </p>
               ) : null}
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenBatch(entry.id)}
+                  className="rounded-xl border border-amateur-border bg-white px-3 py-1 text-xs font-semibold text-amateur-ink hover:bg-amateur-surface"
+                >
+                  {t('pages.onboarding.history.openBatch')}
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -593,12 +877,29 @@ function RecentImportsStrip({ recent }: { recent: OnboardingHistoryEntry[] }) {
   );
 }
 
-function LastImportCard({ lastImport }: { lastImport: OnboardingStepLastImport }): ReactNode {
+function LastImportCard({
+  step,
+  lastImport,
+  onOpenBatch,
+  onTryAgain,
+  onViewAll,
+}: {
+  step: OnboardingStepReport;
+  lastImport: OnboardingStepLastImport;
+  onOpenBatch: (batchId: string) => void;
+  onTryAgain: () => void;
+  onViewAll: () => void;
+}): ReactNode {
   const { t, i18n } = useTranslation();
   const fmt = useMemo(
     () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' }),
     [i18n.language],
   );
+  const showTryAgain =
+    step.status === 'needs_attention' ||
+    lastImport.rejectedRows > 0 ||
+    lastImport.warningRows > 0 ||
+    lastImport.status === 'needs_attention';
   return (
     <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -635,24 +936,302 @@ function LastImportCard({ lastImport }: { lastImport: OnboardingStepLastImport }
           })}
         </InlineAlert>
       ) : null}
+      {showTryAgain ? (
+        <p className="mt-3 text-xs text-amateur-muted">
+          {t('pages.onboarding.lastImport.tryAgainHint')}
+        </p>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => onOpenBatch(lastImport.batchId)}
+          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-1.5 text-xs font-semibold text-amateur-ink hover:bg-amateur-surface"
+        >
+          {t('pages.onboarding.lastImport.openResult')}
+        </button>
+        <button
+          type="button"
+          onClick={onViewAll}
+          className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-1.5 text-xs font-semibold text-amateur-ink hover:bg-amateur-surface"
+        >
+          {t('pages.onboarding.lastImport.viewAll')}
+        </button>
+        {showTryAgain ? (
+          <button
+            type="button"
+            onClick={onTryAgain}
+            className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+          >
+            {t('pages.onboarding.lastImport.tryAgain')}
+          </button>
+        ) : null}
+      </div>
     </section>
   );
 }
 
-const ENTITY_TO_STEP_KEY: Record<string, string> = {
-  sport_branches: 'sport_branches',
-  coaches: 'coaches',
-  groups: 'groups',
-  teams: 'teams',
-  athletes: 'athletes',
-  guardians: 'guardians',
-  athlete_guardians: 'athlete_guardians',
-  charge_items: 'charge_items',
-  inventory_items: 'inventory_items',
-};
+function BatchDrawer({ batchId, onClose }: { batchId: string; onClose: () => void }) {
+  const { t, i18n } = useTranslation();
+  const [detail, setDetail] = useState<OnboardingBatchDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const fmt = useMemo(
+    () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' }),
+    [i18n.language],
+  );
 
-function entityToStepKey(entity: string): string {
-  return ENTITY_TO_STEP_KEY[entity] ?? entity;
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchOnboardingBatch(batchId)
+      .then((res) => {
+        if (cancelled) return;
+        setDetail(res);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : 'Failed to load batch');
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [batchId]);
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-end justify-end bg-amateur-ink/30 p-2 sm:items-stretch sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('pages.onboarding.history.drawerTitle')}
+      onClick={onClose}
+    >
+      <div
+        className="flex h-full w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
+              {t('pages.onboarding.history.drawerTitle')}
+            </p>
+            <h3 className="mt-1 font-display text-lg font-semibold text-amateur-ink">
+              {detail
+                ? t(`pages.onboarding.steps.${detail.stepKey}.title`, {
+                    defaultValue: detail.entity,
+                  })
+                : t('pages.onboarding.history.drawerSubtitle')}
+            </h3>
+            {detail ? (
+              <p className="mt-1 text-xs text-amateur-muted">
+                {fmt.format(new Date(detail.committedAt))}
+                {detail.triggeredBy
+                  ? ` · ${t('pages.onboarding.history.triggeredBy', { who: detail.triggeredBy })}`
+                  : ''}
+              </p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-1.5 text-xs font-semibold text-amateur-ink hover:bg-amateur-surface"
+          >
+            {t('pages.onboarding.history.drawerClose')}
+          </button>
+        </div>
+
+        {loading ? (
+          <p className="mt-4 text-sm text-amateur-muted">{t('pages.onboarding.loading')}</p>
+        ) : null}
+        {error ? (
+          <InlineAlert tone="error" className="mt-4">
+            {error}
+          </InlineAlert>
+        ) : null}
+        {detail ? (
+          <div className="mt-4 space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${BATCH_STATUS_TONES[detail.status]}`}
+              >
+                {t(`pages.onboarding.history.status.${detail.status}`)}
+              </span>
+              {detail.source ? (
+                <span className="text-xs text-amateur-muted">{detail.source}</span>
+              ) : null}
+            </div>
+            <p className="text-sm text-amateur-muted">
+              {t('pages.onboarding.history.line', {
+                source: detail.source ?? t('pages.onboarding.history.sourceFallback'),
+                created: detail.createdRows,
+                updated: detail.updatedRows,
+                skipped: detail.skippedRows,
+              })}
+            </p>
+            {detail.rejectedRows > 0 || detail.warningRows > 0 ? (
+              <p className="text-xs text-amber-700">
+                {t('pages.onboarding.history.attention', {
+                  rejected: detail.rejectedRows,
+                  warnings: detail.warningRows,
+                })}
+              </p>
+            ) : null}
+            <p className="text-xs text-amateur-muted">{t(detail.replayHintKey)}</p>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
+                {t('pages.onboarding.history.drawerHints')}
+              </p>
+              {detail.hints.length === 0 ? (
+                <p className="mt-2 text-xs text-amateur-muted">
+                  {t('pages.onboarding.history.drawerNoHints')}
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-1 text-xs text-amateur-muted">
+                  {detail.hints.map((hint, idx) => (
+                    <li key={idx} className="rounded-xl bg-amateur-canvas px-3 py-1.5">
+                      {hint}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function StepHistoryDrawer({
+  stepKey,
+  onClose,
+  onOpenBatch,
+}: {
+  stepKey: string;
+  onClose: () => void;
+  onOpenBatch: (batchId: string) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const [items, setItems] = useState<OnboardingHistoryEntry[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const fmt = useMemo(
+    () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' }),
+    [i18n.language],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchOnboardingHistory({ step: stepKey, limit: 50 })
+      .then((res) => {
+        if (cancelled) return;
+        setItems(res);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : 'Failed to load step history');
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [stepKey]);
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-end justify-end bg-amateur-ink/30 p-2 sm:items-stretch sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('pages.onboarding.history.stepHistoryTitle')}
+      onClick={onClose}
+    >
+      <div
+        className="flex h-full w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-amateur-muted">
+              {t('pages.onboarding.history.stepHistoryTitle')}
+            </p>
+            <h3 className="mt-1 font-display text-lg font-semibold text-amateur-ink">
+              {t(`pages.onboarding.steps.${stepKey}.title`, { defaultValue: stepKey })}
+            </h3>
+            <p className="mt-1 text-xs text-amateur-muted">
+              {t('pages.onboarding.history.stepHistoryHint')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-1.5 text-xs font-semibold text-amateur-ink hover:bg-amateur-surface"
+          >
+            {t('pages.onboarding.history.drawerClose')}
+          </button>
+        </div>
+        {loading ? (
+          <p className="mt-4 text-sm text-amateur-muted">{t('pages.onboarding.loading')}</p>
+        ) : null}
+        {error ? (
+          <InlineAlert tone="error" className="mt-4">
+            {error}
+          </InlineAlert>
+        ) : null}
+        {items && items.length === 0 ? (
+          <p className="mt-4 rounded-xl border border-dashed border-amateur-border bg-amateur-canvas px-3 py-4 text-sm text-amateur-muted">
+            {t('pages.onboarding.history.stepHistoryEmpty')}
+          </p>
+        ) : null}
+        {items && items.length > 0 ? (
+          <ul className="mt-4 space-y-2">
+            {items.map((entry) => (
+              <li
+                key={entry.id}
+                className="rounded-xl border border-amateur-border/70 bg-amateur-canvas px-3 py-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${BATCH_STATUS_TONES[entry.status]}`}
+                  >
+                    {t(`pages.onboarding.history.status.${entry.status}`)}
+                  </span>
+                  <span className="text-xs text-amateur-muted">
+                    {fmt.format(new Date(entry.committedAt))}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-amateur-muted">
+                  {t('pages.onboarding.history.line', {
+                    source: entry.source ?? t('pages.onboarding.history.sourceFallback'),
+                    created: entry.createdRows,
+                    updated: entry.updatedRows,
+                    skipped: entry.skippedRows,
+                  })}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onOpenBatch(entry.id)}
+                    className="rounded-xl border border-amateur-border bg-white px-3 py-1 text-xs font-semibold text-amateur-ink hover:bg-amateur-surface"
+                  >
+                    {t('pages.onboarding.history.openBatch')}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function formatRelative(iso: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
