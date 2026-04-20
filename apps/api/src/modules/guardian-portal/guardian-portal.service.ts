@@ -793,7 +793,23 @@ export class GuardianPortalService {
     const readiness = await this.familyActions.getGuardianReadiness(tenantId, guardianId);
     const financeSummary = athleteIds.length
       ? await this.finance.listAthleteFinanceSummaries(tenantId, {})
-      : { athletes: [], charges: [], recentPayments: [], totals: {} };
+      : {
+          athletes: [] as Awaited<
+            ReturnType<FinanceService['listAthleteFinanceSummaries']>
+          >['athletes'],
+          charges: [] as Awaited<
+            ReturnType<FinanceService['listAthleteFinanceSummaries']>
+          >['charges'],
+          recentPayments: [] as Awaited<
+            ReturnType<FinanceService['listAthleteFinanceSummaries']>
+          >['recentPayments'],
+          totals: {
+            totalCharged: '0.00',
+            totalCollected: '0.00',
+            totalOutstanding: '0.00',
+            totalOverdue: '0.00',
+          },
+        };
     const financeByAthlete = new Map(
       financeSummary.athletes
         .filter((row) => athleteIds.includes(row.athlete.id))
@@ -1053,6 +1069,282 @@ export class GuardianPortalService {
     ];
     const essentialsAttention = essentials.filter((entry) => entry.severity === 'attention').length;
 
+    // Parent Portal v1.3 — Payment Readiness layer.
+    //
+    // The intent is "calm, family-facing finance clarity" — never a
+    // collections surface. We project the per-athlete charge slice into
+    // a small, non-threatening shape that answers three questions for a
+    // parent at a glance:
+    //   1. Is anything genuinely past due right now?
+    //   2. What is coming up next, and when?
+    //   3. What is already settled / fine?
+    //
+    // We deliberately:
+    //   - cap the visible charges at 6 across the whole family so the
+    //     surface stays scannable on a phone;
+    //   - never render `cancelled` or `paid` rows as "open";
+    //   - group everything by athlete so the parent always sees who a
+    //     given line concerns;
+    //   - hand over a single resolved currency (defaulting to TRY) so
+    //     the UI never has to invent one.
+    type PaymentReadinessCharge = {
+      id: string;
+      athleteId: string;
+      athleteName: string;
+      itemName: string;
+      amount: string;
+      remainingAmount: string;
+      dueDate: string | null;
+      status: 'overdue' | 'dueSoon' | 'open';
+      isOverdue: boolean;
+      currency: string;
+      billingPeriodLabel: string | null;
+    };
+    const SOON_WINDOW_DAYS = 14;
+    const PARENT_FINANCE_CAP = 6;
+    const familyChargeIds = new Set(athleteIds);
+    const linkedAthleteNames = new Map(
+      links.map((link) => [
+        link.athleteId,
+        link.athlete
+          ? `${link.athlete.preferredName || link.athlete.firstName} ${link.athlete.lastName}`
+          : link.athleteId,
+      ]),
+    );
+    const familyCharges = (financeSummary.charges ?? []).filter((charge) =>
+      familyChargeIds.has(charge.athleteId),
+    );
+    const todayMidnight = new Date();
+    todayMidnight.setHours(0, 0, 0, 0);
+    const soonBoundary = new Date(todayMidnight);
+    soonBoundary.setDate(soonBoundary.getDate() + SOON_WINDOW_DAYS);
+    let dominantCurrency = 'TRY';
+    for (const charge of familyCharges) {
+      const code = charge.chargeItem?.currency;
+      if (code) {
+        dominantCurrency = code;
+        break;
+      }
+    }
+    const openCharges: PaymentReadinessCharge[] = familyCharges
+      .filter(
+        (charge) =>
+          charge.derivedStatus !== 'cancelled' &&
+          charge.derivedStatus !== 'paid' &&
+          Number(charge.remainingAmount ?? '0') > 0,
+      )
+      .map((charge) => {
+        const rawDueDate = charge.dueDate as unknown;
+        const dueDate =
+          rawDueDate instanceof Date
+            ? rawDueDate
+            : rawDueDate
+              ? new Date(rawDueDate as string)
+              : null;
+        const isOverdue = Boolean(charge.isOverdue);
+        const isSoon =
+          !isOverdue &&
+          dueDate !== null &&
+          dueDate.getTime() >= todayMidnight.getTime() &&
+          dueDate.getTime() <= soonBoundary.getTime();
+        return {
+          id: charge.id,
+          athleteId: charge.athleteId,
+          athleteName: linkedAthleteNames.get(charge.athleteId) ?? charge.athleteId,
+          itemName: charge.chargeItem?.name ?? 'Charge',
+          amount: String(charge.amount),
+          remainingAmount: String(charge.remainingAmount ?? charge.amount),
+          dueDate: dueDate ? dueDate.toISOString() : null,
+          status: isOverdue ? 'overdue' : isSoon ? 'dueSoon' : 'open',
+          isOverdue,
+          currency: charge.chargeItem?.currency ?? dominantCurrency,
+          billingPeriodLabel: charge.billingPeriodLabel ?? null,
+        } satisfies PaymentReadinessCharge;
+      })
+      .sort((a, b) => {
+        // Overdue first, then by earliest due date, then unspecified due
+        // dates last. This is the calm, expected order for a parent.
+        if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+        const aTime = a.dueDate ? new Date(a.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        const bTime = b.dueDate ? new Date(b.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        return aTime - bTime;
+      });
+    const visibleCharges = openCharges.slice(0, PARENT_FINANCE_CAP);
+    const overdueCount = openCharges.filter((row) => row.status === 'overdue').length;
+    const dueSoonCount = openCharges.filter((row) => row.status === 'dueSoon').length;
+    const totalsByAthlete = new Map<
+      string,
+      { athleteId: string; athleteName: string; outstanding: string; overdue: string }
+    >();
+    for (const link of links) {
+      const aggregate = financeByAthlete.get(link.athleteId);
+      const outstanding = aggregate ? Number(aggregate.totalOutstanding) : 0;
+      const overdue = aggregate ? Number(aggregate.totalOverdue) : 0;
+      if (outstanding <= 0 && overdue <= 0) continue;
+      totalsByAthlete.set(link.athleteId, {
+        athleteId: link.athleteId,
+        athleteName: linkedAthleteNames.get(link.athleteId) ?? link.athleteId,
+        outstanding: outstanding.toFixed(2),
+        overdue: overdue.toFixed(2),
+      });
+    }
+    const familyOutstanding = Array.from(financeByAthlete.values()).reduce(
+      (acc, row) => acc + Number(row.totalOutstanding ?? 0),
+      0,
+    );
+    const familyOverdue = Array.from(financeByAthlete.values()).reduce(
+      (acc, row) => acc + Number(row.totalOverdue ?? 0),
+      0,
+    );
+    const nextDue =
+      openCharges.find((row) => row.status === 'dueSoon' && !row.isOverdue) ?? null;
+    const paymentReadiness = {
+      currency: dominantCurrency,
+      totals: {
+        outstandingAmount: familyOutstanding.toFixed(2),
+        overdueAmount: familyOverdue.toFixed(2),
+        openCount: openCharges.length,
+        overdueCount,
+        dueSoonCount,
+      },
+      // The "tone" is read by the UI to choose the calm / attention
+      // copy. We never escalate to alarming language at the API layer.
+      tone: (overdueCount > 0
+        ? 'attention'
+        : openCharges.length > 0
+          ? 'open'
+          : 'clear') as 'clear' | 'open' | 'attention',
+      windowDays: SOON_WINDOW_DAYS,
+      nextDue: nextDue
+        ? {
+            chargeId: nextDue.id,
+            athleteId: nextDue.athleteId,
+            athleteName: nextDue.athleteName,
+            itemName: nextDue.itemName,
+            amount: nextDue.amount,
+            remainingAmount: nextDue.remainingAmount,
+            dueDate: nextDue.dueDate,
+            currency: nextDue.currency,
+          }
+        : null,
+      charges: visibleCharges,
+      perAthlete: Array.from(totalsByAthlete.values()),
+    };
+
+    // Parent Portal v1.3 — Communication Continuity layer.
+    //
+    // We carry the small slice of "what has the club been talking to my
+    // family about lately?" into the portal. There is intentionally no
+    // inbox, no thread view, and no unread count theatre. We only
+    // surface:
+    //   - the most recent published club update the family is allowed
+    //     to see (already filtered by audience above);
+    //   - the most recent staff <-> family request continuity events
+    //     (a club request that's still open, or one the staff just
+    //     decided on) so the family understands ongoing context.
+    //
+    // The shape is a single, sorted, capped list of "moments" so the
+    // parent UI can render it as one calm strip.
+    type ContinuityMomentKind = 'club_update' | 'family_request';
+    type ContinuityMoment = {
+      id: string;
+      kind: ContinuityMomentKind;
+      occurredAt: string;
+      title: string;
+      summary: string | null;
+      athleteName: string | null;
+      status:
+        | 'published'
+        | 'open'
+        | 'pending_family_action'
+        | 'submitted'
+        | 'under_review'
+        | 'approved'
+        | 'rejected'
+        | 'completed'
+        | 'closed'
+        | null;
+      actionId: string | null;
+      audienceLabel: string | null;
+    };
+    const continuityWindowDays = 30;
+    const continuityCutoffMs = Date.now() - continuityWindowDays * 24 * 60 * 60 * 1000;
+    const continuityMoments: ContinuityMoment[] = [];
+    for (const update of clubUpdates ?? []) {
+      const occurredAt = update.publishedAt ? new Date(update.publishedAt) : null;
+      if (!occurredAt) continue;
+      if (occurredAt.getTime() < continuityCutoffMs) continue;
+      continuityMoments.push({
+        id: `cu-${update.id}`,
+        kind: 'club_update',
+        occurredAt: occurredAt.toISOString(),
+        title: update.title,
+        summary: update.body && update.body.length > 140
+          ? `${update.body.slice(0, 137)}…`
+          : update.body,
+        athleteName: null,
+        status: 'published',
+        actionId: null,
+        audienceLabel:
+          update.audience && update.audience.scope !== 'all'
+            ? update.audience.label ?? null
+            : null,
+      });
+    }
+    for (const action of readiness.actions) {
+      // Family-action surface continuity: an "open" request is shown so
+      // the family knows it is still waiting on them; a recently
+      // decided one is shown so they know staff has reviewed it. We
+      // intentionally hide system noise (closed/completed older than
+      // the window) and never surface staff-only metadata.
+      const ongoing =
+        action.status === 'open' ||
+        action.status === 'pending_family_action' ||
+        action.status === 'submitted' ||
+        action.status === 'under_review';
+      const recentlyDecided =
+        (action.status === 'approved' ||
+          action.status === 'rejected' ||
+          action.status === 'completed' ||
+          action.status === 'closed') &&
+        (action.reviewedAt
+          ? action.reviewedAt.getTime() >= continuityCutoffMs
+          : action.updatedAt.getTime() >= continuityCutoffMs);
+      if (!ongoing && !recentlyDecided) continue;
+      const occurredAt =
+        action.reviewedAt ??
+        action.submittedAt ??
+        action.updatedAt ??
+        action.createdAt;
+      continuityMoments.push({
+        id: `fa-${action.id}`,
+        kind: 'family_request',
+        occurredAt: (occurredAt ?? action.createdAt).toISOString(),
+        title: action.title,
+        summary:
+          action.decisionNote ??
+          action.latestResponseText ??
+          action.description ??
+          null,
+        athleteName: action.athleteName ?? null,
+        status: action.status,
+        actionId: action.id,
+        audienceLabel: null,
+      });
+    }
+    continuityMoments.sort(
+      (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
+    );
+    const continuity = {
+      windowDays: continuityWindowDays,
+      moments: continuityMoments.slice(0, 5),
+      hasOpenFamilyRequest: continuityMoments.some(
+        (moment) =>
+          moment.kind === 'family_request' &&
+          (moment.status === 'open' || moment.status === 'pending_family_action'),
+      ),
+    };
+
     return {
       guardian: {
         id: guardian.id,
@@ -1073,6 +1365,10 @@ export class GuardianPortalService {
         outstandingAthletes: linkedAthletes.filter((athlete) => Number(athlete.outstandingAmount) > 0).length,
         overdueAthletes: linkedAthletes.filter((athlete) => Number(athlete.overdueAmount) > 0).length,
       },
+      // Parent Portal v1.3 — Payment Readiness layer (calm, non-collections).
+      paymentReadiness,
+      // Parent Portal v1.3 — Communication Continuity layer.
+      communication: continuity,
       today: {
         training: todayTraining,
         privateLessons: todayLessons,

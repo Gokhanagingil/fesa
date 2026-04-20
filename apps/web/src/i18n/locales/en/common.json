@@ -2588,7 +2588,32 @@
           "body": "There's an open balance for your family. Your club can answer any questions.",
           "done": "Your balance is clear right now."
         }
-      }
+      },
+      "continuityTitle": "Recent from the club",
+      "continuityHint": "A short, calm look at recent club-to-family context",
+      "continuityBadgeClubUpdate": "Club note",
+      "continuityBadgeFamilyRequest": "Request",
+      "continuityStatusOpen": "Awaiting your reply",
+      "continuityStatusReview": "With your club",
+      "continuityStatusResolved": "Settled",
+      "continuityStatusClosed": "Closed",
+      "continuityForAudience": "For {{label}}",
+      "continuityOpenHint": "We'll keep an open request gently visible until your club has heard back.",
+      "paymentTitle": "Payment readiness",
+      "paymentClearTag": "All clear",
+      "paymentClearBody": "There's nothing open on your family's account right now. We'll quietly let you know if that changes.",
+      "paymentOpenHint": "A calm look at what's open across your family.",
+      "paymentAttentionHint": "A few items may need a closer look. Your club is happy to answer questions.",
+      "paymentTotalLabel": "Open balance",
+      "paymentOverdueLabel": "Past due:",
+      "paymentNextDueLabel": "Next up",
+      "paymentDueOn": "Due {{date}}",
+      "paymentNoDueDate": "No due date",
+      "paymentStatusOverdue": "Past due",
+      "paymentStatusDueSoon": "Due soon",
+      "paymentStatusOpen": "Open",
+      "paymentOpenFooter": "Amounts are in {{currency}}. We don't process payments in the portal — your club handles that the way you're used to.",
+      "paymentAttentionFooter": "If something looks off, just reach out — your club can clarify or update it for you."
     }
   }
 }

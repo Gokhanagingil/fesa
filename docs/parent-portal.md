@@ -504,7 +504,7 @@ Returning, settled families never see this surface at all.
   `GuardianPortalHomePage.smoke.test.tsx` case for the first-landing
   welcome and the calm essentials strip.
 
-### What is intentionally still out of scope (v1.3)
+### What is intentionally still out of scope (v1.3 — Wave 21 baseline)
 
 - An automated "send a reminder for me" workflow — the platform helps
   staff prepare the message; sending stays a human action.
@@ -514,3 +514,183 @@ Returning, settled families never see this surface at all.
   at three attention rows on purpose.
 - Self-serve password reset on the public surface — recovery still
   flows through the staff resend-invite path, the same as in v1.2.
+
+## v1.3 — Family Communication Continuity, Payment Readiness & Trust Layer (Wave 22)
+
+Wave 22 builds on the Wave 21 activation/landing foundation. It does
+**not** introduce a new auth model, a new tenant boundary, a separate
+inbox, or any payment-processing capability. It refines what the parent
+portal carries between sessions and how calmly it explains family
+finance — so the home feels more useful over time, not just on first
+landing. The product principles for this wave are explicit:
+
+- continuity, not noise;
+- payment **readiness** and clarity, not collections pressure;
+- trust through restraint, not through more sections.
+
+### Family Communication Continuity layer
+
+The parent home now renders a small **Recent from the club** strip
+between the calm essentials and the "what needs your attention" card.
+The strip is a single, sorted, capped list of the most recent
+club→family **moments** the parent should be aware of:
+
+| Moment kind     | Source                                                     | Surfaced when                                             |
+|-----------------|------------------------------------------------------------|-----------------------------------------------------------|
+| `club_update`   | A published, in-window club update the family is allowed to see (already audience-filtered upstream). | Published in the last **30 days**.                        |
+| `family_request`| A family-action request the guardian is associated with.   | Status is ongoing (`open`, `pending_family_action`, `submitted`, `under_review`) **or** decided in the last 30 days. |
+
+Hard limits keep the surface calm:
+
+- the API never returns more than **5 moments** in the strip;
+- summaries are clamped to **140 characters** before being shown;
+- closed/completed moments older than the 30-day window are quietly
+  hidden — they would only feel like noise to a returning family;
+- staff workflow noise is never exposed to parents (no internal status
+  beyond what the parent already had visibility into through the
+  family-action surface, no audit trail, no internal authorship).
+
+Moments deep-link back into surfaces the family already has access to:
+`club_update` moments scroll to the existing `From the club` strip,
+`family_request` moments link into the existing `/portal/actions/:id`
+detail page. We never invent a new conversation surface.
+
+A small `hasOpenFamilyRequest` flag accompanies the moments so the UI
+can render a single, calm "we'll keep this gently visible until the
+club has heard back" footer when a request is genuinely waiting on the
+family.
+
+### Payment Readiness layer
+
+A new **Payment readiness** card replaces the previous one-liner
+finance summary in the attention card. The intent is calmer family
+finance clarity — never a collections / dunning surface.
+
+The API computes the parent-safe slice from the same
+`listAthleteFinanceSummaries` call already used by staff finance, then
+projects three states the UI uses to choose its tone:
+
+| Tone        | When                                                     | Visual treatment                                  |
+|-------------|----------------------------------------------------------|---------------------------------------------------|
+| `clear`     | No open charges (cancelled and paid never count).        | Soft "all clear" acknowledgement, no list.        |
+| `open`      | Open charges, none past due.                             | Calm informational card with a "next up" hint.    |
+| `attention` | One or more charges are past due.                        | Same calm card, slightly more prominent border, a "if something looks off, just reach out" footer instead of pressure copy. |
+
+What the card actually carries:
+
+- a single resolved currency (defaulting to `TRY` when no charge has
+  one yet) so the UI never has to invent one mid-list;
+- the family's outstanding total and overdue total, formatted via the
+  existing money helpers;
+- a `nextDue` slot — the earliest non-overdue charge in the next
+  **14 days** — so the parent immediately understands what's coming;
+- a list of open charges, grouped by athlete and ordered "overdue
+  first, then by earliest due date, then no-due-date last", **hard-capped
+  at six entries** for the whole family;
+- a per-athlete totals slice for the existing family cards so the
+  finance hint there can stay consistent.
+
+Three guarantees keep this safe:
+
+1. The portal still does not process payments. The footer copy makes
+   that explicit ("we don't process payments in the portal — your
+   club handles that the way you're used to") so families never expect
+   a checkout flow that doesn't exist.
+2. Cancelled and paid charges are filtered out before the projection
+   runs — they would only confuse a calm finance card.
+3. Tenant isolation flows through the same
+   `where: { tenantId, … }` clauses already used by the finance and
+   guardian-portal services. No new query path was added.
+
+### Club-to-Family Trust layer (UX hierarchy refinements)
+
+The home order is now intentional and explicit, mobile-first:
+
+1. Branded greeting (unchanged).
+2. First-landing welcome (unchanged from Wave 21).
+3. Calm essentials strip (unchanged from Wave 21).
+4. **Recent from the club** continuity strip (new in Wave 22).
+5. **Payment readiness** card (new in Wave 22).
+6. "What needs your attention" / "All caught up" (unchanged).
+7. Today (unchanged).
+8. This week (unchanged from v1.2).
+9. My family (unchanged, with kit-in-hand from v1.2).
+10. All requests (unchanged).
+11. From the club (unchanged).
+
+Trust improvements made without adding new sections:
+
+- The Payment readiness card uses the existing `--portal-ring-soft`
+  CSS variable for its border accent so the calm "attention" tone
+  honours per-tenant branding without breaking readability.
+- Status pills in the continuity strip reuse the same brand-coloured
+  primary-soft surface the existing club-update pill uses, so the
+  brand chrome stays consistent without inventing a new colour.
+- All new copy is written warm-and-clear and avoids "you must",
+  "urgent", "action required" patterns. The strongest language used
+  on the finance surface is "may need a closer look".
+- Empty/clear states are first-class: the Payment readiness card
+  collapses to a single soft acknowledgement and the continuity strip
+  hides itself entirely when there is nothing to surface.
+
+### Mobile-first details
+
+- Both new sections anchor with `#continuity` and `#payment` so the
+  existing bottom-nav scroll model keeps working.
+- The continuity moments use a stacked layout (badge row + title +
+  summary + context line) so each moment is comfortably tappable on a
+  phone.
+- The Payment readiness card uses a two-column header (title + total)
+  on every viewport so the parent's eye lands on the total
+  immediately, then scans down through the next-due hint and the
+  capped list.
+- The "Past due" pill uses an amber tone, never red, so the surface
+  stays calm even in the `attention` tone.
+
+### API additions
+
+`GET /api/guardian-portal/me` is unchanged in shape but now also
+returns two optional blocks alongside the existing `landing`:
+
+| Field              | Purpose                                                           |
+|--------------------|-------------------------------------------------------------------|
+| `paymentReadiness` | Calm, family-facing finance projection (see table above).         |
+| `communication`    | The capped continuity strip + `hasOpenFamilyRequest` flag.        |
+
+Both blocks are tenant-isolated through the same session/access path
+and never include staff-only metadata.
+
+### Validation additions for v1.3 (Wave 22)
+
+- `npm run parent:portal:v1.3:test` is a new pure-Node validator
+  smoke. It mirrors the projection rules in `getPortalHome` for the
+  v1.3 surfaces (charge filtering, ordering, tone derivation, hard
+  caps, continuity windowing) so we can gate every CI run without
+  needing a database.
+- `npm run i18n:check` parity is extended to cover the full
+  `portal.home.continuity*` and `portal.home.payment*` key sets so
+  EN/TR copy can never silently drift.
+- `apps/web` smokes pick up two new
+  `GuardianPortalHomePage.smoke.test.tsx` cases — one for the v1.3
+  continuity strip + payment readiness in the `attention` tone, one
+  for the calm `clear` state — so the parent-facing rendering is
+  protected on every CI run.
+- The existing `npm run lint`, `npm run build`, `npm run repo:guard`,
+  `npm run tenant:branding:test`, `npm run club:updates:test`,
+  `npm run family:activation:test`, and `npm run frontend:smoke`
+  checks all stay green.
+
+### What is intentionally still out of scope (v1.3 / Wave 22)
+
+- A full inbox, threading, or read/unread theatre for parent
+  communication — the continuity strip is deliberately a strip, not a
+  feed.
+- Live payment collection, card capture, or online checkout — the
+  Payment readiness card stays a clarity surface, not a transaction
+  surface.
+- Per-family notification routing, mute/snooze controls, or
+  preference centers — the strip caps and tones do the work instead.
+- An admin "communication CRM" view of the continuity moments —
+  staff already see the underlying club updates and family-action
+  requests on their own surfaces and we deliberately don't double
+  the data here.

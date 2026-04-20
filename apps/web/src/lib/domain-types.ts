@@ -691,6 +691,95 @@ export type GuardianPortalLandingSummary = {
   essentialsAttentionCount: number;
 };
 
+/**
+ * Parent Portal v1.3 — Payment Readiness layer.
+ *
+ * Calm family-facing finance surface. Never a collections / dunning
+ * surface. The portal renders this block as a dedicated card with
+ * three states: "all clear", "open balance", and "needs attention".
+ */
+export type GuardianPortalPaymentReadinessCharge = {
+  id: string;
+  athleteId: string;
+  athleteName: string;
+  itemName: string;
+  amount: string;
+  remainingAmount: string;
+  dueDate: string | null;
+  status: 'overdue' | 'dueSoon' | 'open';
+  isOverdue: boolean;
+  currency: string;
+  billingPeriodLabel: string | null;
+};
+
+export type GuardianPortalPaymentReadiness = {
+  currency: string;
+  totals: {
+    outstandingAmount: string;
+    overdueAmount: string;
+    openCount: number;
+    overdueCount: number;
+    dueSoonCount: number;
+  };
+  /** Tone hint computed by the API. The portal copies are calm in every state. */
+  tone: 'clear' | 'open' | 'attention';
+  /** "Soon" window the API used to classify dueSoon entries. */
+  windowDays: number;
+  nextDue: {
+    chargeId: string;
+    athleteId: string;
+    athleteName: string;
+    itemName: string;
+    amount: string;
+    remainingAmount: string;
+    dueDate: string | null;
+    currency: string;
+  } | null;
+  charges: GuardianPortalPaymentReadinessCharge[];
+  perAthlete: Array<{
+    athleteId: string;
+    athleteName: string;
+    outstanding: string;
+    overdue: string;
+  }>;
+};
+
+/**
+ * Parent Portal v1.3 — Communication Continuity layer.
+ *
+ * A single calm strip carrying the small slice of recent club->family
+ * context the parent should be aware of. We never expose internal
+ * staff workflow noise here — only published club updates and
+ * family-action moments the parent already has visibility into.
+ */
+export type GuardianPortalContinuityMoment = {
+  id: string;
+  kind: 'club_update' | 'family_request';
+  occurredAt: string;
+  title: string;
+  summary: string | null;
+  athleteName: string | null;
+  status:
+    | 'published'
+    | 'open'
+    | 'pending_family_action'
+    | 'submitted'
+    | 'under_review'
+    | 'approved'
+    | 'rejected'
+    | 'completed'
+    | 'closed'
+    | null;
+  actionId: string | null;
+  audienceLabel: string | null;
+};
+
+export type GuardianPortalCommunicationContinuity = {
+  windowDays: number;
+  moments: GuardianPortalContinuityMoment[];
+  hasOpenFamilyRequest: boolean;
+};
+
 export type GuardianPortalHome = {
   guardian: {
     id: string;
@@ -711,6 +800,10 @@ export type GuardianPortalHome = {
     outstandingAthletes: number;
     overdueAthletes: number;
   };
+  /** Parent Portal v1.3 — calm payment readiness card. */
+  paymentReadiness?: GuardianPortalPaymentReadiness;
+  /** Parent Portal v1.3 — recent club->family communication continuity. */
+  communication?: GuardianPortalCommunicationContinuity;
   today?: {
     training: GuardianPortalTodayItem[];
     privateLessons: GuardianPortalTodayItem[];
