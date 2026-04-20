@@ -241,7 +241,23 @@ This keeps the product in a practical club-operations lane rather than turning i
 - **Overdue** remains a computed operational state based on due date plus remaining balance, not a separate stored enum.
 - Athlete finance views now expose total charged / collected / outstanding / overdue values plus recent payment activity.
 
-**Intentionally deferred:** ledger postings, invoices, payment gateways, tax lines, inventory links, and full accounting reconciliation.
+### Athlete charges flow flattening (Collections Clarity Pack)
+
+The staff-side athlete charges page is intentionally **flat and one-action-at-a-time**:
+
+- A compact summary band leads with charged / collected / outstanding / overdue.
+- A small **collections clarity strip** ("Who needs attention") reuses the existing finance summary and links into the existing communications follow-up surface — there is **no parallel collections workflow**.
+- A single **action drawer** with a segmented control replaces the three former side-by-side `<details>` panels. Only one action is mounted at a time:
+  - **Record a collection** (the highest-frequency staff job)
+  - **Assign a fee in bulk** (selected athletes, group, or active team)
+  - **Generate a period batch** (idempotent monthly / term dues with duplicate detection)
+- Less-frequent fields (payment method, reference, notes, periodic amount/due/notes) live behind an **"Advanced details"** disclosure inside each action panel so the default visible state stays calm.
+- The list is mobile-first stacked cards on small screens and table-on-md+, matching the existing pattern in other operational lists.
+- The Finance hub leads with **summary → primary action surface (athlete charges) → priority collections → demoted "more tools" strip** that holds reporting deep-links and the advanced explorer.
+
+The follow-up handoff from the clarity strip preserves source/context honesty by reusing the existing communications query keys (`source=finance_overdue`, `template=overdue_payment_reminder`, `sourceKey=athlete-charges*`), so the existing follow-up history can re-open the original list.
+
+**Intentionally deferred:** ledger postings, invoices, payment gateways, tax lines, inventory links, full accounting reconciliation, and a parallel "collections workspace". The next planned wave is *Payments & Collections Experience v1*; the clarity pack deliberately prepares clean ground for it without inventing premature surfaces.
 
 ## Reporting & command center
 
