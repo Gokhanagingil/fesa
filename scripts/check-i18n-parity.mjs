@@ -108,6 +108,17 @@ const scopedPrefixes = [
   'pages.reports.communicationReadyContext',
   // Athlete photo surface - keep upload/replace/remove copy aligned across locales.
   'pages.athletes.photo',
+  // Parent Portal v1.1 + Brand Admin v1.1 — staff branding + club updates surfaces.
+  'pages.brandAdmin',
+  'pages.clubUpdates',
+  // Parent Portal v1.1 — calm "From the club" strip (parent home).
+  'portal.home.clubUpdatesTitle',
+  'portal.home.clubUpdatesHint',
+  'portal.home.clubUpdatePinned',
+  'portal.home.clubUpdateOpenLink',
+  'portal.home.clubUpdateCategory',
+  // Sidebar nav keys for the club updates surface.
+  'app.nav.clubUpdates',
 ];
 
 function flattenKeys(input, prefix = '') {

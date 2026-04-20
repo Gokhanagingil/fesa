@@ -121,18 +121,123 @@ tap targets (Home, My family, Updates) without ever leaving the page.
 These each have a clear path forward in later waves; the v1 scope keeps
 the surface area small enough to stay calm, secure, and trustworthy.
 
+## v1.1 — Brand Admin v1.1 + Club Updates layer (Wave 18)
+
+Wave 18 builds on the Wave 17 foundation with two small, controlled
+additions and a UX polish pass on the parent home. There is no new
+authentication model, no new tenant boundary, and no new operational
+data exposed to guardians.
+
+### Brand Admin v1.1
+
+A polished staff-side surface is now embedded directly in **Settings →
+Club branding**. The same controlled brand fields stay in place
+(display name, tagline, two colours, logo, welcome copy); on top of
+those we added:
+
+- **A live preview card.** A faithful "what parents will see"
+  preview re-renders as fields change, so club staff don't have to
+  guess how their colour or copy choice will land.
+- **A logo upload flow on top of the existing media foundation.** Clubs
+  can now upload a small logo (PNG/JPG/WEBP, ≤ 1 MB) directly through
+  staff branding, served back through a tenant-scoped, cache-busted
+  route at `GET /api/portal/tenants/:tenantId/branding/logo`. The
+  free-form `brandLogoUrl` is preserved for clubs that prefer to host
+  their own; the uploaded asset takes precedence when both are set.
+- **A contrast advisory.** The brand payload now includes a
+  WCAG-style contrast ratio for primary and accent colours. The portal
+  itself still picks the readable ink colour automatically — the
+  advisory is purely a hint so staff know when a colour choice would
+  feel hard to read.
+
+The full controlled surface stays the same: layout, typography,
+spacing, component structure, focus rings, and system colors for
+danger / success / warning are still **not** brandable, on purpose.
+
+| New tenant column | Purpose |
+|-------------------|---------|
+| `brandLogoAssetFileName` | Per-tenant uploaded logo file name. |
+| `brandLogoAssetContentType` | Stored mime type for the uploaded asset. |
+| `brandLogoAssetSizeBytes` | Stored file size (bytes). |
+| `brandLogoAssetUploadedAt` | Used for cache-busting on replace. |
+
+### Club Updates layer
+
+A small new `club_updates` table backs a calm "From the club" strip on
+the parent portal home. The intent is "a helpful note from the club" —
+not a CMS, not a marketing channel, not a comment thread.
+
+| Field | Purpose |
+|-------|---------|
+| `category` | `announcement` · `event` · `reminder` |
+| `status` | `draft` · `published` · `archived` |
+| `title`, `body` | Plain text only — short title, one paragraph |
+| `linkUrl`, `linkLabel` | Optional safe link (https:// or `/…` path) |
+| `publishedAt` | Auto-set when first published |
+| `expiresAt` | Parent UI hides expired cards |
+| `pinnedUntil` | Keeps a card on top of the strip for a window |
+
+Hard caps protect the parent surface:
+
+- the API never returns more than **5 cards** to parents;
+- staff can manage at most **50 cards** in the staff list;
+- only `published`, in-window cards reach the parent payload.
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `GET /api/club-updates` | staff (`TenantGuard`) | List the staff-side updates queue. |
+| `POST /api/club-updates` | staff | Create a new update. |
+| `GET /api/club-updates/:id` | staff | Single card. |
+| `PATCH /api/club-updates/:id` | staff | Update fields, transition status. |
+| `POST /api/club-updates/:id/publish` | staff | Set status to `published`, stamp `publishedAt` if needed. |
+| `POST /api/club-updates/:id/archive` | staff | Move out of the parent strip without deleting history. |
+| `DELETE /api/club-updates/:id` | staff | Delete the card. |
+
+The guardian portal home payload (`GET /api/guardian-portal/me`) now
+includes the same parent-safe slice via a new `clubUpdates` field, so
+the portal can render the strip without an extra request.
+
+### Parent home polish
+
+The home is unchanged in structure (greeting → attention → today →
+family → all requests → from the club). The "From the club" strip is
+now backed by real club updates: each card has a calm category pill,
+the title and body the club authored, and an optional brand-coloured
+link. The previous fallback (welcome message + reassurance line) still
+appears when the club has not published anything yet.
+
+### Validation additions
+
+- `npm run tenant:branding:test` now also covers the contrast
+  advisory helper.
+- `npm run club:updates:test` is a new pure-Node validator smoke for
+  the club-updates normalization rules and parent-side filtering.
+- `apps/web` smokes now include a `clubUpdates`-rendering case for
+  `GuardianPortalHomePage`.
+- `npm run i18n:check` parity is extended to cover the new
+  `pages.brandAdmin`, `pages.clubUpdates`, `app.nav.clubUpdates`, and
+  `portal.home.clubUpdate*` keys.
+
 ## Validation
 
 - `npm run lint` — covers the new branding service, controllers, DTO, and
-  portal pages.
-- `npm run i18n:check` — protects locale parity for the new portal copy.
+  portal pages, plus the Wave 18 club-updates module and the staff Brand
+  Admin / Club Updates surfaces.
+- `npm run i18n:check` — protects locale parity for the parent portal
+  copy and (since Wave 18) the staff `pages.brandAdmin` and
+  `pages.clubUpdates` surfaces.
 - `npm run repo:guard` — workspace hygiene (existing).
 - `npm run tenant:branding:test` — pure-Node validator smoke for the
   brand color and URL normalization rules used by
-  `TenantBrandingService.updateBranding` (no database required).
-- `npm run frontend:smoke` — covers the new `GuardianPortalHomePage` and
-  `GuardianPortalLoginPage` smokes alongside the existing reporting,
-  imports, inventory, and communications smokes.
+  `TenantBrandingService.updateBranding` plus the Wave 18 contrast
+  advisory helper (no database required).
+- `npm run club:updates:test` — pure-Node validator smoke for the
+  club-updates normalization rules and parent-side filtering
+  (Wave 18, no database required).
+- `npm run frontend:smoke` — covers the `GuardianPortalHomePage` and
+  `GuardianPortalLoginPage` smokes (now including the club-updates
+  strip case) alongside the existing reporting, imports, inventory,
+  and communications smokes.
 
 The existing `npm run api:boot:smoke`, `npm run dashboard:smoke`, and
 `npm run reporting:smoke` checks remain unchanged and still gate the API.

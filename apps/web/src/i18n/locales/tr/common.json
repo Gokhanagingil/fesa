@@ -27,6 +27,7 @@
       "reports": "Raporlar",
       "reportBuilder": "Rapor oluşturucu",
       "imports": "İçe / Dışa aktarma",
+      "clubUpdates": "Kulüp duyuruları",
       "settings": "Ayarlar",
       "admin": "Yönetim"
     },
@@ -1763,6 +1764,99 @@
       "securityPointMembership": "Tenant erişimi yalnızca frontend gizlemesine değil, üyelik kapsamına göre sınırlandırılır.",
       "securityPointGuardian": "Veli oturumları personel oturumlarından ayrıdır ve ayrı tutulur."
     },
+    "brandAdmin": {
+      "title": "Kulüp markası",
+      "subtitle": "Kulübünüzün aile portalında nasıl göründüğünü ayarlayın. Yerleşim, yazı tipleri ve erişilebilirlik ailelerin alıştığı şekliyle her zaman ortak kalır.",
+      "noTenant": "Markayı düzenlemek için üst başlıktan bir kulüp seçin.",
+      "savedJustNow": "Kaydedildi",
+      "saving": "Kaydediliyor…",
+      "save": "Markayı kaydet",
+      "guardrailNote": "Yerleşim, yazı tipleri ve erişilebilirlik tüm kulüpler için ortak kalır.",
+      "identityTitle": "Kulüp kimliği",
+      "identityHint": "Kulübün portal başlığında ve karşılama kartında nasıl adlandırılacağı.",
+      "displayName": "Görünen ad",
+      "displayNameHint": "Logonuzun yanında görünür. Belirtilmezse kulüp adı kullanılır.",
+      "tagline": "Kısa slogan",
+      "taglinePlaceholder": "Kulübünüzü anlatan kısa, sıcak bir cümle",
+      "taglineHint": "Opsiyonel. Tek satır. Kulübünüzün adının altında, sakin tutmaya çalışın.",
+      "colorsTitle": "Renk ikilisi",
+      "colorsHint": "İki marka rengi marka simgesini, yumuşak fonları ve karşılama kartını biçimlendirir. Kulübünüze yakışan renkleri seçin.",
+      "primary": "Ana renk",
+      "accent": "Vurgu rengi",
+      "contrastWarning": "Okunması zor olabilir",
+      "contrastHelp": "Okunaklı yazı rengini biz otomatik seçeriz, yine de daha sıcak veya daha koyu bir ton portalda genellikle daha güvenli durur.",
+      "logoTitle": "Logo",
+      "logoHint": "Küçük bir kare veya yazı logosu yükleyin ya da zaten yayında olan bir adresi girin. Her iki seçenek de güvenli şekilde kulübünüze bağlanır.",
+      "logoUpload": "Logo yükle",
+      "logoReplace": "Logoyu değiştir",
+      "logoRemove": "Yüklü logoyu kaldır",
+      "logoUploading": "Yükleniyor…",
+      "logoConstraints": "PNG, JPG veya WEBP, en fazla 1 MB. Kare veya kareye yakın görseller en iyi sonucu verir.",
+      "externalLogo": "Veya barındırılan bir logo URL'si",
+      "externalLogoHint": "https:// ile veya / ile başlayan bir yol kullanın. Yüklenmiş logo varsa o öncelikli görüntülenir.",
+      "welcomeTitle": "Karşılama mesajı",
+      "welcomeHint": "Veliler için kısa, sıcak bir not. Opsiyonel — boş bırakırsanız sakin bir varsayılan görünür.",
+      "welcomeHeadline": "Başlık",
+      "welcomeHeadlinePlaceholder": "Hoş geldiniz, ___ ailesi",
+      "welcomeMessage": "Mesaj",
+      "welcomeMessagePlaceholder": "Her aile portalı açtığında hissetmesini istediğiniz şey.",
+      "previewTitle": "Velilerin göreceği görünüm",
+      "previewHint": "Yazdıkça güncellenir. Yerleşim ve erişilebilirlik tüm kulüpler için ortaktır.",
+      "previewBadge": "Aile portalı",
+      "previewWelcomeFallback": "Aile alanınıza hoş geldiniz",
+      "previewMessageFallback": "Kulübünüzün bugün ailenizle paylaştıkları burada.",
+      "previewPill": "Sakin",
+      "previewPillSecondary": "Markalı"
+    },
+    "clubUpdates": {
+      "title": "Kulüp duyuruları",
+      "subtitle": "Aile portalında görünen kısa, sakin notlar. Bu hafta ailelerin gerçekten faydalanacağı birkaç önemli şey için kullanın.",
+      "newCta": "Yeni duyuru",
+      "empty": "Henüz duyuru yok. Yayına aldığınız ilk duyuru aile portalı ana sayfasında sessizce görünecek.",
+      "savedJustNow": "Kaydedildi",
+      "publishedOn": "{{when}} tarihinde yayında",
+      "expiresOn": "{{when}} tarihinde sona erer",
+      "notPublished": "Henüz yayında değil",
+      "pinned": "Sabitli",
+      "expired": "Süresi geçti",
+      "confirmDelete": "Bu duyuru silinsin mi? Aileler artık bunu göremez.",
+      "formNewTitle": "Yeni kulüp duyurusu",
+      "formEditTitle": "Kulüp duyurusunu düzenle",
+      "formGuardrail": "Yalnızca düz metin. Kısa tutun — aileler önce ilk kartı telefonda görür.",
+      "fields": {
+        "category": "Tür",
+        "status": "Görünürlük",
+        "title": "Başlık",
+        "titlePlaceholder": "Kısa, hızlı okunan bir başlık",
+        "body": "İçerik",
+        "bodyPlaceholder": "Kısa bir paragraf. Ailenin bilmesi gereken nedir?",
+        "linkLabel": "Bağlantı etiketi",
+        "linkLabelPlaceholder": "Opsiyonel · bağlantı neyi açıyor",
+        "linkUrl": "Bağlantı adresi",
+        "pinnedUntil": "Şu tarihe kadar sabitle",
+        "expiresAt": "Şu tarihten sonra gizle"
+      },
+      "category": {
+        "announcement": "Duyuru",
+        "event": "Etkinlik",
+        "reminder": "Hatırlatma"
+      },
+      "status": {
+        "draft": "Taslak",
+        "published": "Yayında",
+        "archived": "Arşiv"
+      },
+      "actions": {
+        "edit": "Düzenle",
+        "publish": "Yayına al",
+        "archive": "Arşivle",
+        "delete": "Sil",
+        "save": "Kaydet",
+        "create": "Duyuru oluştur",
+        "cancel": "Vazgeç",
+        "saving": "Kaydediliyor…"
+      }
+    },
     "staffLogin": {
       "badge": "Personel erişimi",
       "title": "Kulüp operasyonlarına giriş yapın",
@@ -2035,7 +2129,16 @@
       "allRequestsTitle": "Tüm talepler",
       "allRequestsHint": "Kulübün ailenizle paylaştığı her şey tek bir yerde.",
       "updatesTitle": "Kulüpten",
-      "updatesPlaceholder": "Kulübünüz yeni bir duyuru paylaştığında burada sessizce görünecek."
+      "updatesPlaceholder": "Kulübünüz yeni bir duyuru paylaştığında burada sessizce görünecek.",
+      "clubUpdatesTitle": "Kulüpten",
+      "clubUpdatesHint": "Kulübünüzden kısa, sakin notlar",
+      "clubUpdatePinned": "Sabitli",
+      "clubUpdateOpenLink": "Bağlantıyı aç",
+      "clubUpdateCategory": {
+        "announcement": "Not",
+        "event": "Etkinlik",
+        "reminder": "Hatırlatma"
+      }
     }
   }
 }

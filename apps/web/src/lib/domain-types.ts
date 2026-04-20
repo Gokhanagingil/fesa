@@ -483,11 +483,81 @@ export type TenantBrandingPayload = {
   tagline: string | null;
   primaryColor: string;
   accentColor: string;
+  /** Effective logo URL (uploaded asset or external URL). Parents see this. */
   logoUrl: string | null;
+  /** Externally hosted, free-form logo URL. */
+  externalLogoUrl?: string | null;
+  /** True when the tenant has uploaded a logo asset via Brand Admin v1.1. */
+  hasUploadedLogo?: boolean;
   welcomeTitle: string | null;
   welcomeMessage: string | null;
+  /**
+   * Parent Portal v1.1 — staff-side contrast advisory. The portal still
+   * picks readable ink colours automatically; this is purely a hint for
+   * the brand admin so club staff can see when a colour choice would
+   * land below WCAG AA against either ink colour.
+   */
+  contrast?: {
+    primaryInk: 'light' | 'dark';
+    accentInk: 'light' | 'dark';
+    primaryRatio: number;
+    accentRatio: number;
+    primaryReadable: boolean;
+    accentReadable: boolean;
+  };
   isCustomized: boolean;
   updatedAt: string | null;
+};
+
+/**
+ * Parent Portal v1.1 — Club Updates (parent-facing summary).
+ *
+ * Deliberately small: title, body, optional safe link, category pill, and
+ * a calmly-rendered timestamp. Parents never see drafts, expired cards,
+ * or scheduled-but-not-yet-published cards.
+ */
+export type ClubUpdateCategory = 'announcement' | 'event' | 'reminder';
+export type ClubUpdateStatus = 'draft' | 'published' | 'archived';
+
+export type ClubUpdateParentSummary = {
+  id: string;
+  category: ClubUpdateCategory;
+  title: string;
+  body: string;
+  linkUrl: string | null;
+  linkLabel: string | null;
+  publishedAt: string | null;
+  pinned: boolean;
+};
+
+export type ClubUpdate = {
+  id: string;
+  tenantId: string;
+  category: ClubUpdateCategory;
+  status: ClubUpdateStatus;
+  title: string;
+  body: string;
+  linkUrl: string | null;
+  linkLabel: string | null;
+  publishedAt: string | null;
+  expiresAt: string | null;
+  pinnedUntil: string | null;
+  pinned: boolean;
+  expired: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ClubUpdateInput = {
+  category?: ClubUpdateCategory;
+  status?: ClubUpdateStatus;
+  title?: string;
+  body?: string;
+  linkUrl?: string | null;
+  linkLabel?: string | null;
+  publishedAt?: string | null;
+  expiresAt?: string | null;
+  pinnedUntil?: string | null;
 };
 
 export type GuardianPortalActivationStatus = {
@@ -557,6 +627,7 @@ export type GuardianPortalHome = {
     training: GuardianPortalTodayItem[];
     privateLessons: GuardianPortalTodayItem[];
   };
+  clubUpdates?: ClubUpdateParentSummary[];
 };
 
 export type FamilyActionEvent = {

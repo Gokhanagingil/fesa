@@ -25,6 +25,23 @@ export type AllowedPhotoMimeType = (typeof ALLOWED_PHOTO_MIME_TYPES)[number];
 /** 5 MB ceiling — generous for phone-sourced photos, safely below proxy limits. */
 export const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
 
+/**
+ * Wave 18 — tighter logo image rules.
+ *
+ * Brand logos are small marks rendered at fixed pixel sizes in the portal
+ * shell, so we don't need 5 MB of headroom and we don't accept GIF (no
+ * club logo we've seen needs animation, and GIF rendering quality is poor
+ * at the sizes we render at). The smaller ceiling also keeps brand
+ * uploads well below any proxy / multipart limit.
+ */
+export const ALLOWED_BRAND_LOGO_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const;
+export type AllowedBrandLogoMimeType = (typeof ALLOWED_BRAND_LOGO_MIME_TYPES)[number];
+export const MAX_BRAND_LOGO_SIZE_BYTES = 1 * 1024 * 1024;
+
 const MIME_TO_EXT: Record<AllowedPhotoMimeType, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -32,7 +49,17 @@ const MIME_TO_EXT: Record<AllowedPhotoMimeType, string> = {
   'image/gif': 'gif',
 };
 
-export type SupportedMediaScope = 'athletes';
+/**
+ * Supported per-tenant media scopes.
+ *
+ * - `athletes` (Wave 16) — athlete profile photos. owner = athleteId.
+ * - `tenant-brand` (Wave 18) — uploaded brand logo for the parent portal.
+ *   owner = tenantId, so the file lives at `<tenant>/tenant-brand/<tenant>/`.
+ *   The "owner = tenant" pattern keeps the same isolation guarantees as
+ *   the athlete scope: every read/write resolves under the per-tenant
+ *   subtree of the storage root and rejects path-escape attempts.
+ */
+export type SupportedMediaScope = 'athletes' | 'tenant-brand';
 
 export interface StoredMediaFile {
   fileName: string;
@@ -97,6 +124,33 @@ export class MediaStorageService {
     if (buffer.length > MAX_PHOTO_SIZE_BYTES) {
       throw new BadRequestException(
         'Photo is larger than 5 MB. Try a smaller image.',
+      );
+    }
+    return contentType;
+  }
+
+  /**
+   * Wave 18 — Brand logo upload validator.
+   *
+   * Stricter than {@link assertValidPhoto}: smaller ceiling and no GIF.
+   * Same calm, single-line error tone so the message can surface unchanged
+   * in the staff branding form.
+   */
+  assertValidBrandLogo(
+    buffer: Buffer | undefined,
+    contentType: string | undefined,
+  ): AllowedBrandLogoMimeType {
+    if (!buffer || buffer.length === 0) {
+      throw new BadRequestException('No logo file received.');
+    }
+    if (!contentType || !isAllowedBrandLogoMime(contentType)) {
+      throw new BadRequestException(
+        'Unsupported logo type. Use a JPG, PNG, or WEBP image.',
+      );
+    }
+    if (buffer.length > MAX_BRAND_LOGO_SIZE_BYTES) {
+      throw new BadRequestException(
+        'Logo is larger than 1 MB. Try a smaller image.',
       );
     }
     return contentType;
@@ -197,6 +251,10 @@ export class MediaStorageService {
 
 export function isAllowedPhotoMime(value: string): value is AllowedPhotoMimeType {
   return (ALLOWED_PHOTO_MIME_TYPES as readonly string[]).includes(value);
+}
+
+export function isAllowedBrandLogoMime(value: string): value is AllowedBrandLogoMimeType {
+  return (ALLOWED_BRAND_LOGO_MIME_TYPES as readonly string[]).includes(value);
 }
 
 function sanitizeIdSegment(value: string): string {

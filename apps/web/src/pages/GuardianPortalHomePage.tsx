@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { apiGet } from '../lib/api';
-import type { GuardianPortalHome } from '../lib/domain-types';
+import type { ClubUpdateParentSummary, GuardianPortalHome } from '../lib/domain-types';
 import {
   formatDateTime,
   getFamilyActionStatusLabel,
@@ -349,22 +349,109 @@ export function GuardianPortalHomePage() {
         </section>
       ) : null}
 
-      {/* Club showcase / updates layer.
-          Subtle, supporting, never the primary surface.  We do not show
-          banners, popups, or marketing copy here — only the welcome
-          message the club configured (if any) plus a calm, single-line
-          reassurance about how families learn about news. */}
+      <ClubUpdatesStrip
+        updates={data.clubUpdates ?? []}
+        fallbackTitle={branding?.welcomeTitle ?? null}
+        fallbackBody={branding?.welcomeMessage ?? null}
+      />
+    </div>
+  );
+}
+
+/**
+ * Parent Portal v1.1 — calm "From the club" strip.
+ *
+ * Renders the small slice of published, in-window club updates that the
+ * API allows us to show. The visual treatment is deliberately subtle —
+ * soft brand-aware accents, a clear category pill, and never more than
+ * one card width — so this never feels like a marketing feed. When the
+ * club has not published anything yet, we fall back to the welcome
+ * message they configured, or a single calm line if they haven't set
+ * one of those either.
+ */
+function ClubUpdatesStrip({
+  updates,
+  fallbackTitle,
+  fallbackBody,
+}: {
+  updates: ClubUpdateParentSummary[];
+  fallbackTitle: string | null;
+  fallbackBody: string | null;
+}) {
+  const { t, i18n } = useTranslation();
+
+  if (updates.length === 0) {
+    return (
       <section
         id="updates"
         className="rounded-3xl border border-dashed border-amateur-border bg-amateur-surface/60 p-5 text-sm text-amateur-muted scroll-mt-24"
       >
         <p className="font-medium text-amateur-ink">
-          {branding?.welcomeTitle ?? t('portal.home.updatesTitle')}
+          {fallbackTitle ?? t('portal.home.updatesTitle')}
         </p>
-        <p className="mt-1">
-          {branding?.welcomeMessage ?? t('portal.home.updatesPlaceholder')}
-        </p>
+        <p className="mt-1">{fallbackBody ?? t('portal.home.updatesPlaceholder')}</p>
       </section>
-    </div>
+    );
+  }
+
+  return (
+    <section
+      id="updates"
+      className="rounded-3xl border border-amateur-border bg-amateur-surface p-5 shadow-sm scroll-mt-24"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-display text-base font-semibold text-amateur-ink">
+          {t('portal.home.clubUpdatesTitle')}
+        </h2>
+        <span className="text-xs text-amateur-muted">{t('portal.home.clubUpdatesHint')}</span>
+      </div>
+      <ul className="mt-3 space-y-3">
+        {updates.map((item) => (
+          <li
+            key={item.id}
+            className="rounded-2xl border border-amateur-border bg-amateur-canvas px-4 py-4"
+            style={{
+              boxShadow: item.pinned ? '0 0 0 1px var(--portal-ring-soft, transparent) inset' : undefined,
+            }}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"
+                style={{
+                  backgroundColor: 'var(--portal-primary-soft, #e3f4ee)',
+                  color: 'var(--portal-primary, #0d4a3c)',
+                }}
+              >
+                {t(`portal.home.clubUpdateCategory.${item.category}`)}
+              </span>
+              {item.pinned ? (
+                <span className="text-[11px] font-medium text-amateur-muted">
+                  {t('portal.home.clubUpdatePinned')}
+                </span>
+              ) : null}
+              {item.publishedAt ? (
+                <span className="ml-auto text-[11px] text-amateur-muted">
+                  {formatDateTime(item.publishedAt, i18n.language)}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 font-display text-sm font-semibold text-amateur-ink">{item.title}</p>
+            <p className="mt-1 whitespace-pre-line text-sm text-amateur-muted">{item.body}</p>
+            {item.linkUrl ? (
+              <a
+                href={item.linkUrl}
+                rel="noreferrer noopener"
+                target={item.linkUrl.startsWith('http') ? '_blank' : undefined}
+                className="mt-3 inline-flex items-center text-xs font-semibold"
+                style={{ color: 'var(--portal-primary, #0d4a3c)' }}
+              >
+                {item.linkLabel ?? t('portal.home.clubUpdateOpenLink')}
+                <span aria-hidden="true" className="ml-1">→</span>
+              </a>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

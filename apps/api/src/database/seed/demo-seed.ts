@@ -9,6 +9,7 @@ import {
   AthleteTeamMembership,
   ChargeItem,
   ClubGroup,
+  ClubUpdate,
   Coach,
   FamilyActionEvent,
   FamilyActionRequest,
@@ -262,6 +263,23 @@ type DemoClubSeed = {
     completedAt?: Date | null;
     snoozedUntil?: Date | null;
     metadata?: Record<string, unknown>;
+  }>;
+  /**
+   * Parent Portal v1.1 — seeded club updates that appear in the parent
+   * portal home for each demo club. Kept tiny (max ~3 per club) so the
+   * portal stays calm and the seeds don't act like a marketing feed.
+   */
+  clubUpdates?: Array<{
+    key: string;
+    category: 'announcement' | 'event' | 'reminder';
+    status: 'draft' | 'published' | 'archived';
+    title: string;
+    body: string;
+    linkUrl?: string | null;
+    linkLabel?: string | null;
+    publishedAt?: Date | null;
+    expiresAt?: Date | null;
+    pinnedUntil?: Date | null;
   }>;
 };
 
@@ -797,6 +815,29 @@ function getDemoClubs(): DemoClubSeed[] {
           readAt: d(2026, 4, 10),
         },
       ],
+      clubUpdates: [
+        {
+          key: 'kadikoy-spring-camp',
+          category: 'event',
+          status: 'published',
+          title: 'Bahar kampı kayıtları başladı',
+          body:
+            'U12 ve U14 sporcularımız için bahar kampı 28 Nisan – 2 Mayıs arasında. Kontenjan sınırlı; kampı kaçırmamak için bu hafta içinde rezervasyon yapmanız yeterli.',
+          linkLabel: 'Kamp programı',
+          linkUrl: '/portal/home',
+          publishedAt: d(2026, 4, 12),
+          pinnedUntil: d(2026, 4, 30),
+        },
+        {
+          key: 'kadikoy-jersey-pickup',
+          category: 'reminder',
+          status: 'published',
+          title: 'Yeni formalar kulüpte',
+          body:
+            'Sipariş verdiğiniz kulüp formaları geldi. Antrenman saatlerinde resepsiyondan teslim alabilirsiniz; getirmeyi unutursanız bir hafta saklarız.',
+          publishedAt: d(2026, 4, 10),
+        },
+      ],
     },
     {
       tenant: {
@@ -1057,6 +1098,29 @@ function getDemoClubs(): DemoClubSeed[] {
         },
       ],
       actionCenterStates: [],
+      clubUpdates: [
+        {
+          key: 'fesa-tournament',
+          category: 'event',
+          status: 'published',
+          title: 'U13 turnuvası — Cumartesi sabahı',
+          body:
+            'Bu cumartesi sabahı bölgesel U13 turnuvasında sahadayız. Sporcularımızın 09:30’da kulüpte olması yeterli; ulaşımı kulüp organize edecek.',
+          linkLabel: 'Tüm program',
+          linkUrl: '/portal/home',
+          publishedAt: d(2026, 4, 11),
+          pinnedUntil: d(2026, 4, 20),
+        },
+        {
+          key: 'fesa-academy-photos',
+          category: 'announcement',
+          status: 'published',
+          title: 'Yeni dönem fotoğrafları',
+          body:
+            'Akademi fotoğraf çekimi gelecek hafta. Forma giyiminin bir gün önceden hazır olması bizim için yeterli; geri kalanını kulüp halleder.',
+          publishedAt: d(2026, 4, 8),
+        },
+      ],
     },
     {
       tenant: {
@@ -1277,6 +1341,27 @@ function getDemoClubs(): DemoClubSeed[] {
         },
       ],
       actionCenterStates: [],
+      clubUpdates: [
+        {
+          key: 'moda-away-match',
+          category: 'event',
+          status: 'published',
+          title: 'Deplasman maçı — yol planı',
+          body:
+            'U15 deplasman maçımız bu hafta sonu. Otobüs spor salonu önünden 08:00’de hareket edecek; aileler isterse maça kulüple birlikte gelebilir.',
+          publishedAt: d(2026, 4, 13),
+          pinnedUntil: d(2026, 4, 19),
+        },
+        {
+          key: 'moda-open-day',
+          category: 'reminder',
+          status: 'published',
+          title: 'Açık antrenman günü',
+          body:
+            'Önümüzdeki Çarşamba akşamı U13 grubumuz için açık antrenman düzenleyeceğiz. Aileler tribünde yerini alabilir; kayıt gerekmiyor.',
+          publishedAt: d(2026, 4, 9),
+        },
+      ],
     },
     {
       tenant: {
@@ -1501,6 +1586,35 @@ function getDemoClubs(): DemoClubSeed[] {
         },
       ],
       actionCenterStates: [],
+      clubUpdates: [
+        {
+          key: 'marmara-match-prep',
+          category: 'event',
+          status: 'published',
+          title: 'Hafta sonu maç hazırlığı',
+          body:
+            'U16 takımımızın bu hafta sonu lig maçı var. Aileler tribünden destek olabilir; kit listesi her zamanki gibi.',
+          publishedAt: d(2026, 4, 12),
+          pinnedUntil: d(2026, 4, 19),
+        },
+        {
+          key: 'marmara-summer-camp',
+          category: 'announcement',
+          status: 'published',
+          title: 'Yaz kampı için ön bilgilendirme',
+          body:
+            'Yaz kampı tarihlerimizi netleştiriyoruz. Ailelerimize en geç önümüzdeki hafta detayları paylaşacağız; şimdiden bilgi sahibi olmanız için kısa bir ön not.',
+          publishedAt: d(2026, 4, 7),
+        },
+        {
+          key: 'marmara-pickup-window',
+          category: 'reminder',
+          status: 'draft',
+          title: 'Pazartesi çıkış saati değişebilir',
+          body:
+            'Pazartesi günü antrenman çıkış saati 19:30 olarak güncellenebilir. Netleştiğinde duyuruyu yayınlayacağız.',
+        },
+      ],
     },
   ];
 }
@@ -1607,6 +1721,7 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
     const staffUsers = manager.getRepository(StaffUser);
     const tenantMemberships = manager.getRepository(TenantMembership);
     const actionCenterStates = manager.getRepository(ActionCenterItemState);
+    const clubUpdates = manager.getRepository(ClubUpdate);
 
     const globalAdminSalt = 'wave8-global-admin-salt';
     await ensureStaffUser(staffUsers, {
@@ -1943,6 +2058,23 @@ export async function runDemoSeed(dataSource: DataSource): Promise<void> {
         row.snoozedUntil = state.snoozedUntil ?? null;
         row.metadata = state.metadata ?? {};
         await actionCenterStates.save(row);
+      }
+
+      for (const item of club.clubUpdates ?? []) {
+        const id = stableId(club.tenant.slug, 'club-update', item.key);
+        const row =
+          (await clubUpdates.findOne({ where: { id } })) ??
+          clubUpdates.create({ id, tenantId: club.tenant.id });
+        row.category = item.category;
+        row.status = item.status;
+        row.title = item.title;
+        row.body = item.body;
+        row.linkUrl = item.linkUrl ?? null;
+        row.linkLabel = item.linkLabel ?? null;
+        row.publishedAt = item.publishedAt ?? null;
+        row.expiresAt = item.expiresAt ?? null;
+        row.pinnedUntil = item.pinnedUntil ?? null;
+        await clubUpdates.save(row);
       }
     }
   });

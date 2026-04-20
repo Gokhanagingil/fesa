@@ -16,6 +16,7 @@ import { GuardianModule } from '../guardian/guardian.module';
 import { PrivateLessonModule } from '../private-lesson/private-lesson.module';
 import { TenantModule } from '../tenant/tenant.module';
 import { TrainingModule } from '../training/training.module';
+import { ClubUpdateModule } from '../club-update/club-update.module';
 import { GuardianPortalController } from './guardian-portal.controller';
 import { GuardianPortalGuard } from './guardian-portal.guard';
 import { GuardianPortalService } from './guardian-portal.service';
@@ -28,6 +29,7 @@ import { GuardianPortalService } from './guardian-portal.service';
     PrivateLessonModule,
     TenantModule,
     TrainingModule,
+    ClubUpdateModule,
     TypeOrmModule.forFeature([
       Guardian,
       GuardianPortalAccess,

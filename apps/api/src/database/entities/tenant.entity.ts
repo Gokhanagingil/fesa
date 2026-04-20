@@ -38,6 +38,29 @@ export class Tenant {
   @Column({ type: 'varchar', length: 512, nullable: true })
   brandLogoUrl!: string | null;
 
+  /**
+   * Parent Portal v1.1 — uploaded logo asset (Brand Admin v1.1).
+   *
+   * Clubs that don't host their own logo elsewhere can upload a small,
+   * controlled logo asset directly through staff branding. The file lives
+   * under the per-tenant media root via the existing MediaStorageService
+   * (scope = `tenant-brand`, owner = tenantId) and is served back through
+   * a tenant-scoped route. We keep these as separate columns from the
+   * free-form `brandLogoUrl` so a club can switch between "I host my own"
+   * and "use the uploaded one" without losing either choice.
+   */
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  brandLogoAssetFileName!: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  brandLogoAssetContentType!: string | null;
+
+  @Column({ type: 'integer', nullable: true })
+  brandLogoAssetSizeBytes!: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  brandLogoAssetUploadedAt!: Date | null;
+
   @Column({ type: 'varchar', length: 160, nullable: true })
   brandWelcomeTitle!: string | null;
 
