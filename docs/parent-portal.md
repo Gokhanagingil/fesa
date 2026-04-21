@@ -943,3 +943,162 @@ not a workaround.
   through the staff resend-invite path, the same as in v1.2.
 - A general-purpose notification platform / outbox — the seam is
   bounded to parent invite delivery on purpose.
+
+## Parent Access + Family Journey Stabilization Pass
+
+This pass does not open a new breadth wave. The wave above (Parent
+Invite Delivery & Access Reliability Pack) shipped a real, working
+end-to-end family journey. This pass exists to make that chain more
+trustworthy in actual use:
+
+```
+staff issues invite
+  → delivery state is truthful
+    → staff can verify or manually share
+      → parent receives / opens activation link
+        → parent activates successfully
+          → parent lands in a useful first experience
+            → family activation visibility updates correctly
+              → recovery / continuity remain coherent
+```
+
+### What this pass actually changed
+
+#### Coherence between activation and the recovery / delivery surfaces
+
+Before this pass, a family that:
+
+1. used the public *I lost access* form (which stamped
+   `recoveryRequestedAt` on their access row), and then
+2. activated via the freshly-resent invite,
+
+still appeared to staff with a *“asked for help”* banner on the
+guardian detail surface and inside the **Asked for help** bucket of the
+family activation overview. The truth was the opposite — they were
+already inside the portal.
+
+`GuardianPortalService.activate()` now clears the recovery flag
+(`recoveryRequestedAt`, `recoveryRequestCount`) and the stale invite
+delivery state (`inviteDeliveryState`, `inviteDeliveredAt`,
+`inviteSharedAt`, …) on success. The activated row graduates out of the
+*“did the invite reach them?”* and *“are they still locked out?”*
+questions entirely. The staff overview, the delivery badge on the
+guardian detail page, and the recovery banner all flip in lockstep with
+the parent's actual reality.
+
+#### Truthful, code-tagged activation errors
+
+`getActivationStatus()` and `activate()` used to throw a single
+`UnauthorizedException('Invite link is invalid or expired')` for three
+materially different states. The activation page rendered the same
+*“no longer valid”* copy for all of them.
+
+Both endpoints now return a stable `code` on the 401 envelope:
+
+| Code                       | Meaning                                                   |
+|----------------------------|-----------------------------------------------------------|
+| `invite_link_invalid`      | The token did not match any row (typo / truncated link).  |
+| `invite_link_expired`      | The token matched but the 72h window elapsed.             |
+| `portal_access_disabled`   | The row exists but staff paused this access on purpose.   |
+
+The activation page picks warmer per-reason wording from
+`portal.activate.errors.{missing,invalid,expired,disabled,network}` and
+the matching `…Hint` keys. We never leak account existence — the wording
+stays calm and gives the parent two warm escape paths (Recover / Sign
+in) on every error.
+
+`apps/web/src/lib/api.ts` exposes the parsed `code` on `ApiError.code`
+so any future surface can route on the same contract without re-parsing
+the envelope.
+
+#### Staff-side UX coherence on the guardian detail page
+
+The portal-access section on the guardian detail page used to render
+**Disable** + **Resend invite** as two equal ghost buttons regardless
+of state, leaving staff guessing which one was the primary path. The
+section now picks a single primary action per state:
+
+- **disabled** → *Re-enable portal* (only path).
+- **invited / recovery flag set** → *Resend invite* primary, *Disable*
+  secondary.
+- **active and no recovery** → *Disable* primary; a quiet *Send fresh
+  link* ghost stays available for the rare case where a family asked
+  for one through a side channel.
+
+The activation link panel surfaces the manual-share path as the
+primary CTA exactly when the email path is not working
+(`pending` / `unavailable` / `failed`) and demotes it to a calmer
+ghost in the `sent` state. Once a row is `shared_manually` we hide the
+fallback button entirely so staff never re-stamp by accident.
+
+The link itself is hidden on activated rows — they no longer need it,
+and showing it would imply the parent still hadn't joined.
+
+All buttons in this surface guarantee a 44 px tall touch target so
+staff can manage access reliably from a phone.
+
+#### Calmer truthful copy across the delivery badges
+
+The previous wave landed *“Email sent”* / *“The invitation email was
+accepted by the provider”* as the success copy. That implied a
+stronger guarantee than SMTP can offer (the provider can accept and
+still bounce silently). The badge now reads *“Email handed off”* and
+the tone copy is *“Handed off to the email provider — we cannot
+confirm the inbox, just the handoff.”* (TR mirrored). The truthful
+delivery model itself is unchanged.
+
+#### Activation rate denominator excludes paused rows
+
+`getActivationOverview` used to compute the activation-rate percentage
+against every access row including `disabled` ones. That deflated the
+truthful rate and made the staff overview feel pessimistic. The
+denominator now clamps to non-paused rows, keeping the recovery
+families counted (they are mid-help, not paused). The clamp prevents a
+divide-by-zero on tenants where every access is paused.
+
+#### Parent recovery — explicit *what happens next*
+
+The recovery confirmation page now renders a small *Next step* line
+under the success message so the parent knows the request reached
+their club and what to expect. The truthful-delivery discipline is
+preserved (we still never confirm whether their email is on file).
+
+### Validation additions
+
+A new pure-Node validator
+[`scripts/parent-access-stabilization.test.mjs`](../scripts/parent-access-stabilization.test.mjs)
+gates four contracts on every CI run, with no database required:
+
+1. The three activation error codes are mapped exactly the way the
+   activation page expects them.
+2. `applyActivation()` clears the recovery flag and the stale
+   invite-delivery state.
+3. The activation-rate denominator excludes paused rows and clamps to
+   zero on the all-paused edge.
+4. The InviteLinkPanel CTA hierarchy promotes / demotes the manual
+   fallback in lockstep with the delivery state.
+
+The CI workflow now also explicitly runs the existing pure-Node
+parent-portal validators alongside the stabilization gate so any
+regression in the parent/family journey is caught at PR time:
+
+- `parent:invite:delivery:test`
+- `family:activation:test`
+- `parent:portal:v1.3:test`
+- `club:updates:test`
+- `parent:access:stabilization:test`
+
+Two new vitest smokes cover the activation page error reasons (expired
+vs disabled wording) and the new recovery *Next step* line.
+
+### What is intentionally still out of scope
+
+- A new public reset / magic-link / OTP recovery flow. Recovery still
+  goes through the staff resend-invite path on purpose.
+- A second family-action / invite / follow-up engine. The pass
+  hardens the existing surfaces in place.
+- Webhook-based bounce / delivery receipts. *Sent* still means the
+  provider accepted the handoff — never more.
+- A redesigned staff operations console for invite delivery. The
+  existing access summary + activation overview surfaces remain the
+  single staff entry point.

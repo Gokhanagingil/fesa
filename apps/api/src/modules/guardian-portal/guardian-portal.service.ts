@@ -577,8 +577,15 @@ export class GuardianPortalService {
     const totalGuardians = guardians.length;
     const totalAccessRows = accesses.length;
     const totalActive = buckets.active.count + buckets.dormant.count;
+    // Parent Access Stabilization Pass — the activation rate denominator
+    // intentionally excludes paused (`disabled`) rows. Those families
+    // were taken out of the active funnel by staff on purpose and
+    // counting them as "didn't activate" gives a falsely pessimistic
+    // number on the staff-side overview. Recovery rows still count
+    // (they are families we are mid-helping, not paused).
+    const denominator = Math.max(0, totalAccessRows - buckets.disabled.count);
     const activationRate =
-      totalAccessRows > 0 ? Math.round((totalActive / totalAccessRows) * 100) : 0;
+      denominator > 0 ? Math.round((totalActive / denominator) * 100) : 0;
 
     return {
       tenantId,
@@ -778,11 +785,34 @@ export class GuardianPortalService {
       where: { inviteTokenHash: hash },
       relations: ['guardian', 'tenant'],
     });
-    if (!access || !access.inviteTokenExpiresAt || access.inviteTokenExpiresAt.getTime() < Date.now()) {
-      throw new UnauthorizedException('Invite link is invalid or expired');
+    // Parent Access Stabilization Pass — distinguish "expired" from
+    // "invalid" so the activation page can render the calmer copy. We
+    // still 401 in both cases (tokens never leak account existence) but
+    // we tag the error code so the parent-facing UI can pick warmer
+    // wording. The two truthful codes the API uses are:
+    //   - `invite_link_expired`  — token matched a row but the window
+    //     elapsed (the family pasted an old link).
+    //   - `invite_link_invalid`  — token did not match any row (typo,
+    //     truncation, or the row was reissued / deleted).
+    //   - `portal_access_disabled` — the row exists but staff paused it
+    //     on purpose; recovery-via-staff is the right next step.
+    if (!access) {
+      throw new UnauthorizedException({
+        message: 'Invite link is invalid',
+        code: 'invite_link_invalid',
+      });
+    }
+    if (!access.inviteTokenExpiresAt || access.inviteTokenExpiresAt.getTime() < Date.now()) {
+      throw new UnauthorizedException({
+        message: 'Invite link has expired',
+        code: 'invite_link_expired',
+      });
     }
     if (access.status === 'disabled') {
-      throw new UnauthorizedException('Portal access is disabled');
+      throw new UnauthorizedException({
+        message: 'Portal access is paused by the club',
+        code: 'portal_access_disabled',
+      });
     }
 
     const brand = await this.branding.getForTenant(access.tenantId);
@@ -808,11 +838,23 @@ export class GuardianPortalService {
       where: { inviteTokenHash: hash },
       relations: ['guardian'],
     });
-    if (!access || !access.inviteTokenExpiresAt || access.inviteTokenExpiresAt.getTime() < Date.now()) {
-      throw new UnauthorizedException('Invite link is invalid or expired');
+    if (!access) {
+      throw new UnauthorizedException({
+        message: 'Invite link is invalid',
+        code: 'invite_link_invalid',
+      });
+    }
+    if (!access.inviteTokenExpiresAt || access.inviteTokenExpiresAt.getTime() < Date.now()) {
+      throw new UnauthorizedException({
+        message: 'Invite link has expired',
+        code: 'invite_link_expired',
+      });
     }
     if (access.status === 'disabled') {
-      throw new UnauthorizedException('Portal access is disabled');
+      throw new UnauthorizedException({
+        message: 'Portal access is paused by the club',
+        code: 'portal_access_disabled',
+      });
     }
 
     const passwordInfo = this.hashPassword(password);
@@ -825,6 +867,25 @@ export class GuardianPortalService {
     access.inviteTokenExpiresAt = null;
     access.disabledAt = null;
     access.lastLoginAt = now;
+    // Parent Access Stabilization Pass — clear recovery flags on
+    // successful activation. Without this, a family that triggered the
+    // public "I lost access" form and then activated via the fresh
+    // invite kept the recovery banner / staff badge on indefinitely.
+    // The truth is now coherent: once they're inside, the help request
+    // is resolved.
+    access.recoveryRequestedAt = null;
+    access.recoveryRequestCount = 0;
+    // Parent Access Stabilization Pass — also clear the delivery state
+    // so staff don't see a stale "Email sent" / "Shared manually" badge
+    // for a row that has already been activated. The activated row
+    // graduates out of the "did the invite reach them?" question
+    // entirely.
+    access.inviteDeliveryState = null;
+    access.inviteDeliveryDetail = null;
+    access.inviteDeliveryProvider = null;
+    access.inviteDeliveryAttemptedAt = null;
+    access.inviteDeliveredAt = null;
+    access.inviteSharedAt = null;
     await this.accesses.save(access);
 
     const session = await this.createSession(access);

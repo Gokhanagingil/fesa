@@ -58,5 +58,9 @@ describe('GuardianPortalRecoveryPage', () => {
       }),
     );
     expect(await screen.findByText(/Thanks — we let your club know/)).toBeInTheDocument();
+    // Parent Access Stabilization Pass — the parent should now also see
+    // an explicit "what happens next" line so they know the recovery
+    // request reached staff and what to expect.
+    expect(screen.getByText(/Next step:/)).toBeInTheDocument();
   });
 });

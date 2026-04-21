@@ -683,6 +683,8 @@
         "deliveryVerifyFailed": "The delivery provider did not answer. Use the manual share link until this is resolved.",
         "shareTitle": "Activation link",
         "shareHint": "Tenant-isolated and single-use. Share over a channel the family already trusts (in person, WhatsApp, the club app), then mark as shared.",
+        "shareHintFallback": "Email delivery is not working right now. Share this link with the family yourself, then mark as shared so the family activation overview reflects reality.",
+        "sendFreshLink": "Send fresh link",
         "copyLink": "Copy link",
         "copyAck": "Copied",
         "copyMissing": "Issue or resend the invite to generate a fresh link.",
@@ -690,14 +692,14 @@
         "markShared": "Mark as shared with family",
         "deliveryStateLabel": {
           "pending": "Preparing",
-          "sent": "Email sent",
+          "sent": "Email handed off",
           "failed": "Email failed",
           "unavailable": "Email unavailable",
           "shared_manually": "Shared manually"
         },
         "deliveryTone": {
           "pending": "An invite link has been prepared.",
-          "sent": "The invitation email was accepted by the provider.",
+          "sent": "Handed off to the email provider — we cannot confirm the inbox, just the handoff.",
           "failed": "The provider rejected the invitation email.",
           "unavailable": "Email delivery is not configured for this club yet.",
           "sharedManually": "A staff member shared the activation link with the family directly."
@@ -2566,7 +2568,8 @@
       "submitting": "Sending…",
       "safetyNote": "For your safety, we never confirm whether an email is on file. Either way, your club will hear about it.",
       "submitted": "Thanks — we let your club know.",
-      "submittedHint": "If we found a match, your club will send you a new activation link by email. You can close this page.",
+      "submittedHint": "If we found a match, your club will send you a fresh activation link by email or share it another way. You can close this page.",
+      "submittedNextStep": "Next step: keep an eye on your inbox, or wait for your club to reach out. Activation links are short-lived for safety.",
       "backToLogin": "Back to sign in"
     },
     "activate": {
@@ -2584,7 +2587,19 @@
       "invalidLoginLink": "Sign in",
       "errorTooShort": "Please use at least 8 characters.",
       "errorMismatch": "The two passwords don't match yet.",
-      "safetyNote": "Only the family invited by your club can use this link."
+      "safetyNote": "Only the family invited by your club can use this link.",
+      "errors": {
+        "missing": "This invite link is no longer valid. Please ask your club for a fresh one.",
+        "missingHint": "If you already activated before, sign in with your email and password.",
+        "expired": "This invite link has expired — they're only valid for a short time.",
+        "expiredHint": "Ask your club for a fresh link, or sign in if you already activated before.",
+        "invalid": "This invite link is no longer valid. Please ask your club for a fresh one.",
+        "invalidHint": "If you already activated before, sign in with your email and password.",
+        "disabled": "Your family portal access is paused right now — your club can re-open it.",
+        "disabledHint": "Use the recovery form to let your club know, then they'll send a fresh invite when ready.",
+        "network": "We couldn't check this invite link right now. Please try again in a moment.",
+        "networkHint": "If the problem keeps happening, ask your club for a fresh link."
+      }
     },
     "home": {
       "title": "Family portal",

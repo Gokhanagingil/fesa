@@ -91,6 +91,21 @@ jobs:
       - name: Finance clarity pack validator smoke
         run: npm run finance:clarity:test
 
+      - name: Club updates validator smoke
+        run: npm run club:updates:test
+
+      - name: Family activation validator smoke
+        run: npm run family:activation:test
+
+      - name: Parent portal v1.3 validator smoke
+        run: npm run parent:portal:v1.3:test
+
+      - name: Parent invite delivery validator smoke
+        run: npm run parent:invite:delivery:test
+
+      - name: Parent access stabilization pass validator smoke
+        run: npm run parent:access:stabilization:test
+
       - name: Migration readiness (disposable PostgreSQL)
         run: npm run migration:run -w @amateur/api
 
