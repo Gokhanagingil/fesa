@@ -1,12 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { apiGet, apiPost } from '../lib/api';
+import { ApiError, apiGet, apiPost } from '../lib/api';
 import type { GuardianPortalActivationStatus, GuardianPortalHome } from '../lib/domain-types';
 import { LanguageSwitch } from '../components/ui/LanguageSwitch';
 import { InlineAlert } from '../components/ui/InlineAlert';
 import { PortalBrandMark } from '../components/ui/PortalBrandMark';
 import { resolveBrandingTokens } from '../lib/portal-branding';
+
+/**
+ * Parent Access Stabilization Pass — error reasons surfaced from the
+ * activation API. We map server `code` strings to UX-facing reasons so
+ * the page can pick the warmest, most truthful copy:
+ *
+ *   - `expired`  — token matched but the window elapsed (most common).
+ *   - `invalid`  — token did not match any row (typo, link truncation).
+ *   - `disabled` — the row exists but staff paused this access on purpose.
+ *   - `missing`  — there was no `?token=` param at all.
+ *   - `network`  — anything else (offline, 500). We never blame the parent.
+ */
+type ActivationErrorReason = 'expired' | 'invalid' | 'disabled' | 'missing' | 'network';
 
 /**
  * Parent activation surface — turn an invite into a working portal login.
@@ -30,11 +43,13 @@ export function GuardianPortalActivationPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorReason, setErrorReason] = useState<ActivationErrorReason | null>(null);
 
   useEffect(() => {
     if (!token) {
       setLoading(false);
-      setError(t('portal.activate.invalidLink'));
+      setErrorReason('missing');
+      setError(t('portal.activate.errors.missing'));
       return;
     }
 
@@ -43,7 +58,9 @@ export function GuardianPortalActivationPage() {
         const next = await apiGet<GuardianPortalActivationStatus>(`/api/guardian-portal/activate/${token}`);
         setStatus(next);
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('app.errors.loadFailed'));
+        const reason = reasonFromError(err);
+        setErrorReason(reason);
+        setError(t(`portal.activate.errors.${reason}`));
       } finally {
         setLoading(false);
       }
@@ -66,7 +83,18 @@ export function GuardianPortalActivationPage() {
       await apiPost<GuardianPortalHome>(`/api/guardian-portal/activate/${token}`, { password });
       navigate('/portal', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('app.errors.saveFailed'));
+      // If the token quietly expired between the GET and the POST (a
+      // real edge case for parents who left the page open overnight),
+      // we surface the same warm escape paths the initial-load flow
+      // does, instead of a raw error string.
+      const reason = reasonFromError(err);
+      if (reason === 'expired' || reason === 'invalid' || reason === 'disabled') {
+        setStatus(null);
+        setErrorReason(reason);
+        setError(t(`portal.activate.errors.${reason}`));
+      } else {
+        setError(err instanceof Error ? err.message : t('app.errors.saveFailed'));
+      }
     } finally {
       setSaving(false);
     }
@@ -111,31 +139,40 @@ export function GuardianPortalActivationPage() {
           <p className="mt-2 text-sm text-amateur-muted">{t('portal.activate.hint')}</p>
 
           {error ? (
-            <InlineAlert tone="error" className="mt-4">
+            <InlineAlert
+              tone={errorReason === 'expired' || errorReason === 'disabled' ? 'info' : 'error'}
+              className="mt-4"
+            >
               {error}
             </InlineAlert>
           ) : null}
 
-          {/* When the activation token cannot be resolved (expired, already
-              used, malformed, or simply missing from the link), we used
-              to leave the parent at a dead-end card whose only escape was
-              the brand link in the header. We now offer two explicit
-              calmer paths: ask the club for a fresh invite, or recover
-              an existing account if they already activated before. */}
+          {/* Parent Access Stabilization Pass — when the activation
+              token cannot be resolved (expired, already used, malformed,
+              or simply missing from the link), give the parent two
+              explicit calm paths instead of a dead-end card. We use
+              `min-h-[44px]` so both buttons remain comfortable thumb
+              targets on a phone, and we render a per-reason hint above
+              the buttons so the parent knows which path is for them. */}
           {!loading && !status ? (
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
-              <Link
-                to="/portal/recover"
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-amateur-border bg-amateur-canvas text-sm font-medium text-amateur-ink hover:bg-amateur-surface"
-              >
-                {t('portal.activate.invalidRecoverLink')}
-              </Link>
-              <Link
-                to="/portal/login"
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-amateur-border bg-amateur-canvas text-sm font-medium text-amateur-ink hover:bg-amateur-surface"
-              >
-                {t('portal.activate.invalidLoginLink')}
-              </Link>
+            <div className="mt-5 space-y-3">
+              <p className="text-xs text-amateur-muted">
+                {t(`portal.activate.errors.${errorReason ?? 'invalid'}Hint`)}
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Link
+                  to="/portal/recover"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm font-medium text-amateur-ink hover:bg-amateur-surface"
+                >
+                  {t('portal.activate.invalidRecoverLink')}
+                </Link>
+                <Link
+                  to="/portal/login"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-amateur-border bg-amateur-canvas px-3 py-2 text-sm font-medium text-amateur-ink hover:bg-amateur-surface"
+                >
+                  {t('portal.activate.invalidLoginLink')}
+                </Link>
+              </div>
             </div>
           ) : null}
 
@@ -200,4 +237,15 @@ export function GuardianPortalActivationPage() {
       </div>
     </div>
   );
+}
+
+function reasonFromError(err: unknown): ActivationErrorReason {
+  if (err instanceof ApiError) {
+    const code = err.code ?? '';
+    if (code === 'invite_link_expired') return 'expired';
+    if (code === 'invite_link_invalid') return 'invalid';
+    if (code === 'portal_access_disabled') return 'disabled';
+    if (err.status === 401 || err.status === 404) return 'invalid';
+  }
+  return 'network';
 }

@@ -410,7 +410,11 @@ export function GuardianDetailPage() {
                 language={i18n.language}
               />
               <InviteLinkPanel
-                link={latestInviteLink ?? resolveAbsoluteLink(portalAccess)}
+                link={
+                  portalAccess.status === 'active'
+                    ? null
+                    : latestInviteLink ?? resolveAbsoluteLink(portalAccess)
+                }
                 copyAck={copyAck}
                 onCopy={() => void copyInviteLink()}
                 onMarkShared={() => void markInviteShared()}
@@ -436,19 +440,77 @@ export function GuardianDetailPage() {
                   <dd>{formatDateTime(portalAccess.lastLoginAt, i18n.language)}</dd>
                 </div>
               </dl>
+              {/* Parent Access Stabilization Pass — single primary
+                  action with clear hierarchy.
+
+                  Discovery surfaced a real friction point: the action
+                  row used to render Disable + Resend as two equal ghost
+                  buttons, leaving staff guessing which one was the
+                  primary path. We now choose the primary action based
+                  on the access state:
+                    - `disabled`: "Re-enable portal" is the only path.
+                    - `invited` / recovery flag set: "Resend invite" is
+                      primary, "Disable" is the calmer secondary.
+                    - `active`: "Disable" is primary (the only thing
+                      staff usually wants to do here); "Resend invite"
+                      stays available as a quiet secondary for the rare
+                      case where the family asked for a fresh link.
+
+                  Touch targets are at least 44px tall so staff can
+                  manage access reliably from a phone. */}
               <div className="flex flex-wrap gap-2">
                 {portalAccess.status === 'disabled' ? (
-                  <Button type="button" onClick={() => void togglePortalAccess('enable')} disabled={savingPortal}>
+                  <Button
+                    type="button"
+                    onClick={() => void togglePortalAccess('enable')}
+                    disabled={savingPortal}
+                    className="min-h-[44px]"
+                  >
                     {t('pages.guardians.portalAccess.enable')}
                   </Button>
+                ) : portalAccess.status === 'active' &&
+                  !portalAccess.recoveryRequestedAt ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => void togglePortalAccess('disable')}
+                      disabled={savingPortal}
+                      className="min-h-[44px]"
+                    >
+                      {t('pages.guardians.portalAccess.disable')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => void invitePortalAccess()}
+                      disabled={savingPortal}
+                      className="min-h-[44px]"
+                    >
+                      {t('pages.guardians.portalAccess.sendFreshLink')}
+                    </Button>
+                  </>
                 ) : (
-                  <Button type="button" variant="ghost" onClick={() => void togglePortalAccess('disable')} disabled={savingPortal}>
-                    {t('pages.guardians.portalAccess.disable')}
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      onClick={() => void invitePortalAccess()}
+                      disabled={savingPortal}
+                      className="min-h-[44px]"
+                    >
+                      {t('pages.guardians.portalAccess.resendInvite')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => void togglePortalAccess('disable')}
+                      disabled={savingPortal}
+                      className="min-h-[44px]"
+                    >
+                      {t('pages.guardians.portalAccess.disable')}
+                    </Button>
+                  </>
                 )}
-                <Button type="button" variant="ghost" onClick={() => void invitePortalAccess()} disabled={savingPortal}>
-                  {t('pages.guardians.portalAccess.resendInvite')}
-                </Button>
               </div>
             </div>
           ) : (
@@ -627,9 +689,19 @@ function InviteLinkPanel({
   deliveryState,
 }: InviteLinkPanelProps) {
   const { t } = useTranslation();
-  const showMarkShared =
-    deliveryState === 'unavailable' || deliveryState === 'failed' || deliveryState === 'pending';
   if (!link) return null;
+  // Parent Access Stabilization Pass — when the email path is not
+  // working, the manual share fallback IS the primary path. We promote
+  // "Mark as shared" to the primary button in that case so staff are
+  // never left wondering what to do next; in the calmer "email
+  // accepted" / "already shared" cases we keep "Copy link" as primary
+  // and keep the fallback available as a quiet ghost button so staff
+  // can re-stamp if they sent a fresh copy through another channel.
+  const fallbackIsPrimary =
+    deliveryState === 'unavailable' ||
+    deliveryState === 'failed' ||
+    deliveryState === 'pending';
+  const showMarkShared = deliveryState !== 'shared_manually';
   return (
     <div className="rounded-xl border border-dashed border-amateur-border bg-amateur-canvas px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -646,13 +718,19 @@ function InviteLinkPanel({
         {link}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button type="button" onClick={onCopy} disabled={disabled} className="min-h-[44px]">
+        <Button
+          type="button"
+          variant={fallbackIsPrimary ? 'ghost' : 'primary'}
+          onClick={onCopy}
+          disabled={disabled}
+          className="min-h-[44px]"
+        >
           {t('pages.guardians.portalAccess.copyLink')}
         </Button>
         {showMarkShared ? (
           <Button
             type="button"
-            variant="ghost"
+            variant={fallbackIsPrimary ? 'primary' : 'ghost'}
             onClick={onMarkShared}
             disabled={disabled}
             className="min-h-[44px]"
@@ -662,7 +740,9 @@ function InviteLinkPanel({
         ) : null}
       </div>
       <p className="mt-2 text-xs text-amateur-muted">
-        {t('pages.guardians.portalAccess.shareHint')}
+        {fallbackIsPrimary
+          ? t('pages.guardians.portalAccess.shareHintFallback')
+          : t('pages.guardians.portalAccess.shareHint')}
       </p>
     </div>
   );

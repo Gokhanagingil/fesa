@@ -118,6 +118,9 @@ export function GuardianPortalRecoveryPage() {
             <div className="mt-6 space-y-4">
               <InlineAlert tone="success">{t('portal.recovery.submitted')}</InlineAlert>
               <p className="text-sm text-amateur-muted">{t('portal.recovery.submittedHint')}</p>
+              <p className="text-xs text-amateur-muted">
+                {t('portal.recovery.submittedNextStep')}
+              </p>
               <button
                 type="button"
                 onClick={() => navigate('/portal/login')}

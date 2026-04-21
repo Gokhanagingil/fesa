@@ -1,12 +1,25 @@
 const STORAGE_KEY = 'amateur.tenantId';
 
 export class ApiError extends Error {
+  /**
+   * Parent Access Stabilization Pass — calm error codes.
+   *
+   * Some endpoints (notably the guardian-portal activation flow) tag
+   * their errors with a stable string `code` so the UI can pick warmer
+   * copy (e.g. "your invite link expired" vs "your invite link does not
+   * match anything on file"). The legacy `message` path is still the
+   * default.
+   */
+  public readonly code: string | null;
+
   constructor(
     public readonly status: number,
     message: string,
+    code?: string | null,
   ) {
     super(message);
     this.name = 'ApiError';
+    this.code = code ?? null;
   }
 }
 
@@ -29,20 +42,32 @@ function headers(): HeadersInit {
   return h;
 }
 
-async function parseError(res: Response): Promise<string> {
+type ParsedError = { message: string; code: string | null };
+
+async function parseError(res: Response): Promise<ParsedError> {
   try {
     const body = await res.json();
-    if (body && typeof body.message === 'string') return body.message;
-    if (Array.isArray(body?.message)) return body.message.join(', ');
+    let nested: unknown = body?.message;
+    let code: string | null = typeof body?.code === 'string' ? body.code : null;
+    // Nest's UnauthorizedException({ message, code }) puts the object on
+    // body.message — unwrap that so the UI can route on `.code`.
+    if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+      const inner = nested as { message?: unknown; code?: unknown };
+      if (typeof inner.code === 'string') code = inner.code;
+      if (typeof inner.message === 'string') nested = inner.message;
+    }
+    if (typeof nested === 'string') return { message: nested, code };
+    if (Array.isArray(nested)) return { message: nested.join(', '), code };
   } catch {
     /* ignore */
   }
-  return res.statusText || 'Request failed';
+  return { message: res.statusText || 'Request failed', code: null };
 }
 
 async function assertOk(res: Response): Promise<void> {
   if (!res.ok) {
-    throw new ApiError(res.status, await parseError(res));
+    const parsed = await parseError(res);
+    throw new ApiError(res.status, parsed.message, parsed.code);
   }
 }
 

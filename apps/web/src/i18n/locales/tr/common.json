@@ -717,6 +717,8 @@
         "deliveryVerifyFailed": "Teslimat sağlayıcısı yanıt vermedi. Sorun çözülene kadar elle paylaşım bağlantısını kullanın.",
         "shareTitle": "Aktivasyon bağlantısı",
         "shareHint": "Kulüp izolasyonludur ve tek kullanımlıktır. Ailenin güvendiği bir kanaldan paylaşın (yüz yüze, WhatsApp, kulüp uygulaması), ardından paylaşıldı olarak işaretleyin.",
+        "shareHintFallback": "E-posta teslimi şu anda çalışmıyor. Bu bağlantıyı aileyle siz paylaşın, ardından paylaşıldı olarak işaretleyin; aile aktivasyon görünümü gerçeği yansıtsın.",
+        "sendFreshLink": "Yeni bağlantı gönder",
         "copyLink": "Bağlantıyı kopyala",
         "copyAck": "Kopyalandı",
         "copyMissing": "Yeni bir bağlantı oluşturmak için daveti yeniden gönderin.",
@@ -724,14 +726,14 @@
         "markShared": "Aileye paylaşıldı olarak işaretle",
         "deliveryStateLabel": {
           "pending": "Hazırlanıyor",
-          "sent": "E-posta gönderildi",
+          "sent": "E-postaya teslim edildi",
           "failed": "E-posta başarısız",
           "unavailable": "E-posta kullanılamıyor",
           "shared_manually": "Elle paylaşıldı"
         },
         "deliveryTone": {
           "pending": "Davet bağlantısı hazırlandı.",
-          "sent": "Davet e-postası sağlayıcı tarafından kabul edildi.",
+          "sent": "E-posta sağlayıcısına teslim edildi — gelen kutusunu onaylayamayız, yalnızca teslimi.",
           "failed": "Sağlayıcı davet e-postasını reddetti.",
           "unavailable": "Bu kulüp için e-posta gönderimi henüz yapılandırılmadı.",
           "sharedManually": "Bir personel aktivasyon bağlantısını aileyle doğrudan paylaştı."
@@ -2595,7 +2597,8 @@
       "submitting": "Gönderiliyor…",
       "safetyNote": "Güvenliğiniz için bir e-postanın kayıtlı olup olmadığını asla doğrulamıyoruz. Her durumda, kulübünüz haberdar olur.",
       "submitted": "Teşekkürler — kulübünüze ilettik.",
-      "submittedHint": "Eğer bir eşleşme bulduysak, kulübünüz size e-posta ile yeni bir aktivasyon bağlantısı gönderecek. Bu sayfayı kapatabilirsiniz.",
+      "submittedHint": "Eğer bir eşleşme bulduysak, kulübünüz size e-postayla ya da başka bir kanaldan yeni bir aktivasyon bağlantısı gönderecek. Bu sayfayı kapatabilirsiniz.",
+      "submittedNextStep": "Sonraki adım: gelen kutunuzu kontrol edin ya da kulübünüzün size ulaşmasını bekleyin. Aktivasyon bağlantıları güvenlik için kısa ömürlüdür.",
       "backToLogin": "Girişe dön"
     },
     "activate": {
@@ -2613,7 +2616,19 @@
       "invalidLoginLink": "Giriş yap",
       "errorTooShort": "Lütfen en az 8 karakter kullanın.",
       "errorMismatch": "İki şifre henüz aynı değil.",
-      "safetyNote": "Bu bağlantıyı yalnızca kulübün davet ettiği aile kullanabilir."
+      "safetyNote": "Bu bağlantıyı yalnızca kulübün davet ettiği aile kullanabilir.",
+      "errors": {
+        "missing": "Bu davet bağlantısı artık geçerli değil. Lütfen kulübünüzden yeni bir bağlantı isteyin.",
+        "missingHint": "Daha önce etkinleştirdiyseniz e-posta ve şifrenizle giriş yapın.",
+        "expired": "Bu davet bağlantısının süresi doldu — bağlantılar yalnızca kısa süre geçerlidir.",
+        "expiredHint": "Kulübünüzden yeni bir bağlantı isteyin ya da daha önce etkinleştirdiyseniz giriş yapın.",
+        "invalid": "Bu davet bağlantısı artık geçerli değil. Lütfen kulübünüzden yeni bir bağlantı isteyin.",
+        "invalidHint": "Daha önce etkinleştirdiyseniz e-posta ve şifrenizle giriş yapın.",
+        "disabled": "Aile portalı erişiminiz şu anda duraklatılmış — kulübünüz yeniden açabilir.",
+        "disabledHint": "Kurtarma formuyla kulübünüze haber verin; hazır olduklarında size yeni bir davet gönderirler.",
+        "network": "Bu davet bağlantısını şu anda kontrol edemedik. Lütfen birazdan tekrar deneyin.",
+        "networkHint": "Sorun devam ederse kulübünüzden yeni bir bağlantı isteyin."
+      }
     },
     "home": {
       "title": "Aile portalı",
