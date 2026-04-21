@@ -17,6 +17,7 @@ import { TenantCommunicationConfig } from '../../database/entities/tenant-commun
 import { TrainingSession } from '../../database/entities/training-session.entity';
 import { FinanceModule } from '../finance/finance.module';
 import { FamilyActionModule } from '../family-action/family-action.module';
+import { LicensingModule } from '../licensing/licensing.module';
 import { CommunicationController } from './communication.controller';
 import { CommunicationService } from './communication.service';
 import { OutreachService } from './outreach.service';
@@ -34,6 +35,7 @@ import { WhatsAppReadinessService } from './delivery/whatsapp-readiness.service'
   imports: [
     FinanceModule,
     FamilyActionModule,
+    LicensingModule,
     TypeOrmModule.forFeature([
       Athlete,
       Guardian,

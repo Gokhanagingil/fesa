@@ -1965,6 +1965,11 @@
         "noBand": "No matching band",
         "measuredAt": "Measured at",
         "recordSnapshot": "Record snapshot now",
+        "runScheduledNow": "Run scheduled pass now",
+        "scheduledHint": "A daily background pass refreshes snapshots automatically. Trigger one now if you want fresh history this minute.",
+        "scheduledRanResult": "Scanned {{tenants}} clubs · wrote {{written}} new snapshots.",
+        "liveLabel": "Live",
+        "snapshotLabel": "From snapshot",
         "snapshotsTitle": "Recent snapshots",
         "snapshotsHint": "Append-only history. Useful for explaining mid-month band shifts.",
         "snapshotsEmpty": "No snapshots recorded yet.",
@@ -1973,6 +1978,85 @@
           "scheduled": "Scheduled",
           "api": "API"
         }
+      },
+      "tabs2": {
+        "history": "Subscription history",
+        "editEntitlements": "Edit entitlements"
+      },
+      "history": {
+        "title": "Subscription history",
+        "hint": "Every plan or lifecycle change is recorded here. Use the picker to focus on a single club.",
+        "empty": "No commercial changes recorded yet for this club.",
+        "actorFallback": "Platform admin",
+        "fields": "Changed: {{fields}}",
+        "kind": {
+          "created": "Subscription created",
+          "plan_change": "Plan changed",
+          "status_change": "Lifecycle status changed",
+          "dates_change": "Dates updated",
+          "metadata_change": "Notes updated"
+        },
+        "fieldLabels": {
+          "plan": "plan",
+          "status": "status",
+          "dates": "dates",
+          "onboardingService": "onboarding services",
+          "internalNotes": "internal notes",
+          "statusReason": "status reason"
+        },
+        "delta": {
+          "plan": "{{from}} → {{to}}",
+          "status": "{{from}} → {{to}}"
+        }
+      },
+      "entitlementEditor": {
+        "title": "Plan entitlements",
+        "subtitle": "Toggle each capability per plan. Tenants on the plan see the change on their next request — the entitlement cache rotates within seconds.",
+        "selectPlan": "Plan",
+        "groups": {
+          "parent_portal": "Parent portal",
+          "communications": "Communications",
+          "reporting": "Reporting",
+          "operations": "Operations",
+          "onboarding": "Onboarding"
+        },
+        "gatingActiveChip": "Gated capability",
+        "gatingPassiveChip": "Catalog only",
+        "gatingActiveHint": "This capability is actively gated through LicensingService. Toggling here changes what tenants on this plan can do.",
+        "gatingPassiveHint": "This capability is mapped in the catalog but not yet wired to product gates. Toggling here is safe and forward-looking.",
+        "feature": "Feature",
+        "enabled": "Enabled",
+        "limit": "Limit",
+        "limitHint": "Optional numeric ceiling, e.g. import batches per month. Leave blank for no limit.",
+        "notes": "Notes",
+        "notesPlaceholder": "Optional internal note (240 chars).",
+        "save": "Save change",
+        "savedJustNow": "Saved",
+        "loadFailed": "Could not load this plan."
+      },
+      "featureCatalog": {
+        "parent_portal.branding": "Parent portal branding",
+        "parent_portal.targeted_updates": "Targeted parent updates",
+        "communications.follow_up": "Communications follow-up automations",
+        "reporting.advanced_builder": "Advanced reporting builder",
+        "inventory.management": "Inventory & assignment pack",
+        "private_lessons.module": "Private lessons module",
+        "onboarding.assisted_import": "Onboarding assisted import"
+      }
+    },
+    "gating": {
+      "platformOnly": "Plan adjustments are managed by the Fesa platform team.",
+      "no_subscription": {
+        "title": "No license assigned yet",
+        "body": "This club does not have an active license. Existing data is safe — the platform team will assign a plan shortly."
+      },
+      "license_inactive": {
+        "title": "License paused",
+        "body": "Your {{plan}} subscription is paused. Existing data stays safe; this capability resumes once the license is reactivated."
+      },
+      "plan_excludes_feature": {
+        "title": "Available on a higher plan",
+        "body": "This capability is not part of your {{plan}} plan today. Existing data stays safe; switching plans unlocks it instantly."
       }
     },
     "brandAdmin": {

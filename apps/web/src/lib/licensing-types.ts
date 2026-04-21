@@ -103,3 +103,57 @@ export const TENANT_SUBSCRIPTION_STATUS_VALUES: TenantSubscriptionStatus[] = [
   'expired',
   'cancelled',
 ];
+
+/** Wave 23 — feature catalog payload from /api/admin/licensing/feature-catalog. */
+export type LicenseFeatureCatalogEntry = {
+  key: string;
+  group: 'parent_portal' | 'communications' | 'reporting' | 'operations' | 'onboarding';
+  gatingActive: boolean;
+  supportsLimit: boolean;
+};
+
+export type LicenseFeatureCatalogResponse = {
+  groups: string[];
+  features: LicenseFeatureCatalogEntry[];
+};
+
+export type PlanEditingMatrixRow = {
+  featureKey: string;
+  enabled: boolean;
+  limitValue: number | null;
+  notes: string | null;
+  catalog: LicenseFeatureCatalogEntry;
+};
+
+export type PlanEditingPayload = {
+  plan: LicensePlanSummary;
+  matrix: PlanEditingMatrixRow[];
+};
+
+export type UpdatePlanEntitlementPayload = {
+  enabled: boolean;
+  limitValue?: number | null;
+  notes?: string | null;
+};
+
+export type TenantSubscriptionHistoryEntry = {
+  id: string;
+  tenantId: string;
+  subscriptionId: string | null;
+  changeKind: 'created' | 'plan_change' | 'status_change' | 'dates_change' | 'metadata_change';
+  changedFields: string[];
+  previousPlanCode: string | null;
+  nextPlanCode: string | null;
+  previousStatus: TenantSubscriptionStatus | null;
+  nextStatus: TenantSubscriptionStatus | null;
+  statusReason: string | null;
+  internalNote: string | null;
+  actorDisplayName: string | null;
+  changedAt: string;
+};
+
+export type SnapshotPassResult = {
+  tenantsScanned: number;
+  snapshotsWritten: number;
+  source: 'boot' | 'scheduled' | 'manual';
+};

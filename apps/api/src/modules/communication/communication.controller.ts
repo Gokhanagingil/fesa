@@ -14,6 +14,8 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { TenantGuard } from '../core/tenant.guard';
+import { LICENSE_FEATURE_KEYS } from '../licensing/license.constants';
+import { FeatureGateGuard, RequireFeature } from '../licensing/feature-gate.guard';
 import { CommunicationService } from './communication.service';
 import { OutreachService } from './outreach.service';
 import { CommunicationDeliveryService } from './delivery/communication-delivery.service';
@@ -131,6 +133,8 @@ export class CommunicationController {
   }
 
   @Post('outreach/:id/deliver')
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature(LICENSE_FEATURE_KEYS.COMMUNICATIONS_FOLLOW_UP)
   attemptDelivery(
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe()) id: string,

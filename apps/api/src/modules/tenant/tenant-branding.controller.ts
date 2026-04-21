@@ -18,6 +18,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { Request, Response } from 'express';
 import { TenantGuard } from '../core/tenant.guard';
+import { LICENSE_FEATURE_KEYS } from '../licensing/license.constants';
+import { FeatureGateGuard, RequireFeature } from '../licensing/feature-gate.guard';
 import {
   MAX_BRAND_LOGO_SIZE_BYTES,
   MediaStorageService,
@@ -108,6 +110,8 @@ export class StaffTenantBrandingController {
   }
 
   @Put()
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature(LICENSE_FEATURE_KEYS.PARENT_PORTAL_BRANDING)
   update(@Req() req: Request, @Body() dto: UpdateTenantBrandingDto) {
     if (!dto || typeof dto !== 'object') {
       throw new BadRequestException('Branding payload is required');
@@ -116,6 +120,8 @@ export class StaffTenantBrandingController {
   }
 
   @Post('logo')
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature(LICENSE_FEATURE_KEYS.PARENT_PORTAL_BRANDING)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -134,6 +140,8 @@ export class StaffTenantBrandingController {
   }
 
   @Delete('logo')
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature(LICENSE_FEATURE_KEYS.PARENT_PORTAL_BRANDING)
   removeLogo(@Req() req: Request) {
     return this.branding.removeLogoAsset(req.tenantId!);
   }

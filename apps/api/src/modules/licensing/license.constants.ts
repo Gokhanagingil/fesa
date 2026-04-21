@@ -66,3 +66,77 @@ export const TENANT_SUBSCRIPTION_STATUSES = [
 
 export type TenantSubscriptionStatusValue =
   (typeof TENANT_SUBSCRIPTION_STATUSES)[number];
+
+/**
+ * Wave 23 — feature catalog metadata.
+ *
+ * Lightweight, code-side catalog so the platform-admin entitlement
+ * editor can render groups, names, and i18n keys without a second
+ * matrix table. Keys are i18n suffixes — the web client resolves them
+ * under `pages.billing.featureCatalog.*` to keep TR/EN parity honest.
+ *
+ * Order in the array drives the visual order in the editor.
+ */
+export type LicenseFeatureCatalogEntry = {
+  key: LicenseFeatureKey;
+  group: 'parent_portal' | 'communications' | 'reporting' | 'operations' | 'onboarding';
+  /** True for the small set we have actively wired through real gating. */
+  gatingActive: boolean;
+  /** Whether the entitlement supports a numeric `limitValue` editor. */
+  supportsLimit: boolean;
+};
+
+export const LICENSE_FEATURE_CATALOG: LicenseFeatureCatalogEntry[] = [
+  {
+    key: LICENSE_FEATURE_KEYS.PARENT_PORTAL_BRANDING,
+    group: 'parent_portal',
+    gatingActive: true,
+    supportsLimit: false,
+  },
+  {
+    key: LICENSE_FEATURE_KEYS.PARENT_PORTAL_TARGETED_UPDATES,
+    group: 'parent_portal',
+    gatingActive: false,
+    supportsLimit: false,
+  },
+  {
+    key: LICENSE_FEATURE_KEYS.COMMUNICATIONS_FOLLOW_UP,
+    group: 'communications',
+    gatingActive: true,
+    supportsLimit: false,
+  },
+  {
+    key: LICENSE_FEATURE_KEYS.REPORTING_ADVANCED_BUILDER,
+    group: 'reporting',
+    gatingActive: true,
+    supportsLimit: false,
+  },
+  {
+    key: LICENSE_FEATURE_KEYS.INVENTORY_MANAGEMENT,
+    group: 'operations',
+    gatingActive: false,
+    supportsLimit: false,
+  },
+  {
+    key: LICENSE_FEATURE_KEYS.PRIVATE_LESSONS_MODULE,
+    group: 'operations',
+    gatingActive: false,
+    supportsLimit: false,
+  },
+  {
+    key: LICENSE_FEATURE_KEYS.ONBOARDING_ASSISTED_IMPORT,
+    group: 'onboarding',
+    gatingActive: false,
+    supportsLimit: false,
+  },
+];
+
+export const LICENSE_FEATURE_GROUPS = [
+  'parent_portal',
+  'communications',
+  'reporting',
+  'operations',
+  'onboarding',
+] as const;
+
+export type LicenseFeatureGroup = (typeof LICENSE_FEATURE_GROUPS)[number];

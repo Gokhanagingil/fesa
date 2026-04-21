@@ -43,6 +43,8 @@ import {
   updateOutreach,
 } from '../lib/communication';
 import { useTenant } from '../lib/tenant-hooks';
+import { useFeatureAvailability } from '../lib/feature-availability';
+import { FeatureAvailabilityNotice } from '../components/licensing/FeatureAvailabilityNotice';
 import type {
   AthleteStatus,
   ClubGroup,
@@ -197,6 +199,11 @@ const DELIVERY_STATE_TONE: Record<DeliveryState, string> = {
 export function CommunicationsPage() {
   const { t, i18n } = useTranslation();
   const { tenantId, loading: tenantLoading } = useTenant();
+  const { availability: followUpAvailability } = useFeatureAvailability(
+    'communications.follow_up',
+    tenantId,
+  );
+  const followUpAvailable = followUpAvailability?.available !== false;
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
   const [groupId, setGroupId] = useState(searchParams.get('groupId') ?? '');
@@ -1564,6 +1571,10 @@ export function CommunicationsPage() {
                         preferredMode={preferredMode}
                       />
                     ) : null}
+                    <FeatureAvailabilityNotice
+                      availability={followUpAvailability}
+                      className="mt-3"
+                    />
                     {deliveryNotice ? (
                       <InlineAlert
                         tone={
@@ -1587,6 +1598,7 @@ export function CommunicationsPage() {
                           onClick={() => void handleSendDirect()}
                           disabled={
                             sendingDirect ||
+                            !followUpAvailable ||
                             audience.items.length === 0 ||
                             reachableRecipients.length === 0
                           }
