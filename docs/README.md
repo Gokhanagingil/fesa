@@ -20,6 +20,7 @@ Codename **amateur**: a multilingual club operating platform for amateur sports 
 | [stabilization-gate.md](./stabilization-gate.md) | FESA Stabilization & Productization Gate — cross-module hardening pass between feature waves (action-center reliability, portal trust, settings deep-links, mobile polish, validator) |
 | [finance-clarity-pack.md](./finance-clarity-pack.md) | Athlete Charges Flow Flattening & Collections Clarity Pack — depth-first staff finance simplification (single action drawer, attention strip, calmer finance hub, validator) |
 | [trust-calm-pass.md](./trust-calm-pass.md) | FESA Stabilization & Productization Gate — Trust & Calm Pass — second hardening sweep (landing locale parity, localized API error fallback, parent action page id-guard + mobile primary, portal sign-out tap target, communications error surfacing, validator + smoke) |
+| [billing-licensing.md](./billing-licensing.md) | Billing & Licensing Foundation v1 — plans, plan entitlements, tenant subscriptions, lifecycle states, usage bands + snapshots, central entitlement engine, platform-admin-only console, calm tenant read-only summary, validator |
 | [bootstrap.md](./bootstrap.md) | Demo seed, idempotency, demo tenant id, staff login fixtures |
 | [staging-deploy.md](./staging-deploy.md) | Manual GitHub Actions deploy to Ubuntu staging (SSH troubleshooting, PM2, Nginx) |
 | [release-operations.md](./release-operations.md) | Pre-deploy gates, troubleshooting flow, and branch/hotfix discipline |

@@ -48,6 +48,38 @@ npm workspaces unite `apps/*` and `packages/*`. Shared code lives in packages; a
 - Dashboard, reports, communications, and action-center summaries now degrade gracefully when optional/supporting reporting tables are unavailable during a partial staging migration state.
 - This keeps critical overview pages available instead of allowing one missing support relation to crash the whole command-center surface.
 
+## Billing & Licensing Foundation v1 (Wave 22)
+
+The platform now has a serious internal commercial backbone:
+
+- `license_plans` (Starter / Operations / Growth) and per-plan
+  `license_plan_entitlements` rows centralize feature gating.
+- `tenant_subscriptions` carry one row per tenant with an explicit
+  lifecycle (`trial / active / suspended / expired / cancelled`),
+  start / renewal / trial-end dates, an `onboardingServiceIncluded`
+  seam, internal notes, and lightweight actor traceability.
+- `license_usage_bands` are stored in the database (not hardcoded)
+  so platform admins can tune athlete-band ranges without a code
+  change.
+- `tenant_usage_snapshots` is append-only and captures
+  `(tenantId, measuredAt, activeAthleteCount, bandCode)` for honest
+  history.
+- `LicensingService.isFeatureEnabled(tenantId, featureKey)` is the
+  single read-shape every gate routes through, and
+  `getTenantEntitlements(tenantId)` produces the full snapshot for
+  internal admin tooling. Suspended / expired / cancelled
+  subscriptions evaluate every gate to `false` at the engine
+  boundary so commercial state stays honest.
+- `PlatformAdminGuard` seals the entire `/api/admin/licensing/*`
+  surface to `global_admin` staff users; tenant admins only see a
+  calm read-only summary at `/api/licensing/me` and inside
+  `/app/settings`.
+- The `/app/billing` console is platform-admin-only and is filtered
+  out of the staff sidebar for everyone else.
+
+See [`billing-licensing.md`](./billing-licensing.md) for the full
+domain, lifecycle, gating, seeding, and validation contract.
+
 ## Reporting Foundation v1 (Wave 11)
 
 The reporting subsystem now exposes a reusable, metadata-driven filtering layer

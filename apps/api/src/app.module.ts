@@ -27,6 +27,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { ImportsModule } from './modules/imports/imports.module';
 import { MediaModule } from './modules/media/media.module';
 import { ClubUpdateModule } from './modules/club-update/club-update.module';
+import { LicensingModule } from './modules/licensing/licensing.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { ClubUpdateModule } from './modules/club-update/club-update.module';
     InventoryModule,
     ImportsModule,
     ClubUpdateModule,
+    LicensingModule,
   ],
 })
 export class AppModule {}

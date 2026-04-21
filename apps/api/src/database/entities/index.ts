@@ -34,6 +34,11 @@ import { InventoryAssignment } from './inventory-assignment.entity';
 import { InventoryMovement } from './inventory-movement.entity';
 import { ClubUpdate } from './club-update.entity';
 import { ImportBatch } from './import-batch.entity';
+import { LicensePlan } from './license-plan.entity';
+import { LicensePlanEntitlement } from './license-plan-entitlement.entity';
+import { LicenseUsageBand } from './license-usage-band.entity';
+import { TenantSubscription } from './tenant-subscription.entity';
+import { TenantUsageSnapshot } from './tenant-usage-snapshot.entity';
 
 export const domainEntities = [
   Tenant,
@@ -72,6 +77,11 @@ export const domainEntities = [
   InventoryMovement,
   ClubUpdate,
   ImportBatch,
+  LicensePlan,
+  LicensePlanEntitlement,
+  LicenseUsageBand,
+  TenantSubscription,
+  TenantUsageSnapshot,
 ];
 
 export {
@@ -111,4 +121,9 @@ export {
   InventoryMovement,
   ClubUpdate,
   ImportBatch,
+  LicensePlan,
+  LicensePlanEntitlement,
+  LicenseUsageBand,
+  TenantSubscription,
+  TenantUsageSnapshot,
 };
