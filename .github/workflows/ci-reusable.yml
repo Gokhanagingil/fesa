@@ -91,6 +91,9 @@ jobs:
       - name: Finance clarity pack validator smoke
         run: npm run finance:clarity:test
 
+      - name: Trust & Calm Pass validator smoke
+        run: npm run trust:calm:test
+
       - name: Club updates validator smoke
         run: npm run club:updates:test
 

@@ -26,6 +26,7 @@
     "parent:access:stabilization:test": "node scripts/parent-access-stabilization.test.mjs",
     "stabilization:gate:test": "node scripts/stabilization-gate.test.mjs",
     "finance:clarity:test": "node scripts/finance-clarity-pack.test.mjs",
+    "trust:calm:test": "node scripts/trust-calm-pass.test.mjs",
     "onboarding:imports:test": "node scripts/onboarding-import-definitions.test.mjs",
     "onboarding:readiness:test": "node scripts/onboarding-readiness.test.mjs",
     "lint": "eslint apps/api/src packages/*/src apps/web/src --max-warnings 0",
