@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 const STORAGE_KEY = 'amateur.tenantId';
 
 export class ApiError extends Error {
@@ -61,7 +63,13 @@ async function parseError(res: Response): Promise<ParsedError> {
   } catch {
     /* ignore */
   }
-  return { message: res.statusText || 'Request failed', code: null };
+  // Trust & Calm Pass — when the server response carries no usable
+  // message (e.g. a network blip drops the body, or the proxy returns
+  // an empty 502), fall back to a localized, calm string instead of
+  // hardcoded English. Turkish parents seeing "Request failed" used
+  // to break the otherwise-localized portal trust we had built up.
+  const fallback = i18n.t('app.errors.requestFailed');
+  return { message: res.statusText || fallback, code: null };
 }
 
 async function assertOk(res: Response): Promise<void> {

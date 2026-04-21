@@ -233,6 +233,20 @@ const scopedPrefixes = [
   'pages.finance.openAthleteCharges',
   'pages.finance.moreToolsTitle',
   'pages.finance.moreToolsHint',
+  // FESA Stabilization & Productization Gate — Trust & Calm Pass.
+  // The landing page is the first impression for staff and parents alike;
+  // missing keys here render the raw key string. Protect the small landing
+  // contract across both locales so EN / TR can never silently drift.
+  'landing.ctaPrimary',
+  'landing.ctaPortal',
+  'landing.ctaSecondary',
+  'landing.entryTitle',
+  'landing.entryStaffTitle',
+  'landing.entryStaffBody',
+  'landing.entryGuardianTitle',
+  'landing.entryGuardianBody',
+  // Calmer parent action page primary control + safer error fallback copy.
+  'app.errors.requestFailed',
 ];
 
 function flattenKeys(input, prefix = '') {

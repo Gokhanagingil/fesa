@@ -27,7 +27,17 @@ export function GuardianPortalActionPage() {
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
-    if (!id) return;
+    // Trust & Calm Pass — never leave the parent on an infinite spinner.
+    // Previously a missing `:id` route param (e.g. an old bookmark, a
+    // share-truncated URL, or a manual `/portal/actions/` typo) kept
+    // `loading` permanently true because the early return below also
+    // skipped `setLoading(false)`. We now resolve the loading state and
+    // surface a calm error so the parent can use the "Back to home" link.
+    if (!id) {
+      setLoading(false);
+      setError(t('app.errors.loadFailed'));
+      return;
+    }
     void (async () => {
       setLoading(true);
       setError(null);
@@ -199,9 +209,23 @@ export function GuardianPortalActionPage() {
             />
           </label>
           {canSubmit ? (
-            <Button type="button" onClick={() => void submit()} disabled={saving}>
-              {t('pages.guardianPortal.action.submit')}
-            </Button>
+            // Trust & Calm Pass — primary parent action is now a full-width,
+            // h-12 thumb-friendly control on mobile (matching the login /
+            // activation pages) and right-aligned on tablet/desktop. The
+            // previous compact py-2 button sat off to the start of the row
+            // on a phone, undersized vs the textarea above it.
+            <div className="sm:flex sm:justify-end">
+              <Button
+                type="button"
+                onClick={() => void submit()}
+                disabled={saving}
+                className="h-12 w-full text-base sm:h-auto sm:w-auto sm:text-sm"
+              >
+                {saving
+                  ? t('app.states.saving')
+                  : t('pages.guardianPortal.action.submit')}
+              </Button>
+            </div>
           ) : (
             <InlineAlert tone="info">{t('pages.guardianPortal.action.readOnlyHint')}</InlineAlert>
           )}

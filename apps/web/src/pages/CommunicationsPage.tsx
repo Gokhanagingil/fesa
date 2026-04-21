@@ -376,16 +376,21 @@ export function CommunicationsPage() {
         if (typeof templatesRes.lifecycle?.staleAfterDays === 'number') {
           setStaleAfterDays(templatesRes.lifecycle.staleAfterDays);
         }
-      } catch {
+      } catch (loadError) {
+        // Trust & Calm Pass — surface the failure instead of silently
+        // emptying every dropdown. Previously a partial backend failure
+        // looked like a brand-new tenant with zero data, which was both
+        // misleading and invited staff to "fix" it by re-importing.
         setGroups([]);
         setTeams([]);
         setCoaches([]);
         setSessions([]);
         setTemplates([]);
         setTokens([]);
+        setError(loadError instanceof Error ? loadError.message : t('app.errors.loadFailed'));
       }
     })();
-  }, [tenantId]);
+  }, [tenantId, t]);
 
   const loadHistory = useCallback(async () => {
     if (!tenantId) return;
@@ -394,7 +399,11 @@ export function CommunicationsPage() {
         status: historyStatus === 'all' ? undefined : historyStatus,
       });
       setHistory(res);
-    } catch {
+    } catch (historyError) {
+      // Trust & Calm Pass — a failed history load used to render as a
+      // perfectly empty history with zero counts, which made it look as
+      // though no follow-up had ever happened. Now we keep zeroed counts
+      // (so the rest of the page stays usable) but tell staff what failed.
       setHistory({
         items: [],
         counts: {
@@ -408,8 +417,9 @@ export function CommunicationsPage() {
           archived: 0,
         },
       });
+      setError(historyError instanceof Error ? historyError.message : t('app.errors.loadFailed'));
     }
-  }, [historyStatus, tenantId]);
+  }, [historyStatus, tenantId, t]);
 
   useEffect(() => {
     void loadHistory();

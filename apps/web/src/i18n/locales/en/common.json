@@ -102,7 +102,8 @@
       "loadFailed": "Could not load data.",
       "saveFailed": "Could not save.",
       "needTenant": "Select a club in the header.",
-      "noBranches": "Add a sport branch in the database first."
+      "noBranches": "Add a sport branch in the database first.",
+      "requestFailed": "Something went wrong. Please try again in a moment."
     },
     "auth": {
       "logout": "Sign out"
@@ -2009,20 +2010,20 @@
       "guardianCta": "Are you a guardian? Go to the family portal"
     },
     "guardianPortal": {
-      "backHome": "Back to portal home",
+      "backHome": "Back to family portal",
       "action": {
-        "submitSuccess": "Your response was submitted for club review.",
-        "requestTitle": "Request details",
-        "staffNote": "Staff note",
-        "responseTitle": "Your response",
-        "responseHint": "Share only the information the club requested. Staff will review updates before they become authoritative.",
-        "responseLabel": "Response",
+        "submitSuccess": "Thanks — your response is on its way to your club.",
+        "requestTitle": "What your club is asking",
+        "staffNote": "A note from your club",
+        "responseTitle": "Your reply",
+        "responseHint": "Share only what your club asked for. They'll take a look and update your records when ready.",
+        "responseLabel": "Your reply",
         "phone": "Phone",
         "email": "Email",
-        "notes": "Notes",
-        "submit": "Submit response",
-        "readOnlyHint": "This request is no longer waiting on your action.",
-        "historyTitle": "Request history"
+        "notes": "Anything else?",
+        "submit": "Send my response",
+        "readOnlyHint": "This request is no longer waiting on a reply from you.",
+        "historyTitle": "Activity on this request"
       }
     },
     "imports": {
@@ -2513,14 +2514,20 @@
     "headline": "Run your club with calm confidence.",
     "sub": "One place for groups, teams, schedules, and money — without the clutter.",
     "ctaPrimary": "Staff sign in",
-    "ctaSecondary": "Guardian portal",
+    "ctaPortal": "Family portal",
+    "ctaSecondary": "Learn more",
     "pill1": "Multilingual",
     "pill2": "Mobile-friendly",
     "pill3": "Built for growth",
     "staffCardTitle": "Staff & admins",
     "staffCardBody": "Enter the club operating system with role-aware access, membership-based tenant context, and a calm admin shell.",
     "guardianCardTitle": "Guardians",
-    "guardianCardBody": "Use the separate family portal for invitations, family actions, and athlete-linked updates."
+    "guardianCardBody": "Use the separate family portal for invitations, family actions, and athlete-linked updates.",
+    "entryTitle": "Choose the right entrance",
+    "entryStaffTitle": "Club staff and admins",
+    "entryStaffBody": "Sign in for daily operations, finance, reports and the admin surface.",
+    "entryGuardianTitle": "Parents and families",
+    "entryGuardianBody": "Use the family portal to see club requests and a calm summary for each linked athlete."
   },
   "portal": {
     "brand": "Family portal",

@@ -98,7 +98,12 @@ function PortalChrome() {
             <button
               type="button"
               onClick={() => void logout()}
-              className="rounded-full border border-amateur-border bg-amateur-surface px-3 py-1.5 text-xs font-medium text-amateur-ink transition-colors hover:bg-amateur-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amateur-accent"
+              // Trust & Calm Pass — sign-out is the only deliberate exit
+              // from the parent portal and must not be a sub-spec target on
+              // a phone. We bring it up to a min 40px tap area on mobile,
+              // keep the calm pill look on tablet+ where it sits beside the
+              // language switch.
+              className="inline-flex min-h-[40px] items-center justify-center rounded-full border border-amateur-border bg-amateur-surface px-3 py-1.5 text-xs font-medium text-amateur-ink transition-colors hover:bg-amateur-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amateur-accent"
             >
               {t('portal.actions.signOut')}
             </button>
