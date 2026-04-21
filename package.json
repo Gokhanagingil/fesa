@@ -11,6 +11,7 @@
     "repo:guard": "node scripts/repo-guard.mjs",
     "i18n:check": "node scripts/check-i18n-parity.mjs",
     "api:boot:smoke": "node scripts/api-boot-smoke.mjs",
+    "api:module-graph:test": "node scripts/api-module-graph.test.mjs",
     "dashboard:smoke": "node scripts/dashboard-smoke.mjs",
     "frontend:smoke": "npm run test:smoke -w @amateur/web",
     "reporting:smoke": "node scripts/reporting-smoke.mjs",
