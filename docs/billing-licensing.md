@@ -284,3 +284,44 @@ The internal control surface stays calm and disciplined:
   - new admin tabs and copy keys exist in EN + TR.
 - All Wave 22 validators (`billing:licensing:test`, locale parity,
   repo guard, frontend smoke, etc.) continue to pass.
+
+## Module-graph discipline
+
+`LicensingModule` is declared `@Global()` so its providers
+(`LicensingService`, `PlatformAdminGuard`, `FeatureGateGuard`) are
+injectable from anywhere without forcing the consumer module to add
+`LicensingModule` to its own `imports` array.
+
+This is intentional and load-bearing for boot stability. During Wave 23
+implementation we briefly added `LicensingModule` to `TenantModule`'s
+`imports` so `StaffTenantBrandingController` could pull
+`FeatureGateGuard` for `parent_portal.branding`. That introduced the
+cycle:
+
+```
+TenantModule -> LicensingModule -> AuthModule -> TenantModule
+```
+
+Nest reports this exact cycle as
+*"The module at index [N] of the AuthModule 'imports' array is
+undefined"*, scoped to
+`AppModule -> CoreModule -> TenantModule -> LicensingModule`, and the
+API fails to boot.
+
+Two rules keep this stable going forward and are enforced by
+`scripts/api-module-graph.test.mjs`
+(`npm run api:module-graph:test`):
+
+1. `TenantModule` MUST NOT import `LicensingModule`.
+2. `AuthModule` MUST NOT import `LicensingModule`.
+
+The validator additionally walks every `*.module.ts` under
+`apps/api/src/modules`, resolves all relative `*Module` imports
+referenced inside each `@Module({ imports: [...] })` array, and fails
+on:
+
+- any unresolved relative module reference (the static equivalent of
+  Nest's runtime "module at index [N] is undefined"); and
+- any cycle in the module-import graph.
+
+It runs in CI right before `api:boot:smoke`.

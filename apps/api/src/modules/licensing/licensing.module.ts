@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Athlete } from '../../database/entities/athlete.entity';
 import { LicensePlan } from '../../database/entities/license-plan.entity';
@@ -19,6 +19,28 @@ import { LicensingSnapshotScheduler } from './licensing-snapshot.scheduler';
 import { LicensingService } from './licensing.service';
 import { PlatformAdminGuard } from './platform-admin.guard';
 
+/**
+ * LicensingModule is `@Global()` so its providers (`LicensingService`,
+ * `PlatformAdminGuard`, `FeatureGateGuard`) can be injected from any
+ * controller or service without requiring `LicensingModule` to be added
+ * to that module's `imports` array.
+ *
+ * This is intentional and load-bearing for boot stability:
+ *   - `StaffTenantBrandingController` (in TenantModule) decorates
+ *     branding mutations with `@UseGuards(FeatureGateGuard)`.
+ *   - If TenantModule had to import LicensingModule to satisfy that
+ *     guard, we would re-introduce the cycle
+ *     `TenantModule -> LicensingModule -> AuthModule -> TenantModule`,
+ *     causing AuthModule's TenantModule import to resolve as undefined
+ *     during Nest's dependency scan.
+ *
+ * Treating licensing as a cross-cutting capability (like `CoreModule`)
+ * is the smallest correct architectural correction. The licensing
+ * surface itself is unchanged: every gate still routes through
+ * `LicensingService` and is still sealed by `PlatformAdminGuard` /
+ * `FeatureGateGuard` exactly as before.
+ */
+@Global()
 @Module({
   imports: [
     AuthModule,

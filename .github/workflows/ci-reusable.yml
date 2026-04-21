@@ -115,5 +115,8 @@ jobs:
       - name: Demo seed repeatability
         run: npm run seed:demo:verify
 
+      - name: API module-graph regression guard
+        run: npm run api:module-graph:test
+
       - name: Backend boot smoke
         run: npm run api:boot:smoke
