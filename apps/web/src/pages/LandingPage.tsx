@@ -60,18 +60,15 @@ export function LandingPage() {
             id="about"
             className="rounded-3xl border border-amateur-border bg-amateur-surface p-6 shadow-sm sm:p-8"
           >
-            <p className="text-sm font-semibold text-amateur-accent">{t('app.name')}</p>
-            <p className="mt-2 text-sm leading-relaxed text-amateur-muted">
-              {t('pages.dashboard.subtitle')} {t('pages.groups.subtitle')}
-            </p>
-            <div className="mt-6 grid gap-3 text-sm text-amateur-muted">
+            <p className="text-sm font-semibold text-amateur-accent">{t('landing.entryTitle')}</p>
+            <div className="mt-4 grid gap-3 text-sm text-amateur-muted">
               <div className="rounded-2xl bg-amateur-canvas px-4 py-3">
-                <p className="font-medium text-amateur-ink">{t('pages.groups.title')}</p>
-                <p className="mt-1">{t('pages.groups.subtitle')}</p>
+                <p className="font-medium text-amateur-ink">{t('landing.entryStaffTitle')}</p>
+                <p className="mt-1">{t('landing.entryStaffBody')}</p>
               </div>
               <div className="rounded-2xl bg-amateur-canvas px-4 py-3">
-                <p className="font-medium text-amateur-ink">{t('pages.teams.title')}</p>
-                <p className="mt-1">{t('pages.teams.subtitle')}</p>
+                <p className="font-medium text-amateur-ink">{t('landing.entryGuardianTitle')}</p>
+                <p className="mt-1">{t('landing.entryGuardianBody')}</p>
               </div>
             </div>
           </div>

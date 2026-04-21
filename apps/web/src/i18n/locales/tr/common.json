@@ -214,7 +214,8 @@
       "saveFailed": "Kaydedilemedi.",
       "needTenant": "Üstte kulüp seçin.",
       "noBranches": "Önce veritabanına bir spor branşı ekleyin.",
-      "validation": "Lütfen gerekli alanları kontrol edin."
+      "validation": "Lütfen gerekli alanları kontrol edin.",
+      "requestFailed": "Bir şeyler ters gitti. Lütfen biraz sonra yeniden deneyin."
     },
     "notifications": {
       "title": "Bildirimler",
@@ -2036,20 +2037,20 @@
       "guardianCta": "Veli misiniz? Aile portalına gidin"
     },
     "guardianPortal": {
-      "backHome": "Portal ana sayfasına dön",
+      "backHome": "Aile portalına dön",
       "action": {
-        "submitSuccess": "Yanıtınız kulüp incelemesine gönderildi.",
-        "requestTitle": "Talep detayları",
-        "staffNote": "Personel notu",
+        "submitSuccess": "Teşekkürler — yanıtınız kulübünüze iletildi.",
+        "requestTitle": "Kulübünüzün isteği",
+        "staffNote": "Kulübünüzden bir not",
         "responseTitle": "Yanıtınız",
-        "responseHint": "Yalnız kulübün istediği bilgileri paylaşın. Güncellemeler önce personel tarafından incelenir.",
-        "responseLabel": "Yanıt",
+        "responseHint": "Yalnız kulübün istediği bilgileri paylaşın. Kulübünüz inceleyip kayıtlarınızı güncelleyecek.",
+        "responseLabel": "Yanıtınız",
         "phone": "Telefon",
         "email": "E-posta",
-        "notes": "Notlar",
-        "submit": "Yanıtı gönder",
-        "readOnlyHint": "Bu talep artık sizden aksiyon beklemiyor.",
-        "historyTitle": "Talep geçmişi"
+        "notes": "Eklemek istediğiniz bir şey var mı?",
+        "submit": "Yanıtımı gönder",
+        "readOnlyHint": "Bu talep artık sizden bir yanıt beklemiyor.",
+        "historyTitle": "Bu talep üzerindeki etkinlik"
       }
     },
     "imports": {
