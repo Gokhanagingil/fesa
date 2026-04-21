@@ -15,6 +15,13 @@ The amateur platform ships a **single, repeatable demo seed** for local developm
   sweatshirts, training balls, cones with a deliberately low stock signal,
   and a few open athlete assignments). The inventory seed is idempotent and
   reuses the demo athlete cohort as assignment recipients.
+- After the inventory seed, also runs a **licensing seed** (Billing &
+  Licensing Foundation v1) that upserts the three plans (`Starter`,
+  `Operations`, `Growth`), their per-feature entitlement matrix, four
+  config-driven usage bands, and one tenant subscription per demo
+  club so the platform-admin Billing & Licensing console always
+  shows realistic lifecycle examples on first login. Details:
+  [`billing-licensing.md`](./billing-licensing.md).
 - After the base seed completes, runs an **expansion seed** that grows each
   demo club into a believable staging-walkthrough footprint (≈22-29 athletes,
   ≈12-21 guardians, 4-6 coaches, several groups and teams, weekly recurring

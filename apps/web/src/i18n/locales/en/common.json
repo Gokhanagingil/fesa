@@ -20,7 +20,8 @@
       "reportBuilder": "Report builder",
       "imports": "Import / Export",
       "clubUpdates": "Club updates",
-      "settings": "Settings"
+      "settings": "Settings",
+      "billing": "Billing & Licensing"
     },
     "actions": {
       "search": "Search",
@@ -1873,7 +1874,106 @@
       "securityPointMembership": "Tenant access is filtered by membership, not only by frontend hiding.",
       "securityPointGuardian": "Guardian sessions stay isolated from staff/admin sessions.",
       "openPlatformHome": "Open platform dashboard",
-      "openClubHome": "Open club dashboard"
+      "openClubHome": "Open club dashboard",
+      "licensing": {
+        "title": "License & plan",
+        "hint": "A calm summary of this club's current commercial state. Plan and lifecycle changes are managed by platform admins.",
+        "currentPlan": "Current plan",
+        "noSubscription": "No active license is assigned to this club yet.",
+        "lifecycle": "Lifecycle",
+        "trialEndsAt": "Trial ends",
+        "renewalDate": "Renewal date",
+        "activeAthletes": "Active athletes",
+        "evaluatedBand": "Evaluated band",
+        "noBand": "No band yet",
+        "platformOnly": "Plan and lifecycle adjustments are platform-admin actions."
+      }
+    },
+    "billing": {
+      "title": "Billing & Licensing",
+      "subtitle": "Plans, tenant subscriptions, lifecycle, and usage bands. Platform-admin only.",
+      "summary": {
+        "total": "Tenants",
+        "active": "Active",
+        "trial": "Trial",
+        "suspended": "Suspended"
+      },
+      "tabs": {
+        "label": "Billing & Licensing sections",
+        "subscriptions": "Tenant subscriptions",
+        "plans": "Plans & entitlements",
+        "usage": "Usage & evaluation"
+      },
+      "statuses": {
+        "trial": "Trial",
+        "active": "Active",
+        "suspended": "Suspended",
+        "expired": "Expired",
+        "cancelled": "Cancelled"
+      },
+      "subscriptions": {
+        "empty": "No tenants have subscription records yet — assign one to start tracking commercial state.",
+        "noPlan": "No plan",
+        "onboardingChip": "Onboarding services",
+        "startDate": "Start date",
+        "renewalDate": "Renewal date",
+        "trialEndsAt": "Trial ends",
+        "activeAthletes": "Active athletes",
+        "internalNotes": "Internal notes",
+        "statusReason": "Status reason",
+        "lastChangedBy": "Last change · {{name}}",
+        "unknownActor": "platform admin",
+        "edit": "Manage subscription"
+      },
+      "form": {
+        "title": "Update subscription",
+        "subtitle": "Plan, lifecycle, and dates. Changes are recorded against the platform admin acting now.",
+        "plan": "Plan",
+        "planPlaceholder": "Select a plan…",
+        "planRequired": "Pick a plan before saving.",
+        "status": "Lifecycle status",
+        "startDate": "Start date",
+        "renewalDate": "Renewal date",
+        "trialEndsAt": "Trial ends",
+        "onboardingService": "Onboarding services",
+        "onboardingServiceHint": "Includes onboarding / migration assistance.",
+        "internalNotes": "Internal notes",
+        "statusReason": "Status reason",
+        "save": "Save subscription"
+      },
+      "plans": {
+        "empty": "No plans defined yet — seed the licensing data to bootstrap Starter / Operations / Growth.",
+        "activeChip": "Active",
+        "inactiveChip": "Retired",
+        "defaultTrialChip": "Default trial",
+        "entitlementsTitle": "Feature entitlements",
+        "noEntitlements": "No entitlements mapped.",
+        "entitlementOn": "Enabled",
+        "entitlementOff": "Off",
+        "limitLabel": "limit {{value}}",
+        "bandsTitle": "Active athlete usage bands",
+        "bandsHint": "Bands are config-driven so platform admins can tune them without a code change."
+      },
+      "usage": {
+        "title": "Usage evaluation",
+        "hint": "Live active-athlete count and the band evaluated against it. Take a manual snapshot to keep history.",
+        "tenantPicker": "Club",
+        "activeAthletes": "Active athletes",
+        "activeAthletesShort_one": "{{count}} active athlete",
+        "activeAthletesShort_other": "{{count}} active athletes",
+        "evaluatedBand": "Evaluated band",
+        "noBand": "No matching band",
+        "measuredAt": "Measured at",
+        "recordSnapshot": "Record snapshot now",
+        "snapshotsTitle": "Recent snapshots",
+        "snapshotsHint": "Append-only history. Useful for explaining mid-month band shifts.",
+        "snapshotsEmpty": "No snapshots recorded yet.",
+        "source": {
+          "manual": "Manual",
+          "scheduled": "Scheduled",
+          "api": "API"
+        }
+      }
     },
     "brandAdmin": {
       "title": "Club branding",

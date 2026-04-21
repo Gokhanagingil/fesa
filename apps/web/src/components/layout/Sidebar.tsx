@@ -1,33 +1,66 @@
 import clsx from 'clsx';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../lib/auth-context';
 
-const links = [
-  { to: '/app/dashboard', key: 'dashboard' as const },
-  { to: '/app/onboarding', key: 'onboarding' as const },
-  { to: '/app/action-center', key: 'actionCenter' as const },
-  { to: '/app/athletes', key: 'athletes' as const },
-  { to: '/app/coaches', key: 'coaches' as const },
-  { to: '/app/guardians', key: 'guardians' as const },
-  { to: '/app/groups', key: 'groups' as const },
-  { to: '/app/teams', key: 'teams' as const },
-  { to: '/app/training', key: 'training' as const },
-  { to: '/app/private-lessons', key: 'privateLessons' as const },
-  { to: '/app/finance', key: 'finance' as const },
-  { to: '/app/inventory', key: 'inventory' as const },
-  { to: '/app/communications', key: 'communications' as const },
-  { to: '/app/club-updates', key: 'clubUpdates' as const },
-  { to: '/app/reports', key: 'reports' as const },
-  { to: '/app/imports', key: 'imports' as const },
-  { to: '/app/settings', key: 'settings' as const },
+type SidebarLink = {
+  to: string;
+  key:
+    | 'dashboard'
+    | 'onboarding'
+    | 'actionCenter'
+    | 'athletes'
+    | 'coaches'
+    | 'guardians'
+    | 'groups'
+    | 'teams'
+    | 'training'
+    | 'privateLessons'
+    | 'finance'
+    | 'inventory'
+    | 'communications'
+    | 'clubUpdates'
+    | 'reports'
+    | 'imports'
+    | 'settings'
+    | 'billing';
+  platformAdminOnly?: boolean;
+};
+
+const links: SidebarLink[] = [
+  { to: '/app/dashboard', key: 'dashboard' },
+  { to: '/app/onboarding', key: 'onboarding' },
+  { to: '/app/action-center', key: 'actionCenter' },
+  { to: '/app/athletes', key: 'athletes' },
+  { to: '/app/coaches', key: 'coaches' },
+  { to: '/app/guardians', key: 'guardians' },
+  { to: '/app/groups', key: 'groups' },
+  { to: '/app/teams', key: 'teams' },
+  { to: '/app/training', key: 'training' },
+  { to: '/app/private-lessons', key: 'privateLessons' },
+  { to: '/app/finance', key: 'finance' },
+  { to: '/app/inventory', key: 'inventory' },
+  { to: '/app/communications', key: 'communications' },
+  { to: '/app/club-updates', key: 'clubUpdates' },
+  { to: '/app/reports', key: 'reports' },
+  { to: '/app/imports', key: 'imports' },
+  { to: '/app/billing', key: 'billing', platformAdminOnly: true },
+  { to: '/app/settings', key: 'settings' },
 ];
 
 export function Sidebar() {
   const { t } = useTranslation();
   const location = useLocation();
   const navRef = useRef<HTMLElement>(null);
-  const visibleLinks = links;
+  const { canAccessCrossTenant } = useAuth();
+  // Billing & Licensing is intentionally a platform-admin-only menu in
+  // v1 — tenant admins do not see it at all so commercial state cannot
+  // accidentally leak into a club's day-to-day navigation.
+  const visibleLinks = useMemo(
+    () => links.filter((link) => !link.platformAdminOnly || canAccessCrossTenant),
+    [canAccessCrossTenant],
+  );
 
   // On phones the sidebar collapses to a single horizontally-scrolling
   // strip. With 17 staff destinations the active link can sit far off

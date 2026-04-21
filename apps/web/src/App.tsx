@@ -24,6 +24,7 @@ import { ActionCenterPage } from './pages/ActionCenterPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { ReportBuilderPage } from './pages/ReportBuilderPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { BillingLicensingPage } from './pages/BillingLicensingPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { ImportsPage } from './pages/ImportsPage';
 import { OnboardingPage } from './pages/OnboardingPage';
@@ -82,6 +83,7 @@ export default function App() {
             <Route path="/app/imports" element={<ImportsPage />} />
             <Route path="/app/onboarding" element={<OnboardingPage />} />
             <Route path="/app/settings" element={<SettingsPage />} />
+            <Route path="/app/billing" element={<BillingLicensingPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

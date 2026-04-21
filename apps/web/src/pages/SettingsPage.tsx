@@ -8,6 +8,7 @@ import { StatusBadge } from '../components/ui/StatusBadge';
 import { Button } from '../components/ui/Button';
 import { CommunicationDeliveryReadinessPanel } from '../components/communication/CommunicationDeliveryReadinessPanel';
 import { BrandAdminPanel } from '../components/branding/BrandAdminPanel';
+import { TenantLicenseSummary } from '../components/licensing/TenantLicenseSummary';
 import { useAuth } from '../lib/auth-context';
 import { apiGet } from '../lib/api';
 import { useTenant } from '../lib/tenant-hooks';
@@ -391,6 +392,10 @@ export function SettingsPage() {
             </div>
           </section>
         ) : null}
+
+        <div id="settings-section-license" className="scroll-mt-24">
+          <TenantLicenseSummary tenantId={tenantId} />
+        </div>
 
         <div id="settings-section-brand" className="scroll-mt-24">
           <BrandAdminPanel tenantId={tenantId} />

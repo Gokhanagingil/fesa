@@ -30,7 +30,8 @@
       "imports": "İçe / Dışa aktarma",
       "clubUpdates": "Kulüp duyuruları",
       "settings": "Ayarlar",
-      "admin": "Yönetim"
+      "admin": "Yönetim",
+      "billing": "Faturalama ve Lisans"
     },
     "actions": {
       "search": "Ara",
@@ -1900,7 +1901,106 @@
       "notificationsPreference": "Bildirimler ve aksiyon merkezi öncelikleri canlı operasyon sinyallerinden beslenir.",
       "securityPointStaff": "Personel ve yönetici işlemleri gerçek bir personel oturumu gerektirir.",
       "securityPointMembership": "Tenant erişimi yalnızca frontend gizlemesine değil, üyelik kapsamına göre sınırlandırılır.",
-      "securityPointGuardian": "Veli oturumları personel oturumlarından ayrıdır ve ayrı tutulur."
+      "securityPointGuardian": "Veli oturumları personel oturumlarından ayrıdır ve ayrı tutulur.",
+      "licensing": {
+        "title": "Lisans ve plan",
+        "hint": "Kulübün ticari durumunun sade bir özeti. Plan ve yaşam döngüsü değişiklikleri platform yöneticileri tarafından yönetilir.",
+        "currentPlan": "Geçerli plan",
+        "noSubscription": "Bu kulübe henüz aktif bir lisans atanmamış.",
+        "lifecycle": "Yaşam döngüsü",
+        "trialEndsAt": "Deneme bitişi",
+        "renewalDate": "Yenileme tarihi",
+        "activeAthletes": "Aktif sporcular",
+        "evaluatedBand": "Değerlendirilen bant",
+        "noBand": "Henüz bant yok",
+        "platformOnly": "Plan ve yaşam döngüsü değişiklikleri yalnızca platform yöneticisi işlemleridir."
+      }
+    },
+    "billing": {
+      "title": "Faturalama ve Lisans",
+      "subtitle": "Planlar, kulüp abonelikleri, yaşam döngüsü ve kullanım bantları. Yalnızca platform yöneticisi.",
+      "summary": {
+        "total": "Kulüpler",
+        "active": "Aktif",
+        "trial": "Deneme",
+        "suspended": "Askıda"
+      },
+      "tabs": {
+        "label": "Faturalama ve Lisans bölümleri",
+        "subscriptions": "Kulüp abonelikleri",
+        "plans": "Planlar ve yetkiler",
+        "usage": "Kullanım ve değerlendirme"
+      },
+      "statuses": {
+        "trial": "Deneme",
+        "active": "Aktif",
+        "suspended": "Askıda",
+        "expired": "Süresi doldu",
+        "cancelled": "İptal"
+      },
+      "subscriptions": {
+        "empty": "Henüz hiçbir kulübün abonelik kaydı yok — ticari durumu izlemeye başlamak için bir tane atayın.",
+        "noPlan": "Plan yok",
+        "onboardingChip": "Kurulum desteği",
+        "startDate": "Başlangıç tarihi",
+        "renewalDate": "Yenileme tarihi",
+        "trialEndsAt": "Deneme bitişi",
+        "activeAthletes": "Aktif sporcular",
+        "internalNotes": "Dahili notlar",
+        "statusReason": "Durum gerekçesi",
+        "lastChangedBy": "Son değişiklik · {{name}}",
+        "unknownActor": "platform yöneticisi",
+        "edit": "Aboneliği yönet"
+      },
+      "form": {
+        "title": "Aboneliği güncelle",
+        "subtitle": "Plan, yaşam döngüsü ve tarihler. Değişiklikler işlemi yapan platform yöneticisi adına kaydedilir.",
+        "plan": "Plan",
+        "planPlaceholder": "Plan seçin…",
+        "planRequired": "Kaydetmeden önce bir plan seçin.",
+        "status": "Yaşam döngüsü durumu",
+        "startDate": "Başlangıç tarihi",
+        "renewalDate": "Yenileme tarihi",
+        "trialEndsAt": "Deneme bitişi",
+        "onboardingService": "Kurulum desteği",
+        "onboardingServiceHint": "Kurulum / taşıma desteğini kapsar.",
+        "internalNotes": "Dahili notlar",
+        "statusReason": "Durum gerekçesi",
+        "save": "Aboneliği kaydet"
+      },
+      "plans": {
+        "empty": "Henüz tanımlı plan yok — Starter / Operations / Growth için lisans verisini ekleyin.",
+        "activeChip": "Aktif",
+        "inactiveChip": "Kullanım dışı",
+        "defaultTrialChip": "Varsayılan deneme",
+        "entitlementsTitle": "Özellik yetkileri",
+        "noEntitlements": "Eşlenmiş yetki yok.",
+        "entitlementOn": "Açık",
+        "entitlementOff": "Kapalı",
+        "limitLabel": "limit {{value}}",
+        "bandsTitle": "Aktif sporcu kullanım bantları",
+        "bandsHint": "Bantlar yapılandırma ile yönetilir; platform yöneticileri kod değiştirmeden ayarlayabilir."
+      },
+      "usage": {
+        "title": "Kullanım değerlendirmesi",
+        "hint": "Anlık aktif sporcu sayısı ve buna karşılık değerlendirilen bant. Geçmişi tutmak için manuel anlık görüntü alın.",
+        "tenantPicker": "Kulüp",
+        "activeAthletes": "Aktif sporcular",
+        "activeAthletesShort_one": "{{count}} aktif sporcu",
+        "activeAthletesShort_other": "{{count}} aktif sporcu",
+        "evaluatedBand": "Değerlendirilen bant",
+        "noBand": "Eşleşen bant yok",
+        "measuredAt": "Ölçüm zamanı",
+        "recordSnapshot": "Şimdi anlık görüntü al",
+        "snapshotsTitle": "Son anlık görüntüler",
+        "snapshotsHint": "Yalnızca eklenir. Ay içi bant değişimlerini açıklamak için işe yarar.",
+        "snapshotsEmpty": "Henüz anlık görüntü kaydedilmemiş.",
+        "source": {
+          "manual": "Manuel",
+          "scheduled": "Zamanlanmış",
+          "api": "API"
+        }
+      }
     },
     "brandAdmin": {
       "title": "Kulüp markası",

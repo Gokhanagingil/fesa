@@ -247,6 +247,12 @@ const scopedPrefixes = [
   'landing.entryGuardianBody',
   // Calmer parent action page primary control + safer error fallback copy.
   'app.errors.requestFailed',
+  // Billing & Licensing Foundation v1 — protect every key set across both
+  // locales so the platform-admin commercial console never silently
+  // regresses to raw key rendering.
+  'app.nav.billing',
+  'pages.billing',
+  'pages.settings.licensing',
 ];
 
 function flattenKeys(input, prefix = '') {
