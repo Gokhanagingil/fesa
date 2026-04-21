@@ -17,6 +17,8 @@ import {
 import { Request, Response } from 'express';
 import type { ReportEntityKey, ReportRunRequest } from '@amateur/shared-types';
 import { TenantGuard } from '../core/tenant.guard';
+import { LICENSE_FEATURE_KEYS } from '../licensing/license.constants';
+import { FeatureGateGuard, RequireFeature } from '../licensing/feature-gate.guard';
 import { ReportingService } from './reporting.service';
 import { SavedViewsService, SavedViewInput } from './saved-views.service';
 import { renderCsv } from './csv.util';
@@ -96,6 +98,8 @@ export class ReportingController {
   }
 
   @Post('export')
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature(LICENSE_FEATURE_KEYS.REPORTING_ADVANCED_BUILDER)
   @Header('Content-Type', 'text/csv; charset=utf-8')
   async export(@Req() req: Request, @Body() body: ReportRunRequest, @Res() res: Response) {
     assertEntity(body?.entity);
@@ -130,6 +134,8 @@ export class ReportingController {
   }
 
   @Post('saved-views')
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature(LICENSE_FEATURE_KEYS.REPORTING_ADVANCED_BUILDER)
   createView(@Req() req: Request, @Body() body: SavedViewInput) {
     assertEntity(body?.entity);
     return this.savedViews.create(req.tenantId!, req.staffUserId!, body);
@@ -141,11 +147,15 @@ export class ReportingController {
   }
 
   @Patch('saved-views/:id')
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature(LICENSE_FEATURE_KEYS.REPORTING_ADVANCED_BUILDER)
   updateView(@Req() req: Request, @Param('id') id: string, @Body() body: Partial<SavedViewInput>) {
     return this.savedViews.update(req.tenantId!, req.staffUserId!, id, body);
   }
 
   @Delete('saved-views/:id')
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature(LICENSE_FEATURE_KEYS.REPORTING_ADVANCED_BUILDER)
   deleteView(@Req() req: Request, @Param('id') id: string) {
     return this.savedViews.remove(req.tenantId!, req.staffUserId!, id).then(() => ({ ok: true }));
   }

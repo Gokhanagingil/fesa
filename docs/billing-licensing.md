@@ -154,9 +154,133 @@ periodic; the engine returns the same shape from a live count.
 - Pricing storage, invoicing, and payment processor integration.
 - A full add-on catalog (the current model carries one
   `onboardingServiceIncluded` boolean as a small, justified seam).
-- A subscription history / audit log beyond the lightweight
-  `lastChangedByStaffUserId` actor column.
 - Tenant-admin-facing self-service plan changes.
-- Automated band transitions or scheduled snapshots (the manual
-  snapshot button is enough for v1; the table is shaped to support
-  scheduled writes when they arrive).
+- Automated band transitions.
+
+# Billing & Licensing Operationalization Pack v1 (Wave 23)
+
+Wave 22 modeled the commercial backbone. Wave 23 turns it into an
+operational control plane without rewriting any of it.
+
+## What changed
+
+- **Real gating** is now active for three high-value capabilities,
+  routed exclusively through `LicensingService`:
+  - `parent_portal.branding` — gates staff branding writes (PUT
+    `/tenant/branding`, POST/DELETE `/tenant/branding/logo`).
+  - `communications.follow_up` — gates direct delivery attempts
+    (`POST /communications/outreach/:id/deliver`). Manual logging
+    of outreach stays available on every plan.
+  - `reporting.advanced_builder` — gates the saved-views CRUD and
+    CSV export. Starter views, definitions, and ad-hoc `run` stay
+    available on every plan.
+- **Subscription history** (`tenant_subscription_history`,
+  Wave 23 migration) records every plan / lifecycle / dates change
+  with the actor and a compact diff. Read via
+  `GET /admin/licensing/subscriptions/:tenantId/history`.
+- **Plan entitlement editing** is now controlled-UI-only — no DB
+  access required. Endpoints:
+  - `GET  /admin/licensing/plans/:planCode/edit`
+  - `PUT  /admin/licensing/plans/:planCode/entitlements/:featureKey`
+  - `GET  /admin/licensing/feature-catalog`
+- **Scheduled usage snapshots** are written by a small in-process
+  scheduler (`LicensingSnapshotScheduler`). It runs once shortly
+  after API boot and then daily. Append-only and idempotent — the
+  writer skips when the active-athlete count and band have not
+  changed since the last snapshot in the window. Manual snapshot
+  capability is preserved.
+  - Disable in any environment with
+    `LICENSING_SNAPSHOT_SCHEDULER=disabled`.
+  - Tune the cadence with `LICENSING_SNAPSHOT_INTERVAL_MS` (defaults
+    to 24h; minimum 60_000ms).
+  - Trigger a one-shot manual pass via
+    `POST /admin/licensing/usage/snapshots/run` (also wired into the
+    Billing & Licensing console).
+- **Tenant-side feature availability probe**:
+  `GET /api/licensing/me/feature/:featureKey`. Always responds —
+  never throws 403 — so the web UI can render calm "Available on
+  Operations / Growth" copy instead of dead buttons.
+
+## Engine improvements
+
+`LicensingService` now exposes:
+
+- `requireFeature(tenantId, featureKey)` — strict, throws
+  `ForbiddenException` with `{ featureKey, reason }`.
+- `getFeatureUnavailableReason(tenantId, featureKey)` — non-throwing,
+  returns `null` when allowed, or a structured reason
+  (`no_subscription` | `license_inactive` | `plan_excludes_feature`)
+  for calm UX.
+- `updatePlanEntitlement(planCode, featureKey, input)` — atomic
+  per-feature upsert that invalidates the in-process entitlement
+  cache.
+- `recordUsageSnapshotIfChanged(tenantId, source, options)` — the
+  append-aware writer used by the scheduler.
+- `runScheduledSnapshotPass()` — full-platform pass.
+- `listSubscriptionHistory(tenantId, limit)` — newest-first ledger.
+
+A short-TTL per-tenant entitlement cache prevents the new gates
+from hammering the database on hot endpoints. The cache is
+invalidated on every commercial mutation we own.
+
+## `FeatureGateGuard` + `@RequireFeature`
+
+Other modules wire gates declaratively:
+
+```ts
+@Post('outreach/:id/deliver')
+@UseGuards(FeatureGateGuard)
+@RequireFeature(LICENSE_FEATURE_KEYS.COMMUNICATIONS_FOLLOW_UP)
+attemptDelivery(...) { ... }
+```
+
+The guard is applied **after** `TenantGuard` so `req.tenantId` is
+populated. Failure mode is `ForbiddenException({ featureKey,
+reason })`, which the web client maps to calm copy keys under
+`pages.gating.*`.
+
+## Billing & Licensing console UX (post Wave 23)
+
+The internal control surface stays calm and disciplined:
+
+- Tabs: *Tenant subscriptions*, *Plans & entitlements*,
+  *Edit entitlements*, *Usage & evaluation*, *Subscription history*.
+- The entitlement editor is grouped by capability area (parent
+  portal, communications, reporting, operations, onboarding) with a
+  per-feature save flow — no giant atomic blob.
+- Each feature is labelled "Gated capability" or "Catalog only" so
+  platform admins know which toggles change real product behaviour
+  today.
+- Usage tab now exposes a "Run scheduled pass now" trigger and
+  shows a Live / From snapshot badge.
+- Subscription history renders one calm card per change with the
+  diff chips, the actor (or "Platform admin"), the status reason,
+  and the internal note.
+
+## Tenant-side UX
+
+- `parent_portal.branding`, `communications.follow_up`, and
+  `reporting.advanced_builder` all surface a calm
+  `FeatureAvailabilityNotice` instead of broken affordances when a
+  plan does not include the capability.
+- Wording distinguishes:
+  - **No license assigned yet** (`no_subscription`),
+  - **License paused** (`license_inactive`),
+  - **Available on a higher plan** (`plan_excludes_feature`).
+- Existing data is never described as "lost". Restrictions are
+  legible and graceful.
+
+## Validation
+
+- `npm run billing:licensing:ops:test` — Wave 23 pure-Node
+  validator. Asserts:
+  - subscription history entity + migration shape;
+  - LicensingService helpers (`requireFeature`,
+    `updatePlanEntitlement`, `runScheduledSnapshotPass`, …);
+  - `FeatureGateGuard` + `@RequireFeature` are exported and
+    applied on the three gated controllers;
+  - new platform-admin endpoints exist;
+  - tenant-side feature availability probe exists;
+  - new admin tabs and copy keys exist in EN + TR.
+- All Wave 22 validators (`billing:licensing:test`, locale parity,
+  repo guard, frontend smoke, etc.) continue to pass.

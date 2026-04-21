@@ -1992,6 +1992,11 @@
         "noBand": "Eşleşen bant yok",
         "measuredAt": "Ölçüm zamanı",
         "recordSnapshot": "Şimdi anlık görüntü al",
+        "runScheduledNow": "Zamanlanmış geçişi şimdi çalıştır",
+        "scheduledHint": "Günlük arka plan geçişi anlık görüntüleri otomatik tazeler. Hemen taze geçmiş istiyorsanız manuel olarak tetikleyin.",
+        "scheduledRanResult": "{{tenants}} kulüp tarandı · {{written}} yeni anlık görüntü yazıldı.",
+        "liveLabel": "Canlı",
+        "snapshotLabel": "Anlık görüntüden",
         "snapshotsTitle": "Son anlık görüntüler",
         "snapshotsHint": "Yalnızca eklenir. Ay içi bant değişimlerini açıklamak için işe yarar.",
         "snapshotsEmpty": "Henüz anlık görüntü kaydedilmemiş.",
@@ -2000,6 +2005,85 @@
           "scheduled": "Zamanlanmış",
           "api": "API"
         }
+      },
+      "tabs2": {
+        "history": "Abonelik geçmişi",
+        "editEntitlements": "Yetkileri düzenle"
+      },
+      "history": {
+        "title": "Abonelik geçmişi",
+        "hint": "Her plan veya yaşam döngüsü değişikliği burada kaydedilir. Belirli bir kulübe odaklanmak için seçiciyi kullanın.",
+        "empty": "Bu kulüp için henüz ticari değişiklik kaydedilmemiş.",
+        "actorFallback": "Platform yöneticisi",
+        "fields": "Değişen: {{fields}}",
+        "kind": {
+          "created": "Abonelik oluşturuldu",
+          "plan_change": "Plan değişti",
+          "status_change": "Yaşam döngüsü durumu değişti",
+          "dates_change": "Tarihler güncellendi",
+          "metadata_change": "Notlar güncellendi"
+        },
+        "fieldLabels": {
+          "plan": "plan",
+          "status": "durum",
+          "dates": "tarihler",
+          "onboardingService": "tanışma hizmetleri",
+          "internalNotes": "iç notlar",
+          "statusReason": "durum nedeni"
+        },
+        "delta": {
+          "plan": "{{from}} → {{to}}",
+          "status": "{{from}} → {{to}}"
+        }
+      },
+      "entitlementEditor": {
+        "title": "Plan yetkileri",
+        "subtitle": "Her yeteneği plan başına aç/kapat. Plandaki kiracılar bir sonraki istekte değişikliği görür — yetki önbelleği saniyeler içinde tazelenir.",
+        "selectPlan": "Plan",
+        "groups": {
+          "parent_portal": "Veli portalı",
+          "communications": "İletişim",
+          "reporting": "Raporlama",
+          "operations": "Operasyon",
+          "onboarding": "Tanışma"
+        },
+        "gatingActiveChip": "Aktif yetki",
+        "gatingPassiveChip": "Yalnızca katalog",
+        "gatingActiveHint": "Bu yetenek LicensingService üzerinden aktif olarak kontrol edilir. Buradan değiştirmek planı kullanan kiracıların yapabileceklerini değiştirir.",
+        "gatingPassiveHint": "Bu yetenek katalogda eşlenmiş ancak ürün kontrollerine henüz bağlanmamış. Buradan değiştirmek güvenlidir, ileriye dönüktür.",
+        "feature": "Özellik",
+        "enabled": "Açık",
+        "limit": "Limit",
+        "limitHint": "Opsiyonel sayısal üst sınır, ör. ay başına içe aktarım. Limit yoksa boş bırakın.",
+        "notes": "Notlar",
+        "notesPlaceholder": "Opsiyonel iç not (240 karakter).",
+        "save": "Değişikliği kaydet",
+        "savedJustNow": "Kaydedildi",
+        "loadFailed": "Bu plan yüklenemedi."
+      },
+      "featureCatalog": {
+        "parent_portal.branding": "Veli portalı markası",
+        "parent_portal.targeted_updates": "Hedeflenmiş veli güncellemeleri",
+        "communications.follow_up": "İletişim takip otomasyonları",
+        "reporting.advanced_builder": "Gelişmiş rapor oluşturucu",
+        "inventory.management": "Envanter ve zimmet paketi",
+        "private_lessons.module": "Özel ders modülü",
+        "onboarding.assisted_import": "Tanışma destekli içe aktarım"
+      }
+    },
+    "gating": {
+      "platformOnly": "Plan ayarları Fesa platform ekibi tarafından yönetilir.",
+      "no_subscription": {
+        "title": "Henüz lisans atanmamış",
+        "body": "Bu kulübün aktif lisansı yok. Mevcut verileriniz güvendedir — platform ekibi yakında bir plan atayacaktır."
+      },
+      "license_inactive": {
+        "title": "Lisans duraklatıldı",
+        "body": "{{plan}} aboneliğiniz duraklatıldı. Mevcut verileriniz güvendedir; lisans yeniden etkinleştirildiğinde bu yetenek geri açılır."
+      },
+      "plan_excludes_feature": {
+        "title": "Daha üst bir planda mevcut",
+        "body": "Bu yetenek bugün {{plan}} planınıza dahil değil. Mevcut verileriniz güvendedir; plan yükseldiğinde anında açılır."
       }
     },
     "brandAdmin": {

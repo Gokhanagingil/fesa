@@ -39,6 +39,7 @@ import { LicensePlanEntitlement } from './license-plan-entitlement.entity';
 import { LicenseUsageBand } from './license-usage-band.entity';
 import { TenantSubscription } from './tenant-subscription.entity';
 import { TenantUsageSnapshot } from './tenant-usage-snapshot.entity';
+import { TenantSubscriptionHistory } from './tenant-subscription-history.entity';
 
 export const domainEntities = [
   Tenant,
@@ -82,6 +83,7 @@ export const domainEntities = [
   LicenseUsageBand,
   TenantSubscription,
   TenantUsageSnapshot,
+  TenantSubscriptionHistory,
 ];
 
 export {
@@ -126,4 +128,5 @@ export {
   LicenseUsageBand,
   TenantSubscription,
   TenantUsageSnapshot,
+  TenantSubscriptionHistory,
 };

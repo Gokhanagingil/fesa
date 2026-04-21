@@ -112,3 +112,51 @@ export type TenantEntitlementPublicSummary = {
     band: { code: string | null; label: string | null };
   };
 };
+
+/**
+ * Wave 23 — calm "why is this not available" payload.
+ * Reasons are designed to map directly to UI copy keys.
+ */
+export type LicenseFeatureUnavailableReason =
+  | { reason: 'no_subscription'; featureKey: LicenseFeatureKey }
+  | {
+      reason: 'license_inactive';
+      featureKey: LicenseFeatureKey;
+      planCode: string;
+      planName: string;
+      status: TenantSubscriptionStatusValue | null;
+    }
+  | {
+      reason: 'plan_excludes_feature';
+      featureKey: LicenseFeatureKey;
+      planCode: string;
+      planName: string;
+      status: TenantSubscriptionStatusValue | null;
+    };
+
+export type UpdatePlanEntitlementInput = {
+  enabled: boolean;
+  limitValue?: number | null;
+  notes?: string | null;
+};
+
+export type TenantSubscriptionHistoryEntry = {
+  id: string;
+  tenantId: string;
+  subscriptionId: string | null;
+  changeKind:
+    | 'created'
+    | 'plan_change'
+    | 'status_change'
+    | 'dates_change'
+    | 'metadata_change';
+  changedFields: string[];
+  previousPlanCode: string | null;
+  nextPlanCode: string | null;
+  previousStatus: TenantSubscriptionStatusValue | null;
+  nextStatus: TenantSubscriptionStatusValue | null;
+  statusReason: string | null;
+  internalNote: string | null;
+  actorDisplayName: string | null;
+  changedAt: string;
+};

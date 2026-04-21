@@ -10,15 +10,25 @@ import { StatCard } from '../components/ui/StatCard';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import type {
   AssignSubscriptionPayload,
+  LicenseFeatureCatalogResponse,
   LicensePlanSummary,
   LicenseUsageBandSummary,
+  PlanEditingPayload,
+  PlanEditingMatrixRow,
+  SnapshotPassResult,
+  TenantSubscriptionHistoryEntry,
   TenantSubscriptionStatus,
   TenantSubscriptionSummary,
   TenantUsageSnapshotSummary,
 } from '../lib/licensing-types';
 import { TENANT_SUBSCRIPTION_STATUS_VALUES } from '../lib/licensing-types';
 
-type TabKey = 'plans' | 'subscriptions' | 'usage';
+type TabKey =
+  | 'plans'
+  | 'subscriptions'
+  | 'usage'
+  | 'history'
+  | 'editEntitlements';
 
 function statusTone(status: TenantSubscriptionStatus | null): 'success' | 'info' | 'warning' | 'danger' | 'default' {
   switch (status) {
@@ -267,25 +277,31 @@ export function BillingLicensingPage() {
         aria-label={t('pages.billing.tabs.label')}
         className="mb-6 inline-flex flex-wrap gap-2 rounded-2xl border border-amateur-border bg-amateur-surface p-1.5 text-sm"
       >
-        {(['subscriptions', 'plans', 'usage'] as const).map((key) => {
-          const isActive = activeTab === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => setActiveTab(key)}
-              className={
-                isActive
-                  ? 'rounded-xl bg-amateur-accent-soft px-4 py-2 font-semibold text-amateur-accent'
-                  : 'rounded-xl px-4 py-2 text-amateur-muted hover:text-amateur-ink'
-              }
-            >
-              {t(`pages.billing.tabs.${key}`)}
-            </button>
-          );
-        })}
+        {(['subscriptions', 'plans', 'editEntitlements', 'usage', 'history'] as const).map(
+          (key) => {
+            const isActive = activeTab === key;
+            const label =
+              key === 'editEntitlements' || key === 'history'
+                ? t(`pages.billing.tabs2.${key}`)
+                : t(`pages.billing.tabs.${key}`);
+            return (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveTab(key)}
+                className={
+                  isActive
+                    ? 'rounded-xl bg-amateur-accent-soft px-4 py-2 font-semibold text-amateur-accent'
+                    : 'rounded-xl px-4 py-2 text-amateur-muted hover:text-amateur-ink'
+                }
+              >
+                {label}
+              </button>
+            );
+          },
+        )}
       </div>
 
       {loading ? (
@@ -325,6 +341,18 @@ export function BillingLicensingPage() {
           recordSnapshot={recordSnapshot}
           bands={bands}
         />
+      ) : null}
+
+      {activeTab === 'history' ? (
+        <HistoryPanel
+          subscriptions={subscriptions}
+          selectedTenantId={selectedTenantId}
+          setSelectedTenantId={setSelectedTenantId}
+        />
+      ) : null}
+
+      {activeTab === 'editEntitlements' ? (
+        <EntitlementEditorPanel plans={plans} />
       ) : null}
     </div>
   );
@@ -715,6 +743,39 @@ function UsagePanel({
   bands,
 }: UsagePanelProps) {
   const { t } = useTranslation();
+  const [runningPass, setRunningPass] = useState(false);
+  const [passNotice, setPassNotice] = useState<string | null>(null);
+  const [passError, setPassError] = useState<string | null>(null);
+
+  async function runScheduledPass() {
+    setRunningPass(true);
+    setPassNotice(null);
+    setPassError(null);
+    try {
+      const result = await apiPost<SnapshotPassResult>(
+        '/api/admin/licensing/usage/snapshots/run',
+        {},
+      );
+      setPassNotice(
+        t('pages.billing.usage.scheduledRanResult', {
+          tenants: result.tenantsScanned,
+          written: result.snapshotsWritten,
+        }),
+      );
+    } catch (error) {
+      setPassError(
+        error instanceof Error ? error.message : t('app.errors.saveFailed'),
+      );
+    } finally {
+      setRunningPass(false);
+    }
+  }
+
+  const lastSnapshot = snapshots[0] ?? null;
+  const liveCount = selectedSubscription?.usage.activeAthleteCount ?? null;
+  const showingLive =
+    !lastSnapshot ||
+    (liveCount !== null && lastSnapshot.activeAthleteCount === liveCount);
 
   return (
     <div className="space-y-4">
@@ -727,18 +788,44 @@ function UsagePanel({
             <p className="mt-1 max-w-2xl text-sm text-amateur-muted">
               {t('pages.billing.usage.hint')}
             </p>
+            <p className="mt-1 max-w-2xl text-xs text-amateur-muted">
+              {t('pages.billing.usage.scheduledHint')}
+            </p>
           </div>
-          <Button
-            type="button"
-            variant="primary"
-            onClick={() => void recordSnapshot()}
-            disabled={!selectedTenantId || savingSnapshot}
-          >
-            {savingSnapshot
-              ? t('app.states.saving')
-              : t('pages.billing.usage.recordSnapshot')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => void runScheduledPass()}
+              disabled={runningPass}
+            >
+              {runningPass
+                ? t('app.states.saving')
+                : t('pages.billing.usage.runScheduledNow')}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => void recordSnapshot()}
+              disabled={!selectedTenantId || savingSnapshot}
+            >
+              {savingSnapshot
+                ? t('app.states.saving')
+                : t('pages.billing.usage.recordSnapshot')}
+            </Button>
+          </div>
         </div>
+
+        {passNotice ? (
+          <InlineAlert tone="info" className="mt-3">
+            {passNotice}
+          </InlineAlert>
+        ) : null}
+        {passError ? (
+          <InlineAlert tone="error" className="mt-3">
+            {passError}
+          </InlineAlert>
+        ) : null}
 
         <div className="mt-4 grid gap-3 md:grid-cols-[1fr_2fr]">
           <FieldLabel label={t('pages.billing.usage.tenantPicker')}>
@@ -756,25 +843,34 @@ function UsagePanel({
           </FieldLabel>
 
           {selectedSubscription ? (
-            <div className="grid gap-3 md:grid-cols-3">
-              <StatCard
-                label={t('pages.billing.usage.activeAthletes')}
-                value={selectedSubscription.usage.activeAthleteCount}
-                compact
-              />
-              <StatCard
-                label={t('pages.billing.usage.evaluatedBand')}
-                value={
-                  selectedSubscription.usage.band.label ??
-                  t('pages.billing.usage.noBand')
-                }
-                compact
-              />
-              <StatCard
-                label={t('pages.billing.usage.measuredAt')}
-                value={formatDate(selectedSubscription.usage.measuredAt)}
-                compact
-              />
+            <div className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-3">
+                <StatCard
+                  label={t('pages.billing.usage.activeAthletes')}
+                  value={selectedSubscription.usage.activeAthleteCount}
+                  compact
+                />
+                <StatCard
+                  label={t('pages.billing.usage.evaluatedBand')}
+                  value={
+                    selectedSubscription.usage.band.label ??
+                    t('pages.billing.usage.noBand')
+                  }
+                  compact
+                />
+                <StatCard
+                  label={t('pages.billing.usage.measuredAt')}
+                  value={formatDate(selectedSubscription.usage.measuredAt)}
+                  compact
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <StatusBadge tone={showingLive ? 'success' : 'info'}>
+                  {showingLive
+                    ? t('pages.billing.usage.liveLabel')
+                    : t('pages.billing.usage.snapshotLabel')}
+                </StatusBadge>
+              </div>
             </div>
           ) : null}
         </div>
@@ -838,6 +934,461 @@ function UsagePanel({
             </li>
           ))}
         </ul>
+      </section>
+    </div>
+  );
+}
+
+type HistoryPanelProps = {
+  subscriptions: TenantSubscriptionSummary[];
+  selectedTenantId: string | null;
+  setSelectedTenantId: (id: string) => void;
+};
+
+function HistoryPanel({
+  subscriptions,
+  selectedTenantId,
+  setSelectedTenantId,
+}: HistoryPanelProps) {
+  const { t } = useTranslation();
+  const [history, setHistory] = useState<TenantSubscriptionHistoryEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedTenantId) {
+      setHistory([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+    setLoading(true);
+    setError(null);
+    apiGet<TenantSubscriptionHistoryEntry[]>(
+      `/api/admin/licensing/subscriptions/${selectedTenantId}/history?limit=50`,
+    )
+      .then((rows) => {
+        if (!cancelled) setHistory(rows);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : t('app.errors.loadFailed'));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTenantId, t]);
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="font-display text-base font-semibold text-amateur-ink">
+              {t('pages.billing.history.title')}
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-amateur-muted">
+              {t('pages.billing.history.hint')}
+            </p>
+          </div>
+          <FieldLabel label={t('pages.billing.usage.tenantPicker')}>
+            <select
+              className="w-full rounded-lg border border-amateur-border bg-amateur-surface px-3 py-2 text-sm"
+              value={selectedTenantId ?? ''}
+              onChange={(e) => setSelectedTenantId(e.target.value)}
+            >
+              {subscriptions.map((subscription) => (
+                <option key={subscription.tenantId} value={subscription.tenantId}>
+                  {subscription.tenantName}
+                </option>
+              ))}
+            </select>
+          </FieldLabel>
+        </div>
+
+        {error ? (
+          <InlineAlert tone="error" className="mt-3">
+            {error}
+          </InlineAlert>
+        ) : null}
+
+        {loading ? (
+          <p className="mt-3 text-sm text-amateur-muted">{t('app.states.loading')}</p>
+        ) : history.length === 0 ? (
+          <InlineAlert tone="info" className="mt-3">
+            {t('pages.billing.history.empty')}
+          </InlineAlert>
+        ) : (
+          <ol className="mt-4 space-y-3">
+            {history.map((entry) => (
+              <HistoryEntry key={entry.id} entry={entry} />
+            ))}
+          </ol>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function HistoryEntry({ entry }: { entry: TenantSubscriptionHistoryEntry }) {
+  const { t } = useTranslation();
+  const tone =
+    entry.changeKind === 'created'
+      ? 'success'
+      : entry.changeKind === 'plan_change'
+        ? 'info'
+        : entry.changeKind === 'status_change'
+          ? 'warning'
+          : 'default';
+  const fieldsLabel = entry.changedFields
+    .map((field) => t(`pages.billing.history.fieldLabels.${field}`, field))
+    .join(', ');
+  return (
+    <li className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4">
+      <header className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="font-display text-sm font-semibold text-amateur-ink">
+            {t(`pages.billing.history.kind.${entry.changeKind}`)}
+          </p>
+          <p className="mt-1 text-xs text-amateur-muted">
+            {formatDate(entry.changedAt)} ·{' '}
+            {entry.actorDisplayName ?? t('pages.billing.history.actorFallback')}
+          </p>
+        </div>
+        <StatusBadge tone={tone}>
+          {t(`pages.billing.history.kind.${entry.changeKind}`)}
+        </StatusBadge>
+      </header>
+      <div className="mt-3 grid gap-2 text-xs text-amateur-muted md:grid-cols-2">
+        {entry.previousPlanCode || entry.nextPlanCode ? (
+          <p>
+            <span className="font-semibold text-amateur-ink">
+              {t('pages.billing.history.fieldLabels.plan')}:
+            </span>{' '}
+            {t('pages.billing.history.delta.plan', {
+              from: entry.previousPlanCode ?? '—',
+              to: entry.nextPlanCode ?? '—',
+            })}
+          </p>
+        ) : null}
+        {entry.previousStatus || entry.nextStatus ? (
+          <p>
+            <span className="font-semibold text-amateur-ink">
+              {t('pages.billing.history.fieldLabels.status')}:
+            </span>{' '}
+            {t('pages.billing.history.delta.status', {
+              from: entry.previousStatus ?? '—',
+              to: entry.nextStatus ?? '—',
+            })}
+          </p>
+        ) : null}
+      </div>
+      {entry.changedFields.length > 0 ? (
+        <p className="mt-2 text-xs text-amateur-muted">
+          {t('pages.billing.history.fields', { fields: fieldsLabel })}
+        </p>
+      ) : null}
+      {entry.statusReason ? (
+        <p className="mt-2 text-xs text-amateur-muted">
+          <span className="font-semibold text-amateur-ink">
+            {t('pages.billing.history.fieldLabels.statusReason')}:
+          </span>{' '}
+          {entry.statusReason}
+        </p>
+      ) : null}
+      {entry.internalNote ? (
+        <p className="mt-1 text-xs text-amateur-muted">
+          <span className="font-semibold text-amateur-ink">
+            {t('pages.billing.history.fieldLabels.internalNotes')}:
+          </span>{' '}
+          {entry.internalNote}
+        </p>
+      ) : null}
+    </li>
+  );
+}
+
+type EntitlementEditorPanelProps = {
+  plans: LicensePlanSummary[];
+};
+
+function EntitlementEditorPanel({ plans }: EntitlementEditorPanelProps) {
+  const { t } = useTranslation();
+  const [selectedPlanCode, setSelectedPlanCode] = useState<string | null>(
+    plans[0]?.code ?? null,
+  );
+  const [editing, setEditing] = useState<PlanEditingPayload | null>(null);
+  const [catalog, setCatalog] = useState<LicenseFeatureCatalogResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [savedFeature, setSavedFeature] = useState<string | null>(null);
+  const [savingFeature, setSavingFeature] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedPlanCode && plans[0]?.code) {
+      setSelectedPlanCode(plans[0].code);
+    }
+  }, [plans, selectedPlanCode]);
+
+  const loadPlan = useCallback(
+    async (code: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [planPayload, catalogPayload] = await Promise.all([
+          apiGet<PlanEditingPayload>(`/api/admin/licensing/plans/${code}/edit`),
+          apiGet<LicenseFeatureCatalogResponse>('/api/admin/licensing/feature-catalog'),
+        ]);
+        setEditing(planPayload);
+        setCatalog(catalogPayload);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('pages.billing.entitlementEditor.loadFailed'),
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t],
+  );
+
+  useEffect(() => {
+    if (selectedPlanCode) {
+      void loadPlan(selectedPlanCode);
+    }
+  }, [loadPlan, selectedPlanCode]);
+
+  const grouped = useMemo(() => {
+    if (!editing) return [] as Array<{ group: string; rows: PlanEditingMatrixRow[] }>;
+    const map = new Map<string, PlanEditingMatrixRow[]>();
+    for (const row of editing.matrix) {
+      const list = map.get(row.catalog.group) ?? [];
+      list.push(row);
+      map.set(row.catalog.group, list);
+    }
+    const groupOrder = catalog?.groups ?? [
+      'parent_portal',
+      'communications',
+      'reporting',
+      'operations',
+      'onboarding',
+    ];
+    return groupOrder
+      .filter((group) => map.has(group))
+      .map((group) => ({ group, rows: map.get(group) ?? [] }));
+  }, [editing, catalog]);
+
+  async function saveRow(row: PlanEditingMatrixRow) {
+    if (!selectedPlanCode) return;
+    setSavingFeature(row.featureKey);
+    setError(null);
+    try {
+      await apiPut(
+        `/api/admin/licensing/plans/${selectedPlanCode}/entitlements/${encodeURIComponent(row.featureKey)}`,
+        {
+          enabled: row.enabled,
+          limitValue: row.limitValue,
+          notes: row.notes,
+        },
+      );
+      setSavedFeature(row.featureKey);
+      await loadPlan(selectedPlanCode);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t('app.errors.saveFailed'),
+      );
+    } finally {
+      setSavingFeature(null);
+      setTimeout(() => setSavedFeature((current) => (current === row.featureKey ? null : current)), 1800);
+    }
+  }
+
+  function updateRowDraft(featureKey: string, patch: Partial<PlanEditingMatrixRow>) {
+    setEditing((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        matrix: current.matrix.map((row) =>
+          row.featureKey === featureKey ? { ...row, ...patch } : row,
+        ),
+      };
+    });
+  }
+
+  if (plans.length === 0) {
+    return <InlineAlert tone="info">{t('pages.billing.plans.empty')}</InlineAlert>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-amateur-border bg-amateur-surface p-5 shadow-sm">
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="font-display text-base font-semibold text-amateur-ink">
+              {t('pages.billing.entitlementEditor.title')}
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-amateur-muted">
+              {t('pages.billing.entitlementEditor.subtitle')}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {plans.map((plan) => {
+              const isActive = plan.code === selectedPlanCode;
+              return (
+                <button
+                  key={plan.code}
+                  type="button"
+                  onClick={() => setSelectedPlanCode(plan.code)}
+                  className={
+                    isActive
+                      ? 'rounded-xl bg-amateur-accent-soft px-3 py-2 text-sm font-semibold text-amateur-accent'
+                      : 'rounded-xl border border-amateur-border px-3 py-2 text-sm text-amateur-muted hover:text-amateur-ink'
+                  }
+                >
+                  {plan.name}
+                </button>
+              );
+            })}
+          </div>
+        </header>
+
+        {error ? (
+          <InlineAlert tone="error" className="mt-3">
+            {error}
+          </InlineAlert>
+        ) : null}
+
+        {loading && !editing ? (
+          <p className="mt-3 text-sm text-amateur-muted">{t('app.states.loading')}</p>
+        ) : editing ? (
+          <div className="mt-4 space-y-5">
+            {grouped.map((group) => (
+              <article
+                key={group.group}
+                className="rounded-2xl border border-amateur-border bg-amateur-canvas p-4"
+              >
+                <header className="flex items-center justify-between gap-2">
+                  <h3 className="font-display text-sm font-semibold text-amateur-ink">
+                    {t(`pages.billing.entitlementEditor.groups.${group.group}`)}
+                  </h3>
+                </header>
+                <ul className="mt-3 space-y-3">
+                  {group.rows.map((row) => {
+                    const featureLabel = t(
+                      `pages.billing.featureCatalog.${row.featureKey}`,
+                      row.featureKey,
+                    );
+                    const isSaving = savingFeature === row.featureKey;
+                    const justSaved = savedFeature === row.featureKey;
+                    return (
+                      <li
+                        key={row.featureKey}
+                        className="rounded-xl border border-amateur-border bg-amateur-surface p-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium text-amateur-ink">
+                              {featureLabel}
+                            </p>
+                            <p className="mt-0.5 text-[11px] uppercase tracking-wide text-amateur-muted">
+                              {row.featureKey}
+                            </p>
+                            <p className="mt-1 text-xs text-amateur-muted">
+                              {row.catalog.gatingActive
+                                ? t('pages.billing.entitlementEditor.gatingActiveHint')
+                                : t('pages.billing.entitlementEditor.gatingPassiveHint')}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <StatusBadge
+                              tone={row.catalog.gatingActive ? 'success' : 'default'}
+                            >
+                              {row.catalog.gatingActive
+                                ? t('pages.billing.entitlementEditor.gatingActiveChip')
+                                : t('pages.billing.entitlementEditor.gatingPassiveChip')}
+                            </StatusBadge>
+                            {justSaved ? (
+                              <StatusBadge tone="info">
+                                {t('pages.billing.entitlementEditor.savedJustNow')}
+                              </StatusBadge>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="mt-3 grid gap-3 md:grid-cols-3">
+                          <label className="flex items-center gap-2 text-sm text-amateur-ink">
+                            <input
+                              type="checkbox"
+                              checked={row.enabled}
+                              onChange={(e) =>
+                                updateRowDraft(row.featureKey, { enabled: e.target.checked })
+                              }
+                            />
+                            {t('pages.billing.entitlementEditor.enabled')}
+                          </label>
+                          {row.catalog.supportsLimit ? (
+                            <label className="flex flex-col gap-1 text-xs text-amateur-muted">
+                              <span>{t('pages.billing.entitlementEditor.limit')}</span>
+                              <input
+                                type="number"
+                                min={0}
+                                value={row.limitValue ?? ''}
+                                onChange={(e) =>
+                                  updateRowDraft(row.featureKey, {
+                                    limitValue: e.target.value
+                                      ? Math.max(0, Number(e.target.value))
+                                      : null,
+                                  })
+                                }
+                                className="rounded-lg border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-ink"
+                              />
+                              <span className="text-[11px] text-amateur-muted">
+                                {t('pages.billing.entitlementEditor.limitHint')}
+                              </span>
+                            </label>
+                          ) : null}
+                          <label className="flex flex-col gap-1 text-xs text-amateur-muted md:col-span-1">
+                            <span>{t('pages.billing.entitlementEditor.notes')}</span>
+                            <input
+                              type="text"
+                              value={row.notes ?? ''}
+                              maxLength={240}
+                              onChange={(e) =>
+                                updateRowDraft(row.featureKey, { notes: e.target.value })
+                              }
+                              placeholder={t(
+                                'pages.billing.entitlementEditor.notesPlaceholder',
+                              )}
+                              className="rounded-lg border border-amateur-border bg-amateur-surface px-3 py-2 text-sm text-amateur-ink"
+                            />
+                          </label>
+                        </div>
+                        <div className="mt-3 flex justify-end">
+                          <Button
+                            type="button"
+                            variant="primary"
+                            disabled={isSaving}
+                            onClick={() => void saveRow(row)}
+                          >
+                            {isSaving
+                              ? t('app.states.saving')
+                              : t('pages.billing.entitlementEditor.save')}
+                          </Button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </article>
+            ))}
+          </div>
+        ) : null}
       </section>
     </div>
   );

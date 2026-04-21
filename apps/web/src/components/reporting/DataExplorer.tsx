@@ -24,6 +24,9 @@ import {
   type SavedReportView,
   type StarterReportView,
 } from '../../lib/reporting-types';
+import { useFeatureAvailability } from '../../lib/feature-availability';
+import { useTenant } from '../../lib/tenant-hooks';
+import { FeatureAvailabilityNotice } from '../licensing/FeatureAvailabilityNotice';
 import { AdvancedFilterBuilder } from './AdvancedFilterBuilder';
 import { GroupingPanel } from './GroupingPanel';
 
@@ -87,6 +90,12 @@ export function DataExplorer({ entity, initialFilter = null, initialState, headi
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const { tenantId } = useTenant();
+  const { availability: builderAvailability } = useFeatureAvailability(
+    'reporting.advanced_builder',
+    tenantId,
+  );
+  const builderAvailable = builderAvailability?.available !== false;
   const [info, setInfo] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(true);
 
@@ -342,13 +351,27 @@ export function DataExplorer({ entity, initialFilter = null, initialState, headi
           <Button type="button" variant="ghost" onClick={onClearAll}>
             {t('pages.reports.explorer.reset')}
           </Button>
-          <Button type="button" onClick={() => setShowSaveDialog(true)}>
+          <Button
+            type="button"
+            disabled={!builderAvailable}
+            onClick={() => setShowSaveDialog(true)}
+          >
             {activeViewId ? t('pages.reports.savedViews.update') : t('pages.reports.explorer.save')}
           </Button>
-          <Button type="button" variant="ghost" disabled={exporting} onClick={() => void onExport()}>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={exporting || !builderAvailable}
+            onClick={() => void onExport()}
+          >
             {exporting ? t('pages.reports.explorer.exporting') : t('pages.reports.explorer.exportCsv')}
           </Button>
         </div>
+
+        <FeatureAvailabilityNotice
+          availability={builderAvailability}
+          className="mt-3"
+        />
 
         {savedViews.length > 0 ? (
           <div className="mt-3 space-y-2 text-xs">

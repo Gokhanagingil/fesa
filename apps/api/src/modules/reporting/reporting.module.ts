@@ -21,6 +21,7 @@ import { ActionCenterModule } from '../action-center/action-center.module';
 import { CommunicationModule } from '../communication/communication.module';
 import { FamilyActionModule } from '../family-action/family-action.module';
 import { FinanceModule } from '../finance/finance.module';
+import { LicensingModule } from '../licensing/licensing.module';
 import { ReportingController } from './reporting.controller';
 import { ReportingService } from './reporting.service';
 import { SavedViewsService } from './saved-views.service';
@@ -31,6 +32,7 @@ import { SavedViewsService } from './saved-views.service';
     CommunicationModule,
     FamilyActionModule,
     FinanceModule,
+    LicensingModule,
     TypeOrmModule.forFeature([
       ReportDefinition,
       SavedFilterPreset,

@@ -7,12 +7,15 @@ import { LicenseUsageBand } from '../../database/entities/license-usage-band.ent
 import { StaffUser } from '../../database/entities/staff-user.entity';
 import { Tenant } from '../../database/entities/tenant.entity';
 import { TenantSubscription } from '../../database/entities/tenant-subscription.entity';
+import { TenantSubscriptionHistory } from '../../database/entities/tenant-subscription-history.entity';
 import { TenantUsageSnapshot } from '../../database/entities/tenant-usage-snapshot.entity';
 import { AuthModule } from '../auth/auth.module';
+import { FeatureGateGuard } from './feature-gate.guard';
 import {
   PlatformLicensingController,
   TenantLicensingController,
 } from './licensing.controller';
+import { LicensingSnapshotScheduler } from './licensing-snapshot.scheduler';
 import { LicensingService } from './licensing.service';
 import { PlatformAdminGuard } from './platform-admin.guard';
 
@@ -24,6 +27,7 @@ import { PlatformAdminGuard } from './platform-admin.guard';
       LicensePlanEntitlement,
       LicenseUsageBand,
       TenantSubscription,
+      TenantSubscriptionHistory,
       TenantUsageSnapshot,
       Tenant,
       Athlete,
@@ -31,7 +35,12 @@ import { PlatformAdminGuard } from './platform-admin.guard';
     ]),
   ],
   controllers: [PlatformLicensingController, TenantLicensingController],
-  providers: [LicensingService, PlatformAdminGuard],
-  exports: [LicensingService, PlatformAdminGuard],
+  providers: [
+    LicensingService,
+    LicensingSnapshotScheduler,
+    PlatformAdminGuard,
+    FeatureGateGuard,
+  ],
+  exports: [LicensingService, PlatformAdminGuard, FeatureGateGuard],
 })
 export class LicensingModule {}

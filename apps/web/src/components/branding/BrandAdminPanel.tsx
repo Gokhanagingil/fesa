@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError, apiDelete, apiGet, apiPut } from '../../lib/api';
 import type { TenantBrandingPayload } from '../../lib/domain-types';
+import { useFeatureAvailability } from '../../lib/feature-availability';
 import {
   resolveBrandingTokens,
 } from '../../lib/portal-branding';
 import { Button } from '../ui/Button';
 import { InlineAlert } from '../ui/InlineAlert';
 import { StatusBadge } from '../ui/StatusBadge';
+import { FeatureAvailabilityNotice } from '../licensing/FeatureAvailabilityNotice';
 
 /**
  * Parent Portal v1.1 — Brand Admin v1.1.
@@ -40,6 +42,11 @@ export function BrandAdminPanel({ tenantId }: { tenantId: string | null }) {
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [logoBusy, setLogoBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { availability: brandingAvailability } = useFeatureAvailability(
+    'parent_portal.branding',
+    tenantId,
+  );
+  const brandingAvailable = brandingAvailability?.available !== false;
 
   // Local form state — loaded from server, then edited locally until save.
   const [draft, setDraft] = useState({
@@ -206,6 +213,11 @@ export function BrandAdminPanel({ tenantId }: { tenantId: string | null }) {
         </InlineAlert>
       ) : null}
 
+      <FeatureAvailabilityNotice
+        availability={brandingAvailability}
+        className="mt-4"
+      />
+
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <div className="space-y-4">
           <FieldSection title={t('pages.brandAdmin.identityTitle')} hint={t('pages.brandAdmin.identityHint')}>
@@ -283,7 +295,7 @@ export function BrandAdminPanel({ tenantId }: { tenantId: string | null }) {
                 <Button
                   type="button"
                   variant="primary"
-                  disabled={logoBusy}
+                  disabled={logoBusy || !brandingAvailable}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {logoBusy
@@ -293,7 +305,12 @@ export function BrandAdminPanel({ tenantId }: { tenantId: string | null }) {
                       : t('pages.brandAdmin.logoUpload')}
                 </Button>
                 {branding?.hasUploadedLogo ? (
-                  <Button type="button" variant="ghost" disabled={logoBusy} onClick={() => void removeLogo()}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={logoBusy || !brandingAvailable}
+                    onClick={() => void removeLogo()}
+                  >
                     {t('pages.brandAdmin.logoRemove')}
                   </Button>
                 ) : null}
@@ -331,7 +348,11 @@ export function BrandAdminPanel({ tenantId }: { tenantId: string | null }) {
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
             <p className="text-xs text-amateur-muted">{t('pages.brandAdmin.guardrailNote')}</p>
-            <Button type="button" onClick={() => void saveProfile()} disabled={saving}>
+            <Button
+              type="button"
+              onClick={() => void saveProfile()}
+              disabled={saving || !brandingAvailable}
+            >
               {saving ? t('pages.brandAdmin.saving') : t('pages.brandAdmin.save')}
             </Button>
           </div>
