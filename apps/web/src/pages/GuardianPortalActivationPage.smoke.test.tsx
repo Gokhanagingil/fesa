@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GuardianPortalActivationPage } from './GuardianPortalActivationPage';
 import { renderWithRoute } from '../test/test-utils';
+import { ApiError } from '../lib/api';
 import type { GuardianPortalActivationStatus } from '../lib/domain-types';
 
 const mockApiGet = vi.fn();
@@ -74,6 +75,45 @@ describe('GuardianPortalActivationPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Recover an existing account/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Sign in/ })).toBeInTheDocument();
+  });
+
+  it('shows the calmer expired-link copy when the API tags the failure as expired', async () => {
+    // Parent Access Stabilization Pass — the API now distinguishes
+    // expired vs invalid via a stable error code so the page can pick
+    // warmer wording instead of always saying "no longer valid".
+    mockApiGet.mockRejectedValueOnce(
+      new ApiError(401, 'Invite link has expired', 'invite_link_expired'),
+    );
+
+    renderWithRoute(<GuardianPortalActivationPage />, {
+      path: '/portal/activate',
+      initialEntry: '/portal/activate?token=abc123',
+    });
+
+    expect(
+      await screen.findByText(/This invite link has expired/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Ask your club for a fresh link/)).toBeInTheDocument();
+    // The two warm escape paths must remain available so the parent is
+    // never stranded on this surface.
+    expect(screen.getByRole('link', { name: /Recover an existing account/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Sign in/ })).toBeInTheDocument();
+  });
+
+  it('shows the paused-access copy when the API tags the failure as disabled', async () => {
+    mockApiGet.mockRejectedValueOnce(
+      new ApiError(401, 'Portal access is paused by the club', 'portal_access_disabled'),
+    );
+
+    renderWithRoute(<GuardianPortalActivationPage />, {
+      path: '/portal/activate',
+      initialEntry: '/portal/activate?token=abc123',
+    });
+
+    expect(
+      await screen.findByText(/Your family portal access is paused right now/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Use the recovery form to let your club know/)).toBeInTheDocument();
   });
 
   it('submits the new password and lands the parent on the portal home', async () => {
